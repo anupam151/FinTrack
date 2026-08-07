@@ -4,4 +4,5 @@
     <string name="welcome_to_fintrack">Welcome to FinTrack</string>
     <string name="sign_in_text">Sign in with Google to continue</string>
     <string name="continue_with_google">Continue with Google</string>
+    <string name="default_web_client_id">314557012220-hgi5rfskvskp42p3q0rl3q7j4t9dhpre.apps.googleusercontent.com</string>
 </resources>
