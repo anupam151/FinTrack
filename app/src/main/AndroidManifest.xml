@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Added Internet Permission for Firebase and Google Sign-In -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
@@ -14,9 +13,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.FinTrack">
 
-        <!-- Dashboard / Main Screen (Now the Launcher) -->
+        <!-- Login Screen (Now the Launcher) -->
         <activity
-            android:name=".MainActivity"
+            android:name=".LoginActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
@@ -25,9 +24,9 @@
             </intent-filter>
         </activity>
 
-        <!-- Login Screen -->
+        <!-- Dashboard / Main Screen -->
         <activity
-            android:name=".LoginActivity"
+            android:name=".MainActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 

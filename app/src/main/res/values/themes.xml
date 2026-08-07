@@ -1,8 +1,13 @@
 <resources>
     <!-- Base application theme. -->
     <style name="Base.Theme.FinTrack" parent="Theme.Material3.Light.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <!-- Primary Brand Colors -->
+        <item name="colorPrimary">#082561</item>
+        <item name="colorSecondary">#1ABCAB</item>
+
+        <!-- Status Bar Configuration -->
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">#FFFFFF</item>
     </style>
 
     <style name="Theme.FinTrack" parent="Base.Theme.FinTrack" />

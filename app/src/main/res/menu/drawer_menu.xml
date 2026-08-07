@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="HardcodedText">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_drawer_dashboard"
+            android:icon="@drawable/dashboard"
+            android:title="Dashboard" />
+        <item
+            android:id="@+id/nav_drawer_cards"
+            android:icon="@drawable/card_nav_bottom"
+            android:title="Credit Cards" />
+        <item
+            android:id="@+id/nav_drawer_ledger"
+            android:icon="@drawable/finmate"
+            android:title="FinMates" />
+    </group>
+
+    <item android:title="Account">
+        <menu>
+            <item
+                android:id="@+id/nav_drawer_signout"
+                android:icon="@drawable/emi"
+                android:title="Sign Out" />
+        </menu>
+    </item>
+
+</menu>

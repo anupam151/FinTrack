@@ -1,726 +1,485 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<androidx.drawerlayout.widget.DrawerLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
+    tools:ignore="HardcodedText, TooManyViews, SmallSp, ContentDescription, UseCompoundDrawables, TooDeepLayout"
+    android:id="@+id/drawerLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
     tools:context=".MainActivity">
 
-    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-        android:id="@+id/swipeRefresh"
+    <!-- MAIN CONTENT AREA -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/main"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@+id/bottomNavigationWrapper">
+        android:layout_height="match_parent"
+        android:background="#FFFFFF">
 
-        <androidx.core.widget.NestedScrollView
+        <!-- FIXED TOP APP BAR -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/topAppBarContainer"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:fillViewport="true">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <!-- Top App Bar -->
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp">
-
-                    <TextView
-                        android:id="@+id/tvAppTitle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="FinTrack Dashboard"
-                        android:textColor="#082561"
-                        android:textSize="22sp"
-                        android:textStyle="bold"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnProfile"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Profile  >"
-                        android:textColor="#1abcab"
-                        android:textSize="12sp"
-                        app:strokeColor="#1abcab"
-                        app:cornerRadius="8dp"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent" />
-                </androidx.constraintlayout.widget.ConstraintLayout>
-
-                <!-- Snapshot / Overview -->
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    app:cardBackgroundColor="#FFFFFF"
-                    app:cardCornerRadius="8dp"
-                    app:cardElevation="0dp"
-                    app:strokeColor="#E0E0E0"
-                    app:strokeWidth="1dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:padding="16dp"
-                        android:baselineAligned="false"
-                        android:weightSum="4">
-
-                        <!-- Total Credit Cards -->
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:orientation="vertical">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="💳"
-                                android:textSize="24sp" />
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Total Cards"
-                                android:textColor="#082561"
-                                android:textSize="10sp"
-                                android:layout_marginTop="4dp" />
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="2"
-                                android:textColor="#082561"
-                                android:textSize="14sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-
-                        <!-- Total Limit -->
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:orientation="vertical">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="💼"
-                                android:textSize="24sp" />
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Total Limit"
-                                android:textColor="#082561"
-                                android:textSize="10sp"
-                                android:layout_marginTop="4dp" />
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="₹3,48,000"
-                                android:textColor="#1abcab"
-                                android:textSize="14sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-
-                        <!-- Total Used -->
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:orientation="vertical">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="📈"
-                                android:textSize="24sp" />
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Total Used"
-                                android:textColor="#082561"
-                                android:textSize="10sp"
-                                android:layout_marginTop="4dp" />
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="₹1,57,480"
-                                android:textColor="#082561"
-                                android:textSize="14sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-
-                        <!-- Total Due -->
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:orientation="vertical">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="⏳"
-                                android:textSize="24sp" />
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Total Due"
-                                android:textColor="#082561"
-                                android:textSize="10sp"
-                                android:layout_marginTop="4dp" />
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="₹26,768"
-                                android:textColor="#1abcab"
-                                android:textSize="14sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- SECTION 1: My Credit Cards -->
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    app:cardBackgroundColor="#FFFFFF"
-                    app:cardCornerRadius="12dp"
-                    app:cardElevation="0dp"
-                    app:strokeColor="#E0E0E0"
-                    app:strokeWidth="1dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="12dp">
-
-                        <RelativeLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginBottom="12dp">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_centerVertical="true"
-                                android:text="SECTION 1: My Credit Cards"
-                                android:textColor="#082561"
-                                android:textSize="14sp"
-                                android:textStyle="bold" />
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnAddCard"
-                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_alignParentEnd="true"
-                                android:minHeight="36dp"
-                                android:paddingHorizontal="12dp"
-                                android:text="+ Add Card"
-                                android:textColor="#1abcab"
-                                android:textSize="12sp"
-                                app:strokeColor="#1abcab"
-                                app:cornerRadius="6dp"/>
-                        </RelativeLayout>
-
-                        <!-- Card 1: HDFC -->
-                        <androidx.constraintlayout.widget.ConstraintLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:paddingVertical="12dp"
-                            android:background="@drawable/ripple_effect_bg">
-
-                            <androidx.cardview.widget.CardView
-                                android:id="@+id/logoHdfc"
-                                android:layout_width="48dp"
-                                android:layout_height="48dp"
-                                app:cardBackgroundColor="#082561"
-                                app:cardCornerRadius="8dp"
-                                app:layout_constraintStart_toStartOf="parent"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintBottom_toBottomOf="parent">
-                                <TextView
-                                    android:layout_width="match_parent"
-                                    android:layout_height="match_parent"
-                                    android:gravity="center"
-                                    android:text="HDFC"
-                                    android:textColor="#FFFFFF"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold"/>
-                            </androidx.cardview.widget.CardView>
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                android:layout_marginStart="12dp"
-                                app:layout_constraintStart_toEndOf="@id/logoHdfc"
-                                app:layout_constraintEnd_toStartOf="@id/progressHdfc"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintBottom_toBottomOf="parent">
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Card 1: HDFC Regalia"
-                                    android:textColor="#082561"
-                                    android:textSize="14sp"
-                                    android:textStyle="bold" />
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Limit: ₹1,93,000  |  Used: ₹65,000"
-                                    android:textColor="#757575"
-                                    android:textSize="11sp"
-                                    android:layout_marginTop="2dp" />
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Current Due: ₹12,458 (Due by 15th Aug)"
-                                    android:textColor="#1abcab"
-                                    android:textSize="11sp"
-                                    android:layout_marginTop="2dp" />
-                            </LinearLayout>
-
-                            <RelativeLayout
-                                android:id="@+id/progressHdfc"
-                                android:layout_width="48dp"
-                                android:layout_height="48dp"
-                                android:layout_marginEnd="8dp"
-                                app:layout_constraintEnd_toStartOf="@id/arrowHdfc"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintBottom_toBottomOf="parent">
-                                <com.google.android.material.progressindicator.CircularProgressIndicator
-                                    android:layout_width="match_parent"
-                                    android:layout_height="match_parent"
-                                    android:progress="34"
-                                    app:indicatorColor="#1abcab"
-                                    app:trackColor="#E0E0E0"
-                                    app:trackThickness="3dp" />
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_centerInParent="true"
-                                    android:gravity="center"
-                                    android:text="34%\nUsed"
-                                    android:textColor="#082561"
-                                    android:textSize="9sp" />
-                            </RelativeLayout>
-
-                            <TextView
-                                android:id="@+id/arrowHdfc"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text=">"
-                                android:textColor="#082561"
-                                android:textSize="18sp"
-                                app:layout_constraintEnd_toEndOf="parent"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintBottom_toBottomOf="parent" />
-                        </androidx.constraintlayout.widget.ConstraintLayout>
-
-                        <!-- Divider -->
-                        <View
-                            android:layout_width="match_parent"
-                            android:layout_height="1dp"
-                            android:background="#E0E0E0"
-                            android:layout_marginVertical="8dp"/>
-
-                        <!-- Card 2: SBI -->
-                        <androidx.constraintlayout.widget.ConstraintLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:paddingVertical="12dp"
-                            android:background="@drawable/ripple_effect_bg">
-
-                            <androidx.cardview.widget.CardView
-                                android:id="@+id/logoSbi"
-                                android:layout_width="48dp"
-                                android:layout_height="48dp"
-                                app:cardBackgroundColor="#082561"
-                                app:cardCornerRadius="8dp"
-                                app:layout_constraintStart_toStartOf="parent"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintBottom_toBottomOf="parent">
-                                <TextView
-                                    android:layout_width="match_parent"
-                                    android:layout_height="match_parent"
-                                    android:gravity="center"
-                                    android:text="SBI"
-                                    android:textColor="#FFFFFF"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold"/>
-                            </androidx.cardview.widget.CardView>
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                android:layout_marginStart="12dp"
-                                app:layout_constraintStart_toEndOf="@id/logoSbi"
-                                app:layout_constraintEnd_toStartOf="@id/progressSbi"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintBottom_toBottomOf="parent">
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Card 2: SBI Cashback"
-                                    android:textColor="#082561"
-                                    android:textSize="14sp"
-                                    android:textStyle="bold" />
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Limit: ₹89,000  |  Used: ₹12,000"
-                                    android:textColor="#757575"
-                                    android:textSize="11sp"
-                                    android:layout_marginTop="2dp" />
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Current Due: ₹4,298 (Due by 28th Aug)"
-                                    android:textColor="#1abcab"
-                                    android:textSize="11sp"
-                                    android:layout_marginTop="2dp" />
-                            </LinearLayout>
-
-                            <RelativeLayout
-                                android:id="@+id/progressSbi"
-                                android:layout_width="48dp"
-                                android:layout_height="48dp"
-                                android:layout_marginEnd="8dp"
-                                app:layout_constraintEnd_toStartOf="@id/arrowSbi"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintBottom_toBottomOf="parent">
-                                <com.google.android.material.progressindicator.CircularProgressIndicator
-                                    android:layout_width="match_parent"
-                                    android:layout_height="match_parent"
-                                    android:progress="13"
-                                    app:indicatorColor="#1abcab"
-                                    app:trackColor="#E0E0E0"
-                                    app:trackThickness="3dp" />
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_centerInParent="true"
-                                    android:gravity="center"
-                                    android:text="13%\nUsed"
-                                    android:textColor="#082561"
-                                    android:textSize="9sp" />
-                            </RelativeLayout>
-
-                            <TextView
-                                android:id="@+id/arrowSbi"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text=">"
-                                android:textColor="#082561"
-                                android:textSize="18sp"
-                                app:layout_constraintEnd_toEndOf="parent"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintBottom_toBottomOf="parent" />
-                        </androidx.constraintlayout.widget.ConstraintLayout>
-
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- SECTION 2: Borrower/Lender Ledger -->
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    app:cardBackgroundColor="#FFFFFF"
-                    app:cardCornerRadius="12dp"
-                    app:cardElevation="0dp"
-                    app:strokeColor="#E0E0E0"
-                    app:strokeWidth="1dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="12dp">
-
-                        <RelativeLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginBottom="12dp">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_centerVertical="true"
-                                android:text="SECTION 2: Borrower / Lender Ledger"
-                                android:textColor="#082561"
-                                android:textSize="14sp"
-                                android:textStyle="bold" />
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnAddPerson"
-                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_alignParentEnd="true"
-                                android:minHeight="36dp"
-                                android:paddingHorizontal="12dp"
-                                android:text="+ Add Person"
-                                android:textColor="#1abcab"
-                                android:textSize="12sp"
-                                app:strokeColor="#1abcab"
-                                app:cornerRadius="6dp"/>
-                        </RelativeLayout>
-
-                        <!-- Person 1: Rahul Sharma -->
-                        <androidx.constraintlayout.widget.ConstraintLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:paddingVertical="8dp">
-
-                            <androidx.cardview.widget.CardView
-                                android:id="@+id/avatarRS"
-                                android:layout_width="40dp"
-                                android:layout_height="40dp"
-                                app:cardBackgroundColor="#1abcab"
-                                app:cardCornerRadius="20dp"
-                                app:cardElevation="0dp"
-                                app:layout_constraintStart_toStartOf="parent"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintBottom_toBottomOf="parent">
-                                <TextView
-                                    android:layout_width="match_parent"
-                                    android:layout_height="match_parent"
-                                    android:gravity="center"
-                                    android:text="RS"
-                                    android:textColor="#FFFFFF"
-                                    android:textSize="14sp"
-                                    android:textStyle="bold"/>
-                            </androidx.cardview.widget.CardView>
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                android:layout_marginStart="12dp"
-                                app:layout_constraintStart_toEndOf="@id/avatarRS"
-                                app:layout_constraintEnd_toStartOf="@id/arrowRS"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintBottom_toBottomOf="parent">
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Rahul Sharma"
-                                    android:textColor="#082561"
-                                    android:textSize="14sp"
-                                    android:textStyle="bold" />
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Status: Owes you"
-                                    android:textColor="#1abcab"
-                                    android:textSize="11sp"
-                                    android:layout_marginTop="2dp" />
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Amount: +₹1,500"
-                                    android:textColor="#1abcab"
-                                    android:textSize="11sp" />
-                            </LinearLayout>
-
-                            <TextView
-                                android:id="@+id/arrowRS"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text=">"
-                                android:textColor="#082561"
-                                android:textSize="18sp"
-                                app:layout_constraintEnd_toEndOf="parent"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintBottom_toBottomOf="parent" />
-                        </androidx.constraintlayout.widget.ConstraintLayout>
-
-                        <!-- Person 2: Amit Roy -->
-                        <androidx.constraintlayout.widget.ConstraintLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:paddingVertical="8dp">
-
-                            <androidx.cardview.widget.CardView
-                                android:id="@+id/avatarAR"
-                                android:layout_width="40dp"
-                                android:layout_height="40dp"
-                                app:cardBackgroundColor="#1abcab"
-                                app:cardCornerRadius="20dp"
-                                app:cardElevation="0dp"
-                                app:layout_constraintStart_toStartOf="parent"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintBottom_toBottomOf="parent">
-                                <TextView
-                                    android:layout_width="match_parent"
-                                    android:layout_height="match_parent"
-                                    android:gravity="center"
-                                    android:text="AR"
-                                    android:textColor="#FFFFFF"
-                                    android:textSize="14sp"
-                                    android:textStyle="bold"/>
-                            </androidx.cardview.widget.CardView>
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                android:layout_marginStart="12dp"
-                                app:layout_constraintStart_toEndOf="@id/avatarAR"
-                                app:layout_constraintEnd_toStartOf="@id/arrowAR"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintBottom_toBottomOf="parent">
-                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Amit Roy" android:textColor="#082561" android:textSize="14sp" android:textStyle="bold" />
-                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Status: You owe" android:textColor="#1abcab" android:textSize="11sp" android:layout_marginTop="2dp" />
-                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Amount: -₹800" android:textColor="#1abcab" android:textSize="11sp" />
-                            </LinearLayout>
-
-                            <TextView
-                                android:id="@+id/arrowAR"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text=">"
-                                android:textColor="#082561"
-                                android:textSize="18sp"
-                                app:layout_constraintEnd_toEndOf="parent"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintBottom_toBottomOf="parent" />
-                        </androidx.constraintlayout.widget.ConstraintLayout>
-
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- Sign Out -->
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/btnSignOut"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:layout_marginBottom="24dp"
-                    app:cardBackgroundColor="#FFFFFF"
-                    app:cardCornerRadius="12dp"
-                    app:cardElevation="0dp"
-                    app:strokeColor="#E0E0E0"
-                    app:strokeWidth="1dp">
-
-                    <androidx.constraintlayout.widget.ConstraintLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:paddingHorizontal="16dp">
-                        <TextView
-                            android:id="@+id/iconSignOut"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="↪"
-                            android:textSize="20sp"
-                            android:textColor="#082561"
-                            android:textStyle="bold"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent"
-                            app:layout_constraintBottom_toBottomOf="parent" />
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Sign Out"
-                            android:textColor="#082561"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:layout_marginStart="12dp"
-                            app:layout_constraintStart_toEndOf="@id/iconSignOut"
-                            app:layout_constraintTop_toTopOf="parent"
-                            app:layout_constraintBottom_toBottomOf="parent" />
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text=">"
-                            android:textColor="#082561"
-                            android:textSize="18sp"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintTop_toTopOf="parent"
-                            app:layout_constraintBottom_toBottomOf="parent" />
-                    </androidx.constraintlayout.widget.ConstraintLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-            </LinearLayout>
-        </androidx.core.widget.NestedScrollView>
-    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
-
-    <!-- Custom Bottom Navigation Bar matching the UI perfectly -->
-    <LinearLayout
-        android:id="@+id/bottomNavigationWrapper"
-        android:layout_width="match_parent"
-        android:layout_height="72dp"
-        android:orientation="horizontal"
-        android:background="#FFFFFF"
-        android:elevation="8dp"
-        android:paddingHorizontal="8dp"
-        android:gravity="center_vertical"
-        android:weightSum="4"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <!-- Nav Item: Dashboard (Active) -->
-        <LinearLayout
-            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:paddingVertical="8dp"
-            android:background="@drawable/active_nav_bg"> <!-- Requires a simple shape drawable for the teal rounding -->
+            android:background="#FFFFFF"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <!-- Hamburger Menu Icon -->
+            <ImageView
+                android:id="@+id/ivMenuDrawer"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:padding="1dp"
+                android:src="@drawable/ic_menu"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
             <TextView
-                android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🏠" android:textSize="20sp" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Dashboard" android:textColor="#1abcab" android:textSize="12sp" android:textStyle="bold" android:layout_marginTop="4dp" />
-        </LinearLayout>
+                android:id="@+id/tvAppTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="Dashboard"
+                android:textColor="#082561"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toEndOf="@id/ivMenuDrawer"
+                app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Nav Item: Cards -->
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- SCROLLABLE CONTENT AREA -->
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/swipeRefresh"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            app:layout_constraintBottom_toTopOf="@+id/bottomNavigationWrapper"
+            app:layout_constraintTop_toBottomOf="@+id/topAppBarContainer">
+
+            <androidx.core.widget.NestedScrollView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="16dp">
+
+                    <!-- Snapshot / Overview -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        app:cardBackgroundColor="#FFFFFF"
+                        app:cardCornerRadius="8dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#E0E0E0"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:baselineAligned="false"
+                            android:orientation="horizontal"
+                            android:padding="16dp"
+                            android:weightSum="4">
+
+                            <!-- Total Credit Cards -->
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:gravity="center"
+                                android:orientation="vertical">
+                                <TextView
+                                    android:id="@+id/tvIconCards"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="💳"
+                                    android:textSize="24sp" />
+                                <TextView
+                                    android:id="@+id/tvLabelCards"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:text="Total Cards"
+                                    android:textColor="#082561"
+                                    android:textSize="11sp" />
+                                <TextView
+                                    android:id="@+id/tvValueCards"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="2"
+                                    android:textColor="#082561"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <!-- Total Limit -->
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:gravity="center"
+                                android:orientation="vertical">
+                                <TextView
+                                    android:id="@+id/tvIconLimit"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="💼"
+                                    android:textSize="24sp" />
+                                <TextView
+                                    android:id="@+id/tvLabelLimit"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:text="Total Limit"
+                                    android:textColor="#082561"
+                                    android:textSize="11sp" />
+                                <TextView
+                                    android:id="@+id/tvValueLimit"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="₹3,48,000"
+                                    android:textColor="#1abcab"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <!-- Total Used -->
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:gravity="center"
+                                android:orientation="vertical">
+                                <TextView
+                                    android:id="@+id/tvIconUsed"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="📈"
+                                    android:textSize="24sp" />
+                                <TextView
+                                    android:id="@+id/tvLabelUsed"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:text="Total Used"
+                                    android:textColor="#082561"
+                                    android:textSize="11sp" />
+                                <TextView
+                                    android:id="@+id/tvValueUsed"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="₹1,57,480"
+                                    android:textColor="#082561"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <!-- Total Due -->
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:gravity="center"
+                                android:orientation="vertical">
+                                <TextView
+                                    android:id="@+id/tvIconDue"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="⏳"
+                                    android:textSize="24sp" />
+                                <TextView
+                                    android:id="@+id/tvLabelDue"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:text="Total Due"
+                                    android:textColor="#082561"
+                                    android:textSize="11sp" />
+                                <TextView
+                                    android:id="@+id/tvValueDue"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="₹26,768"
+                                    android:textColor="#1abcab"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- SECTION 1: My Credit Cards (Max 2 Recent Items) -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        app:cardBackgroundColor="#FFFFFF"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#E0E0E0"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+
+                            <RelativeLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="12dp">
+                                <TextView
+                                    android:id="@+id/tvSectionCardsTitle"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_centerVertical="true"
+                                    android:text="SECTION 1: My Credit Cards"
+                                    android:textColor="#082561"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+
+                                <!-- Modern Minimalist More Button -->
+                                <TextView
+                                    android:id="@+id/btnAddCard"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_alignParentEnd="true"
+                                    android:layout_centerVertical="true"
+                                    android:background="?attr/selectableItemBackground"
+                                    android:padding="4dp"
+                                    android:text="More >"
+                                    android:textColor="#1abcab"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+                            </RelativeLayout>
+
+                            <!-- Reusable Card Slot 1 -->
+                            <include
+                                android:id="@+id/cardItem1"
+                                layout="@layout/item_dashboard_card" />
+
+                            <!-- Divider -->
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginVertical="8dp"
+                                android:background="#E0E0E0" />
+
+                            <!-- Reusable Card Slot 2 -->
+                            <include
+                                android:id="@+id/cardItem2"
+                                layout="@layout/item_dashboard_card" />
+
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- SECTION 2: Borrower/Lender Ledger (Max 2 Recent Items) -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        app:cardBackgroundColor="#FFFFFF"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#E0E0E0"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+
+                            <!-- SECTION 2 HEADER -->
+                            <RelativeLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="12dp">
+                                <TextView
+                                    android:id="@+id/tvSectionLedgerTitle"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_centerVertical="true"
+                                    android:text="SECTION 2: Borrower / Lender Ledger"
+                                    android:textColor="#082561"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+
+                                <!-- Modern Minimalist More Button -->
+                                <TextView
+                                    android:id="@+id/btnAddPerson"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_alignParentEnd="true"
+                                    android:layout_centerVertical="true"
+                                    android:background="?attr/selectableItemBackground"
+                                    android:padding="4dp"
+                                    android:text="More >"
+                                    android:textColor="#1abcab"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+                            </RelativeLayout>
+
+                            <!-- Reusable FinMate Slot 1 -->
+                            <include
+                                android:id="@+id/ledgerItem1"
+                                layout="@layout/item_dashboard_finmate" />
+
+                            <!-- Divider -->
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginVertical="8dp"
+                                android:background="#E0E0E0" />
+
+                            <!-- Reusable FinMate Slot 2 -->
+                            <include
+                                android:id="@+id/ledgerItem2"
+                                layout="@layout/item_dashboard_finmate" />
+
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                </LinearLayout>
+            </androidx.core.widget.NestedScrollView>
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+        <!-- Custom Bottom Navigation Bar -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:id="@+id/bottomNavigationWrapper"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="vertical">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="💳" android:textSize="20sp" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cards" android:textColor="#082561" android:textSize="12sp" android:layout_marginTop="4dp" />
+            android:background="#FFFFFF"
+            android:elevation="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingVertical="12dp"
+            android:paddingHorizontal="8dp"
+            android:baselineAligned="false"
+            android:weightSum="4"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent">
+
+            <!-- Nav Item: Dashboard (Active) -->
+            <LinearLayout
+                android:id="@+id/navItemDashboard"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@drawable/active_nav_bg"
+                android:gravity="center"
+                android:orientation="vertical">
+                <ImageView
+                    android:id="@+id/ivNavDashboardIcon"
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:src="@drawable/dashboard" />
+                <TextView
+                    android:id="@+id/tvNavDashboardLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Dashboard"
+                    android:textColor="#1abcab"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Nav Item: Cards -->
+            <LinearLayout
+                android:id="@+id/navItemCards"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+                <ImageView
+                    android:id="@+id/ivNavCardsIcon"
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:src="@drawable/card_nav_bottom"/>
+                <TextView
+                    android:id="@+id/tvNavCardsLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Cards"
+                    android:textColor="#082561"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Nav Item: Ledger -->
+            <LinearLayout
+                android:id="@+id/navItemLedger"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+                <ImageView
+                    android:id="@+id/ivNavLedgerIcon"
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:src="@drawable/finmate"/>
+                <TextView
+                    android:id="@+id/tvNavLedgerLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="FinMates"
+                    android:textColor="#082561"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Nav Item: Reports -->
+            <LinearLayout
+                android:id="@+id/navItemEmi"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+                <ImageView
+                    android:id="@+id/ivNavReportsIcon"
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:src="@drawable/emi"/>
+                <TextView
+                    android:id="@+id/tvNavReportsLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="EMIs"
+                    android:textColor="#082561"
+                    android:textSize="12sp" />
+            </LinearLayout>
         </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <!-- Nav Item: Ledger -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="vertical">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="👥" android:textSize="20sp" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Ledger" android:textColor="#082561" android:textSize="12sp" android:layout_marginTop="4dp" />
-        </LinearLayout>
+    <!-- THE SIDE DRAWER VIEW -->
+    <com.google.android.material.navigation.NavigationView
+        android:id="@+id/navigationView"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:background="#FFFFFF"
+        app:headerLayout="@layout/nav_header"
+        app:menu="@menu/drawer_menu" />
 
-        <!-- Nav Item: Reports -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="vertical">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📊" android:textSize="20sp" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Reports" android:textColor="#082561" android:textSize="12sp" android:layout_marginTop="4dp" />
-        </LinearLayout>
-
-    </LinearLayout>
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.drawerlayout.widget.DrawerLayout>
