@@ -86,9 +86,25 @@
                             android:layout_weight="1"
                             android:gravity="center"
                             android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="💳" android:textSize="24sp" />
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Total Cards" android:textColor="#082561" android:textSize="10sp" android:layout_marginTop="4dp" />
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="2" android:textColor="#082561" android:textSize="14sp" android:textStyle="bold" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="💳"
+                                android:textSize="24sp" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Total Cards"
+                                android:textColor="#082561"
+                                android:textSize="10sp"
+                                android:layout_marginTop="4dp" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="2"
+                                android:textColor="#082561"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
                         </LinearLayout>
 
                         <!-- Total Limit -->
@@ -98,9 +114,25 @@
                             android:layout_weight="1"
                             android:gravity="center"
                             android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="💼" android:textSize="24sp" />
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Total Limit" android:textColor="#082561" android:textSize="10sp" android:layout_marginTop="4dp" />
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="₹3,48,000" android:textColor="#1abcab" android:textSize="14sp" android:textStyle="bold" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="💼"
+                                android:textSize="24sp" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Total Limit"
+                                android:textColor="#082561"
+                                android:textSize="10sp"
+                                android:layout_marginTop="4dp" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="₹3,48,000"
+                                android:textColor="#1abcab"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
                         </LinearLayout>
 
                         <!-- Total Used -->
@@ -110,9 +142,25 @@
                             android:layout_weight="1"
                             android:gravity="center"
                             android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📈" android:textSize="24sp" />
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Total Used" android:textColor="#082561" android:textSize="10sp" android:layout_marginTop="4dp" />
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="₹1,57,480" android:textColor="#082561" android:textSize="14sp" android:textStyle="bold" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="📈"
+                                android:textSize="24sp" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Total Used"
+                                android:textColor="#082561"
+                                android:textSize="10sp"
+                                android:layout_marginTop="4dp" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="₹1,57,480"
+                                android:textColor="#082561"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
                         </LinearLayout>
 
                         <!-- Total Due -->
@@ -122,9 +170,25 @@
                             android:layout_weight="1"
                             android:gravity="center"
                             android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⏳" android:textSize="24sp" />
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Total Due" android:textColor="#082561" android:textSize="10sp" android:layout_marginTop="4dp" />
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="₹26,768" android:textColor="#1abcab" android:textSize="14sp" android:textStyle="bold" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="⏳"
+                                android:textSize="24sp" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Total Due"
+                                android:textColor="#082561"
+                                android:textSize="10sp"
+                                android:layout_marginTop="4dp" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="₹26,768"
+                                android:textColor="#1abcab"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
                         </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -208,9 +272,27 @@
                                 app:layout_constraintEnd_toStartOf="@id/progressHdfc"
                                 app:layout_constraintTop_toTopOf="parent"
                                 app:layout_constraintBottom_toBottomOf="parent">
-                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Card 1: HDFC Regalia" android:textColor="#082561" android:textSize="14sp" android:textStyle="bold" />
-                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Limit: ₹1,93,000  |  Used: ₹65,000" android:textColor="#757575" android:textSize="11sp" android:layout_marginTop="2dp" />
-                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Current Due: ₹12,458 (Due by 15th Aug)" android:textColor="#1abcab" android:textSize="11sp" android:layout_marginTop="2dp" />
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Card 1: HDFC Regalia"
+                                    android:textColor="#082561"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Limit: ₹1,93,000  |  Used: ₹65,000"
+                                    android:textColor="#757575"
+                                    android:textSize="11sp"
+                                    android:layout_marginTop="2dp" />
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Current Due: ₹12,458 (Due by 15th Aug)"
+                                    android:textColor="#1abcab"
+                                    android:textSize="11sp"
+                                    android:layout_marginTop="2dp" />
                             </LinearLayout>
 
                             <RelativeLayout
@@ -251,7 +333,11 @@
                         </androidx.constraintlayout.widget.ConstraintLayout>
 
                         <!-- Divider -->
-                        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E0E0E0" android:layout_marginVertical="8dp"/>
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:background="#E0E0E0"
+                            android:layout_marginVertical="8dp"/>
 
                         <!-- Card 2: SBI -->
                         <androidx.constraintlayout.widget.ConstraintLayout
@@ -288,9 +374,27 @@
                                 app:layout_constraintEnd_toStartOf="@id/progressSbi"
                                 app:layout_constraintTop_toTopOf="parent"
                                 app:layout_constraintBottom_toBottomOf="parent">
-                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Card 2: SBI Cashback" android:textColor="#082561" android:textSize="14sp" android:textStyle="bold" />
-                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Limit: ₹89,000  |  Used: ₹12,000" android:textColor="#757575" android:textSize="11sp" android:layout_marginTop="2dp" />
-                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Current Due: ₹4,298 (Due by 28th Aug)" android:textColor="#1abcab" android:textSize="11sp" android:layout_marginTop="2dp" />
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Card 2: SBI Cashback"
+                                    android:textColor="#082561"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Limit: ₹89,000  |  Used: ₹12,000"
+                                    android:textColor="#757575"
+                                    android:textSize="11sp"
+                                    android:layout_marginTop="2dp" />
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Current Due: ₹4,298 (Due by 28th Aug)"
+                                    android:textColor="#1abcab"
+                                    android:textSize="11sp"
+                                    android:layout_marginTop="2dp" />
                             </LinearLayout>
 
                             <RelativeLayout
@@ -412,9 +516,26 @@
                                 app:layout_constraintEnd_toStartOf="@id/arrowRS"
                                 app:layout_constraintTop_toTopOf="parent"
                                 app:layout_constraintBottom_toBottomOf="parent">
-                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Rahul Sharma" android:textColor="#082561" android:textSize="14sp" android:textStyle="bold" />
-                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Status: Owes you" android:textColor="#1abcab" android:textSize="11sp" android:layout_marginTop="2dp" />
-                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Amount: +₹1,500" android:textColor="#1abcab" android:textSize="11sp" />
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Rahul Sharma"
+                                    android:textColor="#082561"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Status: Owes you"
+                                    android:textColor="#1abcab"
+                                    android:textSize="11sp"
+                                    android:layout_marginTop="2dp" />
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Amount: +₹1,500"
+                                    android:textColor="#1abcab"
+                                    android:textSize="11sp" />
                             </LinearLayout>
 
                             <TextView
@@ -562,7 +683,8 @@
             android:orientation="vertical"
             android:paddingVertical="8dp"
             android:background="@drawable/active_nav_bg"> <!-- Requires a simple shape drawable for the teal rounding -->
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🏠" android:textSize="20sp" />
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🏠" android:textSize="20sp" />
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Dashboard" android:textColor="#1abcab" android:textSize="12sp" android:textStyle="bold" android:layout_marginTop="4dp" />
         </LinearLayout>
 
