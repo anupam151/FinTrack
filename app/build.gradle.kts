@@ -36,6 +36,7 @@ dependencies {
     // Replaced hardcoded strings with version catalog references
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
 
     implementation(libs.activity.ktx)
     implementation(libs.appcompat)

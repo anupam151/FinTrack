@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">FinTrack</string>
+    <string name="fintrack_app_logo">FinTrack App Logo</string>
+    <string name="welcome_to_fintrack">Welcome to FinTrack</string>
+    <string name="sign_in_text">Sign in with Google to continue</string>
+    <string name="continue_with_google">Continue with Google</string>
 </resources>
