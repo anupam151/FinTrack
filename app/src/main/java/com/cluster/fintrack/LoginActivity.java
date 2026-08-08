@@ -24,6 +24,11 @@ import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @SuppressWarnings("deprecation")
 public class LoginActivity extends AppCompatActivity {
@@ -115,9 +120,26 @@ public class LoginActivity extends AppCompatActivity {
                 });
     }
 
-    // 7. Navigate to MainActivity upon success
+    // 7. Navigate to MainActivity upon success AND create the Firestore User Document
     private void updateUI(FirebaseUser user) {
         if (user != null) {
+            String userId = user.getUid();
+            String userEmail = user.getEmail();
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+            // Prepare the User Document Data
+            Map<String, Object> userData = new HashMap<>();
+            if (userEmail != null) {
+                userData.put("email", userEmail);
+            }
+            userData.put("lastLogin", System.currentTimeMillis());
+
+            // Save to Firestore using merge() so it doesn't overwrite existing sub-collections
+            db.collection("Users").document(userId)
+                    .set(userData, SetOptions.merge())
+                    .addOnFailureListener(e -> Log.w(TAG, "Error writing user document", e));
+
+            // Navigate to Dashboard immediately (don't wait for Firestore to finish syncing)
             Intent intent = new Intent(LoginActivity.this, MainActivity.class);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             startActivity(intent);
