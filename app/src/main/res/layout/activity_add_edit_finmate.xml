@@ -31,9 +31,8 @@
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:padding="4dp"
-            android:src="@android:drawable/ic_menu_revert"
-            app:tint="#082561" />
+            android:padding="2dp"
+            android:src="@drawable/back" />
 
         <TextView
             android:id="@+id/tvFinMateFormTitle"
