@@ -25,6 +25,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 public class FinMatesActivity extends AppCompatActivity {
 
@@ -159,11 +160,11 @@ public class FinMatesActivity extends AppCompatActivity {
 
         // Link to class-level variables so the Contact Picker can fill them when returning
         currentEtFinMateName = view.findViewById(R.id.etSheetFinMateName);
-        currentEtWhatsAppNo = view.findViewById(R.id.etSheetContactNo); // Updated ID
+        currentEtWhatsAppNo = view.findViewById(R.id.etSheetContactNo);
 
         TextInputEditText etEmail = view.findViewById(R.id.etSheetEmail);
         TextInputEditText etAddress = view.findViewById(R.id.etSheetAddress);
-        RadioGroup radioGroupWhatsApp = view.findViewById(R.id.radioGroupWhatsApp); // Radio Group Binding
+        RadioGroup radioGroupWhatsApp = view.findViewById(R.id.radioGroupWhatsApp);
         MaterialButton btnSave = view.findViewById(R.id.btnSheetSaveFinMate);
 
         title.setText("Add FinMate");
@@ -208,36 +209,35 @@ public class FinMatesActivity extends AppCompatActivity {
             boolean isWhatsApp = (selectedId == R.id.radioYes);
             String finalWhatsAppNo = isWhatsApp ? contactNo : "";
 
-            // Firebase Integration
+            // Firestore Integration
             if (FirebaseAuth.getInstance().getCurrentUser() == null) {
                 Toast.makeText(this, "Error: User not logged in!", Toast.LENGTH_SHORT).show();
                 return;
             }
 
             String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-            com.google.firebase.database.DatabaseReference finMatesRef = com.google.firebase.database.FirebaseDatabase.getInstance().getReference("Users").child(userId).child("FinMates");
-
-            String newFinMateId = finMatesRef.push().getKey();
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            String newFinMateId = db.collection("Users").document(userId).collection("FinMates").document().getId();
 
             // Build the new FinMate object
             FinMate newFinMate = new FinMate(newFinMateId, name, contactNo, finalWhatsAppNo, email, address, System.currentTimeMillis());
 
-            if (newFinMateId != null) {
-                btnSave.setEnabled(false);
-                btnSave.setText("Saving...");
+            btnSave.setEnabled(false);
+            btnSave.setText("Saving...");
 
-                finMatesRef.child(newFinMateId).setValue(newFinMate).addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        Toast.makeText(this, "FinMate Saved Successfully!", Toast.LENGTH_SHORT).show();
-                        dialog.dismiss();
-                    } else {
-                        String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error occurred";
-                        Toast.makeText(this, "Failed to save: " + errorMessage, Toast.LENGTH_SHORT).show();
-                        btnSave.setEnabled(true);
-                        btnSave.setText("Save FinMate");
-                    }
-                });
-            }
+            db.collection("Users").document(userId).collection("FinMates").document(newFinMateId)
+                    .set(newFinMate)
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            Toast.makeText(this, "FinMate Saved Successfully!", Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                        } else {
+                            String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error occurred";
+                            Toast.makeText(this, "Failed to save: " + errorMessage, Toast.LENGTH_SHORT).show();
+                            btnSave.setEnabled(true);
+                            btnSave.setText("Save FinMate");
+                        }
+                    });
         });
 
         dialog.show();

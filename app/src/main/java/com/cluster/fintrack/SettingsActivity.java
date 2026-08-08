@@ -27,6 +27,7 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 @SuppressWarnings("deprecation")
 public class SettingsActivity extends AppCompatActivity {
@@ -252,28 +253,27 @@ public class SettingsActivity extends AppCompatActivity {
             }
 
             String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-            com.google.firebase.database.DatabaseReference cardsRef = com.google.firebase.database.FirebaseDatabase.getInstance().getReference("Users").child(userId).child("Cards");
-
-            String newCardId = cardsRef.push().getKey();
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            String newCardId = db.collection("Users").document(userId).collection("Cards").document().getId();
 
             Card newCard = new Card(newCardId, bankName, cardName, totalLimit, billingDay, themeColorHex, System.currentTimeMillis());
 
-            if (newCardId != null) {
-                btnSave.setEnabled(false);
-                btnSave.setText("Saving...");
+            btnSave.setEnabled(false);
+            btnSave.setText("Saving...");
 
-                cardsRef.child(newCardId).setValue(newCard).addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        Toast.makeText(this, "Card Saved Successfully!", Toast.LENGTH_SHORT).show();
-                        dialog.dismiss();
-                    } else {
-                        String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error occurred";
-                        Toast.makeText(this, "Failed to save: " + errorMessage, Toast.LENGTH_SHORT).show();
-                        btnSave.setEnabled(true);
-                        btnSave.setText("Save Card");
-                    }
-                });
-            }
+            db.collection("Users").document(userId).collection("Cards").document(newCardId)
+                    .set(newCard)
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            Toast.makeText(this, "Card Saved Successfully!", Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                        } else {
+                            String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error occurred";
+                            Toast.makeText(this, "Failed to save: " + errorMessage, Toast.LENGTH_SHORT).show();
+                            btnSave.setEnabled(true);
+                            btnSave.setText("Save Card");
+                        }
+                    });
         });
 
         dialog.show();
@@ -285,23 +285,20 @@ public class SettingsActivity extends AppCompatActivity {
         View view = getLayoutInflater().inflate(R.layout.dialog_add_edit_finmate, findViewById(android.R.id.content), false);
         dialog.setContentView(view);
 
-        // Bindings
         TextView title = view.findViewById(R.id.tvSheetTitle);
         TextView btnImportContact = view.findViewById(R.id.btnImportContact);
 
-        // Link to class-level variables so the Contact Picker can fill them when returning
         currentEtFinMateName = view.findViewById(R.id.etSheetFinMateName);
-        currentEtWhatsAppNo = view.findViewById(R.id.etSheetContactNo); // Updated ID
+        currentEtWhatsAppNo = view.findViewById(R.id.etSheetContactNo);
 
         TextInputEditText etEmail = view.findViewById(R.id.etSheetEmail);
         TextInputEditText etAddress = view.findViewById(R.id.etSheetAddress);
-        RadioGroup radioGroupWhatsApp = view.findViewById(R.id.radioGroupWhatsApp); // Radio Group Binding
+        RadioGroup radioGroupWhatsApp = view.findViewById(R.id.radioGroupWhatsApp);
         MaterialButton btnSave = view.findViewById(R.id.btnSheetSaveFinMate);
 
         title.setText("Add FinMate");
         btnSave.setText("Save FinMate");
 
-        // Contact Picker Logic
         btnImportContact.setOnClickListener(v -> {
             if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CONTACTS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 launchContactPicker();
@@ -310,66 +307,58 @@ public class SettingsActivity extends AppCompatActivity {
             }
         });
 
-        // Save Logic
         btnSave.setOnClickListener(v -> {
             String name = String.valueOf(currentEtFinMateName.getText()).trim();
             String contactNo = String.valueOf(currentEtWhatsAppNo.getText()).trim();
             String email = String.valueOf(etEmail.getText()).trim();
             String address = String.valueOf(etAddress.getText()).trim();
 
-            // 1. Name Validation
             if (TextUtils.isEmpty(name)) {
                 currentEtFinMateName.setError("Enter Name");
                 return;
             }
 
-            // 2. Contact Number Validation
             if (TextUtils.isEmpty(contactNo) || contactNo.length() < 10) {
                 currentEtWhatsAppNo.setError("Enter valid 10-digit number");
                 return;
             }
 
-            // 3. WhatsApp Choice Validation (Must explicitly select Yes or No)
             int selectedId = radioGroupWhatsApp.getCheckedRadioButtonId();
             if (selectedId == -1) {
                 Toast.makeText(this, "Please select if this number is on WhatsApp", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            // Determine if WhatsApp button should appear on dashboard
             boolean isWhatsApp = (selectedId == R.id.radioYes);
             String finalWhatsAppNo = isWhatsApp ? contactNo : "";
 
-            // Firebase Integration
             if (FirebaseAuth.getInstance().getCurrentUser() == null) {
                 Toast.makeText(this, "Error: User not logged in!", Toast.LENGTH_SHORT).show();
                 return;
             }
 
             String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-            com.google.firebase.database.DatabaseReference finMatesRef = com.google.firebase.database.FirebaseDatabase.getInstance().getReference("Users").child(userId).child("FinMates");
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            String newFinMateId = db.collection("Users").document(userId).collection("FinMates").document().getId();
 
-            String newFinMateId = finMatesRef.push().getKey();
-
-            // Build the new FinMate object
             FinMate newFinMate = new FinMate(newFinMateId, name, contactNo, finalWhatsAppNo, email, address, System.currentTimeMillis());
 
-            if (newFinMateId != null) {
-                btnSave.setEnabled(false);
-                btnSave.setText("Saving...");
+            btnSave.setEnabled(false);
+            btnSave.setText("Saving...");
 
-                finMatesRef.child(newFinMateId).setValue(newFinMate).addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        Toast.makeText(this, "FinMate Saved Successfully!", Toast.LENGTH_SHORT).show();
-                        dialog.dismiss();
-                    } else {
-                        String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error occurred";
-                        Toast.makeText(this, "Failed to save: " + errorMessage, Toast.LENGTH_SHORT).show();
-                        btnSave.setEnabled(true);
-                        btnSave.setText("Save FinMate");
-                    }
-                });
-            }
+            db.collection("Users").document(userId).collection("FinMates").document(newFinMateId)
+                    .set(newFinMate)
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            Toast.makeText(this, "FinMate Saved Successfully!", Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                        } else {
+                            String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error occurred";
+                            Toast.makeText(this, "Failed to save: " + errorMessage, Toast.LENGTH_SHORT).show();
+                            btnSave.setEnabled(true);
+                            btnSave.setText("Save FinMate");
+                        }
+                    });
         });
 
         dialog.show();

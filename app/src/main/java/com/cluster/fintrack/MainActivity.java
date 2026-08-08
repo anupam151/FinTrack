@@ -12,7 +12,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.core.view.ViewCompat;
@@ -31,11 +30,8 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -108,34 +104,12 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout navItemLedger = findViewById(R.id.navItemLedger);
         LinearLayout navSetings = findViewById(R.id.navSetings);
 
-        LinearLayout layoutEmptyCards = findViewById(R.id.layoutEmptyCards);
-        LinearLayout layoutCardsContainer = findViewById(R.id.layoutCardsContainer);
-        View cardItem1 = findViewById(R.id.cardItem1);
-        View cardDivider = findViewById(R.id.cardDivider);
-        View cardItem2 = findViewById(R.id.cardItem2);
-
         TextView btnAddCardEmpty = findViewById(R.id.btnAddCardEmpty);
         TextView btnAddFinMateEmpty = findViewById(R.id.btnAddFinMateEmpty);
 
-        int totalCards = getSimulatedTotalCards();
-        if (totalCards == 0) {
-            layoutEmptyCards.setVisibility(View.VISIBLE);
-            layoutCardsContainer.setVisibility(View.GONE);
-        } else {
-            layoutEmptyCards.setVisibility(View.GONE);
-            layoutCardsContainer.setVisibility(View.VISIBLE);
-            cardItem1.setVisibility(View.VISIBLE);
-            if (totalCards == 1) {
-                cardDivider.setVisibility(View.GONE);
-                cardItem2.setVisibility(View.GONE);
-            } else {
-                cardDivider.setVisibility(View.VISIBLE);
-                cardItem2.setVisibility(View.VISIBLE);
-            }
-        }
-
-        // Call our real-time Firebase FinMates loader!
-        loadFinMatesFromFirebase();
+        // Load live Firestore data for Cards and FinMates
+        loadCardsFromFirestore();
+        loadFinMatesFromFirestore();
 
         ivMenuDrawer.setOnClickListener(v -> {
             if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
@@ -183,9 +157,6 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(MainActivity.this, "Refreshing financial ledger...", Toast.LENGTH_SHORT).show();
             swipeRefresh.postDelayed(() -> swipeRefresh.setRefreshing(false), 1500);
         });
-
-        cardItem1.setOnClickListener(v -> Toast.makeText(MainActivity.this, "Clicked Card Slot 1", Toast.LENGTH_SHORT).show());
-        cardItem2.setOnClickListener(v -> Toast.makeText(MainActivity.this, "Clicked Card Slot 2", Toast.LENGTH_SHORT).show());
 
         btnAddCard.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, CardsActivity.class);
@@ -321,28 +292,27 @@ public class MainActivity extends AppCompatActivity {
             }
 
             String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-            DatabaseReference cardsRef = FirebaseDatabase.getInstance().getReference("Users").child(userId).child("Cards");
-
-            String newCardId = cardsRef.push().getKey();
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            String newCardId = db.collection("Users").document(userId).collection("Cards").document().getId();
 
             Card newCard = new Card(newCardId, bankName, cardName, totalLimit, billingDay, themeColorHex, System.currentTimeMillis());
 
-            if (newCardId != null) {
-                btnSave.setEnabled(false);
-                btnSave.setText("Saving...");
+            btnSave.setEnabled(false);
+            btnSave.setText("Saving...");
 
-                cardsRef.child(newCardId).setValue(newCard).addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        Toast.makeText(this, "Card Saved Successfully!", Toast.LENGTH_SHORT).show();
-                        dialog.dismiss();
-                    } else {
-                        String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error occurred";
-                        Toast.makeText(this, "Failed to save: " + errorMessage, Toast.LENGTH_SHORT).show();
-                        btnSave.setEnabled(true);
-                        btnSave.setText("Save Card");
-                    }
-                });
-            }
+            db.collection("Users").document(userId).collection("Cards").document(newCardId)
+                    .set(newCard)
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            Toast.makeText(this, "Card Saved Successfully!", Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                        } else {
+                            String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error occurred";
+                            Toast.makeText(this, "Failed to save: " + errorMessage, Toast.LENGTH_SHORT).show();
+                            btnSave.setEnabled(true);
+                            btnSave.setText("Save Card");
+                        }
+                    });
         });
 
         dialog.show();
@@ -407,79 +377,117 @@ public class MainActivity extends AppCompatActivity {
             }
 
             String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-            DatabaseReference finMatesRef = FirebaseDatabase.getInstance().getReference("Users").child(userId).child("FinMates");
-
-            String newFinMateId = finMatesRef.push().getKey();
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            String newFinMateId = db.collection("Users").document(userId).collection("FinMates").document().getId();
 
             FinMate newFinMate = new FinMate(newFinMateId, name, contactNo, finalWhatsAppNo, email, address, System.currentTimeMillis());
 
-            if (newFinMateId != null) {
-                btnSave.setEnabled(false);
-                btnSave.setText("Saving...");
+            btnSave.setEnabled(false);
+            btnSave.setText("Saving...");
 
-                finMatesRef.child(newFinMateId).setValue(newFinMate).addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        Toast.makeText(this, "FinMate Saved Successfully!", Toast.LENGTH_SHORT).show();
-                        dialog.dismiss();
-                    } else {
-                        String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error occurred";
-                        Toast.makeText(this, "Failed to save: " + errorMessage, Toast.LENGTH_SHORT).show();
-                        btnSave.setEnabled(true);
-                        btnSave.setText("Save FinMate");
-                    }
-                });
-            }
+            db.collection("Users").document(userId).collection("FinMates").document(newFinMateId)
+                    .set(newFinMate)
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            Toast.makeText(this, "FinMate Saved Successfully!", Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                        } else {
+                            String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error occurred";
+                            Toast.makeText(this, "Failed to save: " + errorMessage, Toast.LENGTH_SHORT).show();
+                            btnSave.setEnabled(true);
+                            btnSave.setText("Save FinMate");
+                        }
+                    });
         });
 
         dialog.show();
     }
 
-    private void loadFinMatesFromFirebase() {
+    @SuppressLint("NotifyDataSetChanged")
+    private void loadCardsFromFirestore() {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null) return;
 
         String userId = currentUser.getUid();
-        DatabaseReference finMatesRef = FirebaseDatabase.getInstance().getReference("Users").child(userId).child("FinMates");
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        LinearLayout layoutEmptyCards = findViewById(R.id.layoutEmptyCards);
+        RecyclerView recyclerViewCards = findViewById(R.id.recyclerViewCards);
+        recyclerViewCards.setLayoutManager(new LinearLayoutManager(this));
+
+        List<Card> cardList = new ArrayList<>();
+        CardAdapter adapter = new CardAdapter(this, cardList);
+        recyclerViewCards.setAdapter(adapter);
+
+        db.collection("Users").document(userId).collection("Cards")
+                .addSnapshotListener((snapshot, error) -> {
+                    if (error != null) {
+                        Toast.makeText(MainActivity.this, "Failed to load cards: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    cardList.clear();
+                    if (snapshot != null) {
+                        for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                            Card card = doc.toObject(Card.class);
+                            if (card != null) {
+                                cardList.add(card);
+                            }
+                        }
+                    }
+
+                    if (cardList.isEmpty()) {
+                        layoutEmptyCards.setVisibility(View.VISIBLE);
+                        recyclerViewCards.setVisibility(View.GONE);
+                    } else {
+                        layoutEmptyCards.setVisibility(View.GONE);
+                        recyclerViewCards.setVisibility(View.VISIBLE);
+                        adapter.notifyDataSetChanged();
+                    }
+                });
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    private void loadFinMatesFromFirestore() {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) return;
+
+        String userId = currentUser.getUid();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
 
         LinearLayout layoutEmptyFinMates = findViewById(R.id.layoutEmptyFinMates);
         RecyclerView recyclerViewFinMates = findViewById(R.id.recyclerViewFinMates);
-
         recyclerViewFinMates.setLayoutManager(new LinearLayoutManager(this));
 
         List<FinMate> finMateList = new ArrayList<>();
         FinMateAdapter adapter = new FinMateAdapter(this, finMateList);
         recyclerViewFinMates.setAdapter(adapter);
 
-        finMatesRef.addValueEventListener(new ValueEventListener() {
-            @SuppressLint("NotifyDataSetChanged")
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                finMateList.clear();
-                for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
-                    FinMate finMate = dataSnapshot.getValue(FinMate.class);
-                    if (finMate != null) {
-                        finMateList.add(finMate);
+        db.collection("Users").document(userId).collection("FinMates")
+                .addSnapshotListener((snapshot, error) -> {
+                    if (error != null) {
+                        Toast.makeText(MainActivity.this, "Failed to load FinMates: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                        return;
                     }
-                }
 
-                if (finMateList.isEmpty()) {
-                    layoutEmptyFinMates.setVisibility(View.VISIBLE);
-                    recyclerViewFinMates.setVisibility(View.GONE);
-                } else {
-                    layoutEmptyFinMates.setVisibility(View.GONE);
-                    recyclerViewFinMates.setVisibility(View.VISIBLE);
-                    adapter.notifyDataSetChanged();
-                }
-            }
+                    finMateList.clear();
+                    if (snapshot != null) {
+                        for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                            FinMate finMate = doc.toObject(FinMate.class);
+                            if (finMate != null) {
+                                finMateList.add(finMate);
+                            }
+                        }
+                    }
 
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(MainActivity.this, "Failed to load FinMates: " + error.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    private int getSimulatedTotalCards() {
-        return 0;
+                    if (finMateList.isEmpty()) {
+                        layoutEmptyFinMates.setVisibility(View.VISIBLE);
+                        recyclerViewFinMates.setVisibility(View.GONE);
+                    } else {
+                        layoutEmptyFinMates.setVisibility(View.GONE);
+                        recyclerViewFinMates.setVisibility(View.VISIBLE);
+                        adapter.notifyDataSetChanged();
+                    }
+                });
     }
 }

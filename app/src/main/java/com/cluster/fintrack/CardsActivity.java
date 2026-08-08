@@ -23,6 +23,8 @@ import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 public class CardsActivity extends AppCompatActivity {
 
@@ -86,54 +88,85 @@ public class CardsActivity extends AppCompatActivity {
         View view = getLayoutInflater().inflate(R.layout.dialog_add_edit_card, findViewById(android.R.id.content), false);
         dialog.setContentView(view);
 
-        // Standard Fields
         TextView title = view.findViewById(R.id.tvCardSheetTitle);
+        com.google.android.material.textfield.MaterialAutoCompleteTextView spinBankName = view.findViewById(R.id.spinSheetBankName);
         TextInputEditText etCardName = view.findViewById(R.id.etSheetCardName);
-        MaterialButton btnSave = view.findViewById(R.id.btnSheetSaveCard);
+        TextInputEditText etTotalLimit = view.findViewById(R.id.etSheetTotalLimit);
+        TextInputEditText etBillingDay = view.findViewById(R.id.etSheetBillingDay);
 
-        // Color Picker Fields
         com.google.android.material.card.MaterialCardView cardColorPreview = view.findViewById(R.id.cardColorPreview);
         MaterialButton btnPickColor = view.findViewById(R.id.btnPickColor);
+        TextView btnResetColor = view.findViewById(R.id.btnResetColor);
+        MaterialButton btnSave = view.findViewById(R.id.btnSheetSaveCard);
 
         title.setText("Add Credit Card");
         btnSave.setText("Save Card");
 
-        // 1. Set the default starting color (Navy Blue: #082561)
-        // We use an array so we can modify it inside the lambda/click listener
         final int[] currentColor = {android.graphics.Color.parseColor("#082561")};
+        final int defaultColor = android.graphics.Color.parseColor("#082561");
 
-        // 2. Open the Color Picker when the button is clicked
         btnPickColor.setOnClickListener(v -> {
             yuku.ambilwarna.AmbilWarnaDialog colorPickerDialog = new yuku.ambilwarna.AmbilWarnaDialog(this, currentColor[0], new yuku.ambilwarna.AmbilWarnaDialog.OnAmbilWarnaListener() {
                 @Override
-                public void onCancel(yuku.ambilwarna.AmbilWarnaDialog dialog) {
-                    // User canceled, do nothing
-                }
+                public void onCancel(yuku.ambilwarna.AmbilWarnaDialog dialog) {}
 
                 @Override
                 public void onOk(yuku.ambilwarna.AmbilWarnaDialog dialog, int color) {
-                    // Update our color variable
                     currentColor[0] = color;
-                    // Update the preview box UI instantly
                     cardColorPreview.setCardBackgroundColor(color);
                 }
             });
             colorPickerDialog.show();
         });
 
-        // 3. Save button logic
+        btnResetColor.setOnClickListener(v -> {
+            currentColor[0] = defaultColor;
+            cardColorPreview.setCardBackgroundColor(defaultColor);
+        });
+
         btnSave.setOnClickListener(v -> {
-            String name = String.valueOf(etCardName.getText()).trim();
-            if (TextUtils.isEmpty(name)) {
-                etCardName.setError("Enter Card Name");
+            String bankName = String.valueOf(spinBankName.getText()).trim();
+            String cardName = String.valueOf(etCardName.getText()).trim();
+            String limitStr = String.valueOf(etTotalLimit.getText()).trim();
+            String billingDayStr = String.valueOf(etBillingDay.getText()).trim();
+
+            if (TextUtils.isEmpty(bankName)) { spinBankName.setError("Required"); return; }
+            if (TextUtils.isEmpty(cardName)) { etCardName.setError("Required"); return; }
+            if (TextUtils.isEmpty(limitStr)) { etTotalLimit.setError("Required"); return; }
+            if (TextUtils.isEmpty(billingDayStr)) { etBillingDay.setError("Required"); return; }
+
+            double totalLimit = Double.parseDouble(limitStr);
+            int billingDay = Integer.parseInt(billingDayStr);
+
+            String themeColorHex = String.format("#%06X", (0xFFFFFF & currentColor[0]));
+
+            if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+                Toast.makeText(this, "Error: User not logged in!", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            // Convert the integer color back to a Hex String (e.g., "#082561") so it's easy to save to Firebase later
-            String hexColor = String.format("#%06X", (0xFFFFFF & currentColor[0]));
+            String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            String newCardId = db.collection("Users").document(userId).collection("Cards").document().getId();
 
-            Toast.makeText(this, "Card Saved! Color: " + hexColor, Toast.LENGTH_SHORT).show();
-            dialog.dismiss();
+            Card newCard = new Card(newCardId, bankName, cardName, totalLimit, billingDay, themeColorHex, System.currentTimeMillis());
+
+            btnSave.setEnabled(false);
+            btnSave.setText("Saving...");
+
+            db.collection("Users").document(userId).collection("Cards").document(newCardId)
+                    .set(newCard)
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            Toast.makeText(this, "Card Saved Successfully!", Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                        } else {
+                            String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error occurred";
+                            Toast.makeText(this, "Failed to save: " + errorMessage, Toast.LENGTH_SHORT).show();
+                            btnSave.setEnabled(true);
+                            btnSave.setText("Save Card");
+                        }
+                    });
         });
 
         dialog.show();

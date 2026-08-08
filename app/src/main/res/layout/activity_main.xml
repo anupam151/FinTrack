@@ -228,7 +228,7 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- SECTION 1: My Credit Cards (Max 2 Recent Items) -->
+                    <!-- SECTION 1: My Credit Cards -->
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -259,7 +259,6 @@
                                     android:textSize="14sp"
                                     android:textStyle="bold" />
 
-                                <!-- Modern Minimalist More Button -->
                                 <TextView
                                     android:id="@+id/btnAddCard"
                                     android:layout_width="wrap_content"
@@ -274,7 +273,7 @@
                                     android:textStyle="bold" />
                             </RelativeLayout>
 
-                            <!-- Empty State: No Cards (Vertical Layout with Button Below) -->
+                            <!-- Empty State: No Cards -->
                             <LinearLayout
                                 android:id="@+id/layoutEmptyCards"
                                 android:layout_width="match_parent"
@@ -307,25 +306,19 @@
                                     android:textStyle="bold" />
                             </LinearLayout>
 
-                            <!-- Cards Container (Hidden by default) -->
-                            <LinearLayout
-                                android:id="@+id/layoutCardsContainer"
+                            <!-- Live Firestore Cards RecyclerView (Fixed) -->
+                            <androidx.recyclerview.widget.RecyclerView
+                                android:id="@+id/recyclerViewCards"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                android:visibility="gone">
-
-                                <include android:id="@+id/cardItem1" layout="@layout/item_dashboard_card" />
-
-                                <View android:id="@+id/cardDivider" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="8dp" android:background="#E0E0E0" />
-
-                                <include android:id="@+id/cardItem2" layout="@layout/item_dashboard_card" />
-                            </LinearLayout>
+                                android:nestedScrollingEnabled="false"
+                                android:visibility="gone"
+                                tools:listitem="@layout/item_dashboard_card" />
 
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- SECTION 2: Borrower/Lender Ledger (Max 2 Recent Items) -->
+                    <!-- SECTION 2: Borrower/Lender Ledger -->
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -357,7 +350,6 @@
                                     android:textSize="14sp"
                                     android:textStyle="bold" />
 
-                                <!-- Modern Minimalist More Button -->
                                 <TextView
                                     android:id="@+id/btnAddPerson"
                                     android:layout_width="wrap_content"
@@ -372,7 +364,7 @@
                                     android:textStyle="bold" />
                             </RelativeLayout>
 
-                            <!-- Empty State: No FinMates (Vertical Layout with Button Below) -->
+                            <!-- Empty State: No FinMates -->
                             <LinearLayout
                                 android:id="@+id/layoutEmptyFinMates"
                                 android:layout_width="match_parent"
@@ -405,7 +397,7 @@
                                     android:textStyle="bold" />
                             </LinearLayout>
 
-                            <!-- FinMates Container (Hidden by default) -->
+                            <!-- FinMates Container -->
                             <androidx.recyclerview.widget.RecyclerView
                                 android:id="@+id/recyclerViewFinMates"
                                 android:layout_width="match_parent"
