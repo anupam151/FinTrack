@@ -83,24 +83,56 @@ public class CardsActivity extends AppCompatActivity {
     @SuppressLint("SetTextI18n")
     private void showAddCardBottomSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
-        // Resolves layout parameters properly without passing null
         View view = getLayoutInflater().inflate(R.layout.dialog_add_edit_card, findViewById(android.R.id.content), false);
         dialog.setContentView(view);
 
+        // Standard Fields
         TextView title = view.findViewById(R.id.tvCardSheetTitle);
         TextInputEditText etCardName = view.findViewById(R.id.etSheetCardName);
         MaterialButton btnSave = view.findViewById(R.id.btnSheetSaveCard);
 
+        // Color Picker Fields
+        com.google.android.material.card.MaterialCardView cardColorPreview = view.findViewById(R.id.cardColorPreview);
+        MaterialButton btnPickColor = view.findViewById(R.id.btnPickColor);
+
         title.setText("Add Credit Card");
         btnSave.setText("Save Card");
 
+        // 1. Set the default starting color (Navy Blue: #082561)
+        // We use an array so we can modify it inside the lambda/click listener
+        final int[] currentColor = {android.graphics.Color.parseColor("#082561")};
+
+        // 2. Open the Color Picker when the button is clicked
+        btnPickColor.setOnClickListener(v -> {
+            yuku.ambilwarna.AmbilWarnaDialog colorPickerDialog = new yuku.ambilwarna.AmbilWarnaDialog(this, currentColor[0], new yuku.ambilwarna.AmbilWarnaDialog.OnAmbilWarnaListener() {
+                @Override
+                public void onCancel(yuku.ambilwarna.AmbilWarnaDialog dialog) {
+                    // User canceled, do nothing
+                }
+
+                @Override
+                public void onOk(yuku.ambilwarna.AmbilWarnaDialog dialog, int color) {
+                    // Update our color variable
+                    currentColor[0] = color;
+                    // Update the preview box UI instantly
+                    cardColorPreview.setCardBackgroundColor(color);
+                }
+            });
+            colorPickerDialog.show();
+        });
+
+        // 3. Save button logic
         btnSave.setOnClickListener(v -> {
             String name = String.valueOf(etCardName.getText()).trim();
             if (TextUtils.isEmpty(name)) {
                 etCardName.setError("Enter Card Name");
                 return;
             }
-            Toast.makeText(this, "Card Saved!", Toast.LENGTH_SHORT).show();
+
+            // Convert the integer color back to a Hex String (e.g., "#082561") so it's easy to save to Firebase later
+            String hexColor = String.format("#%06X", (0xFFFFFF & currentColor[0]));
+
+            Toast.makeText(this, "Card Saved! Color: " + hexColor, Toast.LENGTH_SHORT).show();
             dialog.dismiss();
         });
 

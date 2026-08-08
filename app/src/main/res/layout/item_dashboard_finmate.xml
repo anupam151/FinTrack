@@ -8,15 +8,17 @@
     android:background="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true"
-    android:paddingVertical="8dp"
+    android:paddingVertical="12dp"
+    android:paddingHorizontal="4dp"
     tools:ignore="HardcodedText, TooManyViews, SmallSp, ContentDescription, UseCompoundDrawables, TooDeepLayout">
 
+    <!-- Avatar -->
     <androidx.cardview.widget.CardView
         android:id="@+id/finmateAvatarContainer"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
         app:cardBackgroundColor="#1abcab"
-        app:cardCornerRadius="20dp"
+        app:cardCornerRadius="22dp"
         app:cardElevation="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -29,17 +31,19 @@
             android:gravity="center"
             android:text="AB"
             android:textColor="#FFFFFF"
-            android:textSize="14sp"
+            android:textSize="16sp"
             android:textStyle="bold" />
     </androidx.cardview.widget.CardView>
 
+    <!-- Details Section -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
+        android:layout_marginStart="14dp"
+        android:layout_marginEnd="12dp"
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/ivFinmateArrow"
+        app:layout_constraintEnd_toStartOf="@id/ivWhatsApp"
         app:layout_constraintStart_toEndOf="@id/finmateAvatarContainer"
         app:layout_constraintTop_toTopOf="parent">
 
@@ -48,35 +52,87 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Person Name"
-            android:textColor="#082561"
-            android:textSize="14sp"
+            android:textColor="#101828"
+            android:textSize="15sp"
             android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/tvFinmateStatus"
+        <!-- Receivable Row -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Receivable: "
+                android:textColor="#667085"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tvFinmateReceivable"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="₹0"
+                android:textColor="#388E3C"
+                android:textStyle="bold"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Payable Row -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Status: Owed"
-            android:textColor="#1abcab"
-            android:textSize="11sp" />
+            android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/tvFinmateAmount"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Amount: ₹0"
-            android:textColor="#1abcab"
-            android:textSize="11sp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Payable: "
+                android:textColor="#667085"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tvFinmatePayable"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="₹0"
+                android:textColor="#D32F2F"
+                android:textStyle="bold"
+                android:textSize="12sp" />
+        </LinearLayout>
     </LinearLayout>
 
+    <!-- WhatsApp Button (Hidden by default in your Java code if no number exists) -->
+    <ImageView
+        android:id="@+id/ivWhatsApp"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginEnd="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="0dp"
+        android:src="@drawable/whatsapp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/ivFinmateArrow"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="visible" />
+    <!-- NOTE: I used a standard Android call icon colored in WhatsApp green.
+         If you want a real WhatsApp logo later, just swap the android:src tag to your own drawable. -->
+
+    <!-- Arrow icon -->
     <TextView
         android:id="@+id/ivFinmateArrow"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginEnd="4dp"
         android:text=">"
-        android:textColor="#082561"
+        android:textColor="#98A2B3"
         android:textSize="18sp"
+        android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />

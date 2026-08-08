@@ -9,7 +9,9 @@ activityKtx = "1.13.0"
 constraintlayout = "2.2.2"
 firebaseBom = "34.17.0"
 playServicesAuth = "21.6.0"
-swipeRefresh = "1.1.0"
+swipeRefresh = "1.2.0"
+firebaseDatabase = "22.0.1"
+ambilwarna = "2.0.1"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -24,6 +26,8 @@ firebase-firestore = { module = "com.google.firebase:firebase-firestore" }
 firebase-auth = { module = "com.google.firebase:firebase-auth" }
 play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
 androidx-swiperefreshlayout = { module = "androidx.swiperefreshlayout:swiperefreshlayout", version.ref = "swipeRefresh" }
+firebase-database = { group = "com.google.firebase", name = "firebase-database", version.ref = "firebaseDatabase" }
+ambilwarna = { group = "com.github.yukuku", name = "ambilwarna", version.ref = "ambilwarna" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

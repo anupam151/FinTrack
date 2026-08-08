@@ -24,8 +24,8 @@
             android:background="#FFFFFF"
             android:elevation="6dp"
             android:paddingHorizontal="16dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
@@ -46,7 +46,7 @@
                 android:id="@+id/tvAppTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="15dp"
                 android:text="Dashboard"
                 android:textColor="#082561"
                 android:textSize="22sp"
@@ -406,19 +406,13 @@
                             </LinearLayout>
 
                             <!-- FinMates Container (Hidden by default) -->
-                            <LinearLayout
-                                android:id="@+id/layoutFinMatesContainer"
+                            <androidx.recyclerview.widget.RecyclerView
+                                android:id="@+id/recyclerViewFinMates"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                android:visibility="gone">
-
-                                <include android:id="@+id/ledgerItem1" layout="@layout/item_dashboard_finmate" />
-
-                                <View android:id="@+id/ledgerDivider" android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="8dp" android:background="#E0E0E0" />
-
-                                <include android:id="@+id/ledgerItem2" layout="@layout/item_dashboard_finmate" />
-                            </LinearLayout>
+                                android:nestedScrollingEnabled="false"
+                                android:visibility="gone"
+                                tools:listitem="@layout/item_dashboard_finmate" />
 
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
