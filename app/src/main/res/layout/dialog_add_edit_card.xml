@@ -1,75 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/mainAddEditCard"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
     android:background="#FFFFFF"
-    tools:context=".AddEditCardActivity"
+    android:orientation="vertical"
     tools:ignore="HardcodedText, ContentDescription">
 
-    <!-- FIXED TOP APP BAR (Changed to LinearLayout to prevent overlap) -->
-    <LinearLayout
-        android:id="@+id/topAppBarContainer"
+    <!-- Handle Bar for Bottom Sheet -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="8dp"
+        android:background="#E0E0E0" />
+
+    <!-- Title Bar -->
+    <TextView
+        android:id="@+id/tvCardSheetTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:background="#FFFFFF"
-        android:elevation="6dp"
-        android:paddingHorizontal="16dp"
-        android:paddingTop="12dp"
+        android:paddingHorizontal="20dp"
         android:paddingBottom="12dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        android:text="Add Credit Card"
+        android:textColor="#082561"
+        android:textSize="20sp"
+        android:textStyle="bold" />
 
-        <ImageView
-            android:id="@+id/ivBackAddEdit"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:padding="2dp"
-            android:src="@drawable/back" />
-
-        <TextView
-            android:id="@+id/tvFormTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:text="Add Credit Card"
-            android:textColor="#082561"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-
-    </LinearLayout>
-
-    <!-- SCROLLABLE FORM AREA -->
+    <!-- Scrollable Form Inputs -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:fillViewport="true"
-        app:layout_constraintBottom_toTopOf="@+id/btnSaveCard"
-        app:layout_constraintTop_toBottomOf="@+id/topAppBarContainer">
+        android:maxHeight="450dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:paddingHorizontal="20dp"
+            android:paddingBottom="12dp">
 
             <!-- 1. Bank Name -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
+                android:layout_marginBottom="16dp"
                 android:hint="Bank Name">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/spinBankName"
+                    android:id="@+id/spinSheetBankName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="none"
@@ -81,11 +65,11 @@
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
-                android:hint="Card Name (e.g., Millennia, SimplyCLICK)">
+                android:layout_marginBottom="16dp"
+                android:hint="Card Name (e.g., Millennia)">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etCardName"
+                    android:id="@+id/etSheetCardName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="textCapWords"
@@ -97,12 +81,12 @@
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
+                android:layout_marginBottom="16dp"
                 android:hint="Total Limit Approved"
                 app:prefixText="₹ ">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etTotalLimit"
+                    android:id="@+id/etSheetTotalLimit"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="numberDecimal"
@@ -114,12 +98,12 @@
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
+                android:layout_marginBottom="16dp"
                 android:hint="Billing Day (1 to 31)"
-                app:helperText="The date your statement generates every month">
+                app:helperText="Statement generation date">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etBillingDay"
+                    android:id="@+id/etSheetBillingDay"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="number"
@@ -130,18 +114,23 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- FIXED SAVE BUTTON -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnSaveCard"
+    <!-- Fixed Bottom Save Button -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:layout_margin="16dp"
-        android:text="Save Card"
-        android:textColor="#FFFFFF"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        app:backgroundTint="#1abcab"
-        app:cornerRadius="8dp"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        android:layout_height="wrap_content"
+        android:padding="20dp"
+        android:background="#FFFFFF">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSheetSaveCard"
+            android:layout_width="match_parent"
+            android:layout_height="55dp"
+            android:text="Save Card"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:backgroundTint="#1abcab"
+            app:cornerRadius="8dp" />
+    </LinearLayout>
+
+</LinearLayout>

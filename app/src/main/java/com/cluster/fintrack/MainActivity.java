@@ -1,7 +1,9 @@
 package com.cluster.fintrack;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -19,7 +21,10 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.navigation.NavigationView;
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 
 @SuppressWarnings("deprecation")
@@ -31,15 +36,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // 1. Enable modern Edge-to-Edge display
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        // 2. Set dark status bar icons since background is white
         WindowInsetsControllerCompat controller = new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
         controller.setAppearanceLightStatusBars(true);
 
-        // 3. Handle Edge-to-Edge Window Insets on the DrawerLayout and Main Content
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.drawerLayout), (v, windowInsets) -> {
             androidx.core.graphics.Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
             View mainContent = findViewById(R.id.main);
@@ -47,7 +49,6 @@ public class MainActivity extends AppCompatActivity {
             return windowInsets;
         });
 
-        // 4. Handle Edge-to-Edge Window Insets on the Navigation View so drawer items don't hide under bars
         NavigationView navigationView = findViewById(R.id.navigationView);
         ViewCompat.setOnApplyWindowInsetsListener(navigationView, (v, windowInsets) -> {
             androidx.core.graphics.Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -55,7 +56,6 @@ public class MainActivity extends AppCompatActivity {
             return windowInsets;
         });
 
-        // 5. Initialize UI components
         drawerLayout = findViewById(R.id.drawerLayout);
         ImageView ivMenuDrawer = findViewById(R.id.ivMenuDrawer);
         SwipeRefreshLayout swipeRefresh = findViewById(R.id.swipeRefresh);
@@ -66,7 +66,6 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout navItemLedger = findViewById(R.id.navItemLedger);
         LinearLayout navSetings = findViewById(R.id.navSetings);
 
-        // --- INITIALIZE EMPTY STATES & CONTAINERS ---
         LinearLayout layoutEmptyCards = findViewById(R.id.layoutEmptyCards);
         LinearLayout layoutCardsContainer = findViewById(R.id.layoutCardsContainer);
         View cardItem1 = findViewById(R.id.cardItem1);
@@ -82,18 +81,14 @@ public class MainActivity extends AppCompatActivity {
         TextView btnAddCardEmpty = findViewById(R.id.btnAddCardEmpty);
         TextView btnAddFinMateEmpty = findViewById(R.id.btnAddFinMateEmpty);
 
-        // --- LOGIC TO HIDE/SHOW CARDS ---
         int totalCards = getSimulatedTotalCards();
-
         if (totalCards == 0) {
             layoutEmptyCards.setVisibility(View.VISIBLE);
             layoutCardsContainer.setVisibility(View.GONE);
         } else {
             layoutEmptyCards.setVisibility(View.GONE);
             layoutCardsContainer.setVisibility(View.VISIBLE);
-
             cardItem1.setVisibility(View.VISIBLE);
-
             if (totalCards == 1) {
                 cardDivider.setVisibility(View.GONE);
                 cardItem2.setVisibility(View.GONE);
@@ -103,18 +98,14 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        // --- LOGIC TO HIDE/SHOW FINMATES ---
         int totalFinMates = getSimulatedTotalFinMates();
-
         if (totalFinMates == 0) {
             layoutEmptyFinMates.setVisibility(View.VISIBLE);
             layoutFinMatesContainer.setVisibility(View.GONE);
         } else {
             layoutEmptyFinMates.setVisibility(View.GONE);
             layoutFinMatesContainer.setVisibility(View.VISIBLE);
-
             ledgerItem1.setVisibility(View.VISIBLE);
-
             if (totalFinMates == 1) {
                 ledgerDivider.setVisibility(View.GONE);
                 ledgerItem2.setVisibility(View.GONE);
@@ -124,7 +115,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        // 6. Setup Side Drawer Toggle
         ivMenuDrawer.setOnClickListener(v -> {
             if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
                 drawerLayout.closeDrawer(GravityCompat.START);
@@ -133,7 +123,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // 7. Handle Side Drawer Item Clicks
         navigationView.setNavigationItemSelectedListener(item -> {
             int id = item.getItemId();
 
@@ -168,21 +157,17 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
 
-        // 8. Setup Swipe to Refresh Action
         swipeRefresh.setOnRefreshListener(() -> {
             Toast.makeText(MainActivity.this, "Refreshing financial ledger...", Toast.LENGTH_SHORT).show();
             swipeRefresh.postDelayed(() -> swipeRefresh.setRefreshing(false), 1500);
         });
 
-        // 9. Setup Section 1: Card Slot Clicks
         cardItem1.setOnClickListener(v -> Toast.makeText(MainActivity.this, "Clicked Card Slot 1", Toast.LENGTH_SHORT).show());
         cardItem2.setOnClickListener(v -> Toast.makeText(MainActivity.this, "Clicked Card Slot 2", Toast.LENGTH_SHORT).show());
 
-        // 10. Setup Section 2: FinMates Ledger Slot Clicks
         ledgerItem1.setOnClickListener(v -> Toast.makeText(MainActivity.this, "Clicked FinMate Slot 1", Toast.LENGTH_SHORT).show());
         ledgerItem2.setOnClickListener(v -> Toast.makeText(MainActivity.this, "Clicked FinMate Slot 2", Toast.LENGTH_SHORT).show());
 
-        // 11. Setup Button Clicks ("More" links)
         btnAddCard.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, CardsActivity.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
@@ -195,18 +180,9 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        // 12. Setup Empty State "+" Button Clicks
-        btnAddCardEmpty.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, AddEditCardActivity.class);
-            startActivity(intent);
-        });
+        btnAddCardEmpty.setOnClickListener(v -> showAddCardBottomSheet());
+        btnAddFinMateEmpty.setOnClickListener(v -> showAddFinMateBottomSheet());
 
-        btnAddFinMateEmpty.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, AddEditFinMateActivity.class);
-            startActivity(intent);
-        });
-
-        // 13. Setup Bottom Navigation Bar Actions
         navItemCards.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, CardsActivity.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
@@ -223,6 +199,68 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
             startActivity(intent);
         });
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void showAddCardBottomSheet() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        // Using findViewById(android.R.id.content) resolves the layout parameters properly without null
+        View view = getLayoutInflater().inflate(R.layout.dialog_add_edit_card, findViewById(android.R.id.content), false);
+        dialog.setContentView(view);
+
+        TextView title = view.findViewById(R.id.tvCardSheetTitle);
+        TextInputEditText etCardName = view.findViewById(R.id.etSheetCardName);
+        MaterialButton btnSave = view.findViewById(R.id.btnSheetSaveCard);
+
+        title.setText("Add Credit Card");
+        btnSave.setText("Save Card");
+
+        btnSave.setOnClickListener(v -> {
+            String name = String.valueOf(etCardName.getText()).trim();
+            if (TextUtils.isEmpty(name)) {
+                etCardName.setError("Enter Card Name");
+                return;
+            }
+            Toast.makeText(this, "Card Saved!", Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+        });
+
+        dialog.show();
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void showAddFinMateBottomSheet() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        // Using findViewById(android.R.id.content) resolves the layout parameters properly without null
+        View view = getLayoutInflater().inflate(R.layout.dialog_add_edit_finmate, findViewById(android.R.id.content), false);
+        dialog.setContentView(view);
+
+        TextView title = view.findViewById(R.id.tvSheetTitle);
+        TextInputEditText etName = view.findViewById(R.id.etSheetFinMateName);
+        TextInputEditText etWhatsApp = view.findViewById(R.id.etSheetWhatsAppNo);
+        MaterialButton btnSave = view.findViewById(R.id.btnSheetSaveFinMate);
+
+        title.setText("Add FinMate");
+        btnSave.setText("Save FinMate");
+
+        btnSave.setOnClickListener(v -> {
+            String name = String.valueOf(etName.getText()).trim();
+            String whatsAppNo = String.valueOf(etWhatsApp.getText()).trim();
+
+            if (TextUtils.isEmpty(name)) {
+                etName.setError("Enter Name");
+                return;
+            }
+            if (TextUtils.isEmpty(whatsAppNo) || whatsAppNo.length() < 10) {
+                etWhatsApp.setError("Enter 10-digit number");
+                return;
+            }
+
+            Toast.makeText(this, "FinMate Saved!", Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+        });
+
+        dialog.show();
     }
 
     private int getSimulatedTotalCards() {

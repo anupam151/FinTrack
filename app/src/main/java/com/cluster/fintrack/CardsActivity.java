@@ -1,9 +1,14 @@
 package com.cluster.fintrack;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -14,7 +19,10 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
+import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.navigation.NavigationView;
+import com.google.android.material.textfield.TextInputEditText;
 
 public class CardsActivity extends AppCompatActivity {
 
@@ -46,7 +54,6 @@ public class CardsActivity extends AppCompatActivity {
         ImageView ivMenuDrawerCards = findViewById(R.id.ivMenuDrawerCards);
         ivMenuDrawerCards.setOnClickListener(v -> drawerLayout.openDrawer(GravityCompat.START));
 
-        // Navigation Clicks
         LinearLayout navItemDashboard = findViewById(R.id.navItemDashboard);
         LinearLayout navItemLedger = findViewById(R.id.navItemLedger);
         LinearLayout navSetings = findViewById(R.id.navSetings);
@@ -70,9 +77,33 @@ public class CardsActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        findViewById(R.id.fabAddCard).setOnClickListener(v -> {
-            Intent intent = new Intent(CardsActivity.this, AddEditCardActivity.class);
-            startActivity(intent);
+        findViewById(R.id.fabAddCard).setOnClickListener(v -> showAddCardBottomSheet());
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void showAddCardBottomSheet() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        // Resolves layout parameters properly without passing null
+        View view = getLayoutInflater().inflate(R.layout.dialog_add_edit_card, findViewById(android.R.id.content), false);
+        dialog.setContentView(view);
+
+        TextView title = view.findViewById(R.id.tvCardSheetTitle);
+        TextInputEditText etCardName = view.findViewById(R.id.etSheetCardName);
+        MaterialButton btnSave = view.findViewById(R.id.btnSheetSaveCard);
+
+        title.setText("Add Credit Card");
+        btnSave.setText("Save Card");
+
+        btnSave.setOnClickListener(v -> {
+            String name = String.valueOf(etCardName.getText()).trim();
+            if (TextUtils.isEmpty(name)) {
+                etCardName.setError("Enter Card Name");
+                return;
+            }
+            Toast.makeText(this, "Card Saved!", Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
         });
+
+        dialog.show();
     }
 }

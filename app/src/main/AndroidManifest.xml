@@ -46,16 +46,6 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
-        <!-- Add / Edit Credit Card Form -->
-        <activity
-            android:name=".AddEditCardActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".AddEditFinMateActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
-
 
     </application>
 
