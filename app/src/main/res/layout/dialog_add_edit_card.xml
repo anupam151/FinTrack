@@ -20,17 +20,36 @@
         app:cardElevation="0dp"
         app:strokeWidth="0dp" />
 
-    <!-- Title Bar -->
-    <TextView
-        android:id="@+id/tvCardSheetTitle"
+    <!-- Title Bar with Global Clear All Button -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:paddingHorizontal="24dp"
-        android:paddingVertical="4dp"
-        android:text="Add Credit Card"
-        android:textColor="#101828"
-        android:textSize="22sp"
-        android:textStyle="bold" />
+        android:paddingVertical="4dp">
+
+        <TextView
+            android:id="@+id/tvCardSheetTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Add Credit Card"
+            android:textColor="#101828"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <!-- Global Reset Button (Clears all fields) -->
+        <ImageView
+            android:id="@+id/btnClearAllFields"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="6dp"
+            android:src="@drawable/eraser" />
+    </LinearLayout>
 
     <!-- Subtle Header Divider -->
     <View
@@ -57,10 +76,10 @@
             <!-- 1. Card Name / Type -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:hint="Card Name (e.g., Millennia)"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:hint="Card Name (e.g., Millennia)"
+                android:layout_marginBottom="10dp"
                 app:boxCornerRadiusBottomEnd="12dp"
                 app:boxCornerRadiusBottomStart="12dp"
                 app:boxCornerRadiusTopEnd="12dp"
@@ -73,19 +92,21 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="textCapWords"
-                    android:paddingTop="16dp"
-                    android:paddingBottom="16dp"
+                    android:maxLength="24"
+                    android:paddingTop="13dp"
+                    android:paddingBottom="13dp"
                     android:textColor="#101828"
-                    android:textSize="16sp" />
+                    android:textSize="14sp" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- 1. Bank Name -->
+            <!-- 2. Bank Name (With dynamic clear button support via Material Design) -->
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilSheetBankName"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:hint="Bank Name (e.g., State Bank of India)"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:hint="Start Typing Bank Name"
+                android:layout_marginBottom="10dp"
                 app:boxCornerRadiusBottomEnd="12dp"
                 app:boxCornerRadiusBottomStart="12dp"
                 app:boxCornerRadiusTopEnd="12dp"
@@ -100,27 +121,56 @@
                     android:inputType="text"
                     android:popupBackground="@drawable/bg_rounded_popup"
                     android:completionThreshold="1"
-                    android:paddingTop="16dp"
-                    android:paddingBottom="16dp"
+                    android:paddingTop="13dp"
+                    android:paddingBottom="13dp"
                     android:textColor="#101828"
-                    android:textSize="16sp" />
+                    android:textSize="14sp" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- 3. Total Limit & Billing Day (Placed side-by-side) -->
+
+            <!-- 3. Card Type Dropdown (Matches Bank Name style and behavior) -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilSheetCardType"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:hint="Card Type (e.g., Visa, RuPay)"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxStrokeColor="#1abcab"
+                app:hintTextColor="#1abcab">
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/spinSheetCardType"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:popupBackground="@drawable/bg_rounded_popup"
+                    android:completionThreshold="1"
+                    android:paddingTop="13dp"
+                    android:paddingBottom="13dp"
+                    android:textColor="#101828"
+                    android:textSize="14sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- 4. Total Limit & Last 4 Digits & Billing Day Container -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:baselineAligned="false"
-                android:layout_marginBottom="12dp">
+                android:layout_marginBottom="10dp">
 
                 <!-- Total Limit -->
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1.2"
+                    android:layout_marginEnd="6dp"
                     android:hint="Total Limit"
                     app:prefixText="₹ "
                     app:prefixTextColor="#667085"
@@ -136,10 +186,38 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="numberDecimal"
-                        android:paddingTop="16dp"
-                        android:paddingBottom="16dp"
+                        android:paddingTop="13dp"
+                        android:paddingBottom="13dp"
                         android:textColor="#101828"
-                        android:textSize="16sp" />
+                        android:textSize="14sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Last 4 Digits -->
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.9"
+                    android:layout_marginEnd="6dp"
+                    android:hint="Last 4 Digit"
+                    app:boxCornerRadiusBottomEnd="12dp"
+                    app:boxCornerRadiusBottomStart="12dp"
+                    app:boxCornerRadiusTopEnd="12dp"
+                    app:boxCornerRadiusTopStart="12dp"
+                    app:boxStrokeColor="#1abcab"
+                    app:hintTextColor="#1abcab">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etSheetLast4Digits"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:maxLength="4"
+                        android:paddingTop="13dp"
+                        android:paddingBottom="13dp"
+                        android:textColor="#101828"
+                        android:textSize="14sp"
+                        android:gravity="center_horizontal" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Billing Day -->
@@ -147,10 +225,9 @@
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="0.7"
-                    android:layout_marginStart="8dp"
-                    android:hint="Billing Day"
-                    app:suffixText="/ 31"
+                    android:layout_weight="0.9"
+                    android:hint="Bill Day"
+                    app:suffixText="/31"
                     app:suffixTextColor="#98A2B3"
                     app:boxCornerRadiusBottomEnd="12dp"
                     app:boxCornerRadiusBottomStart="12dp"
@@ -165,10 +242,10 @@
                         android:layout_height="wrap_content"
                         android:inputType="number"
                         android:maxLength="2"
-                        android:paddingTop="16dp"
-                        android:paddingBottom="16dp"
+                        android:paddingTop="13dp"
+                        android:paddingBottom="13dp"
                         android:textColor="#101828"
-                        android:textSize="16sp"
+                        android:textSize="14sp"
                         android:gravity="center_horizontal" />
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -178,7 +255,7 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="5dp"
+                android:layout_marginBottom="12dp"
                 app:cardBackgroundColor="#FAFAFA"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="0dp"
@@ -190,10 +267,10 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:paddingHorizontal="16dp"
-                    android:paddingVertical="12dp"
+                    android:paddingVertical="8dp"
                     android:gravity="center_vertical">
 
-                    <!-- LEFT COLUMN: The layout_weight="1" pushes everything else to the right -->
+                    <!-- LEFT COLUMN -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -218,7 +295,6 @@
                     </LinearLayout>
 
                     <!-- RIGHT COLUMN: Tools -->
-                    <!-- 1. Tiny Reset Icon -->
                     <ImageView
                         android:id="@+id/btnResetColor"
                         android:layout_width="40dp"
@@ -228,13 +304,12 @@
                         android:clickable="true"
                         android:focusable="true"
                         android:padding="6dp"
-                        android:src="@drawable/reset"/>
+                        android:src="@drawable/reset" />
 
-                    <!-- 2. MERGED: Color Preview Button -->
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/cardColorPreview"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
+                        android:layout_width="65dp"
+                        android:layout_height="40dp"
                         android:clickable="true"
                         android:focusable="true"
                         android:foreground="?attr/selectableItemBackground"
@@ -244,10 +319,9 @@
                         app:strokeColor="#EAECF0"
                         app:strokeWidth="2dp">
 
-                        <!-- Subtle edit icon inside the color box -->
                         <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
                             android:layout_gravity="center"
                             android:src="@drawable/edit"
                             app:tint="#FFFFFF" />
@@ -257,10 +331,11 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Save Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSheetSaveCard"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
+                android:layout_height="45dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:text="Save Card"

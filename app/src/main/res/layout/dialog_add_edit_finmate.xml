@@ -15,7 +15,6 @@
         android:layout_height="5dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="12dp"
-        android:layout_marginBottom="16dp"
         app:cardBackgroundColor="#E0E0E0"
         app:cardCornerRadius="2.5dp"
         app:cardElevation="0dp"
@@ -26,9 +25,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:paddingHorizontal="24dp"
-        android:paddingBottom="16dp"
-        android:gravity="center_vertical">
+        android:paddingVertical="4dp">
 
         <TextView
             android:id="@+id/tvSheetTitle"
@@ -75,16 +74,16 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingHorizontal="24dp"
-            android:paddingTop="20dp"
+            android:paddingTop="12dp"
             android:paddingBottom="12dp">
 
             <!-- 1. Name -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:hint="Full Name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
-                android:hint="Full Name"
+                android:layout_marginBottom="10dp"
                 app:boxCornerRadiusBottomEnd="12dp"
                 app:boxCornerRadiusBottomStart="12dp"
                 app:boxCornerRadiusTopEnd="12dp"
@@ -97,20 +96,20 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="textPersonName|textCapWords"
-                    android:paddingTop="16dp"
-                    android:paddingBottom="16dp"
+                    android:paddingTop="13dp"
+                    android:paddingBottom="13dp"
                     android:textColor="#101828"
-                    android:textSize="16sp" />
+                    android:textSize="14sp" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- 2. Contact Number -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
                 android:hint="Contact Number"
                 app:prefixText="+91 "
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="5dp"
                 app:prefixTextColor="#667085"
                 app:boxCornerRadiusBottomEnd="12dp"
                 app:boxCornerRadiusBottomStart="12dp"
@@ -125,33 +124,34 @@
                     android:layout_height="wrap_content"
                     android:inputType="phone"
                     android:maxLength="10"
-                    android:paddingTop="16dp"
-                    android:paddingBottom="16dp"
+                    android:paddingTop="13dp"
+                    android:paddingBottom="13dp"
                     android:textColor="#101828"
-                    android:textSize="16sp" />
+                    android:textSize="14sp" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- 2.5 WhatsApp Availability Question & Radio Group -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="20dp"
-                android:paddingHorizontal="4dp">
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="5dp">
 
+                <!-- Question - Left aligned -->
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_weight="1"
                     android:text="Is this number on WhatsApp?"
                     android:textColor="#344054"
                     android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="8dp" />
+                    android:textStyle="bold" />
 
-                <!-- Radio Group (Neither is checked by default) -->
+                <!-- Radio Buttons - Right aligned -->
                 <RadioGroup
                     android:id="@+id/radioGroupWhatsApp"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
 
@@ -163,7 +163,7 @@
                         android:textColor="#344054"
                         android:textSize="14sp"
                         android:buttonTint="#1abcab"
-                        android:layout_marginEnd="24dp" />
+                        android:layout_marginEnd="20dp" />
 
                     <RadioButton
                         android:id="@+id/radioNo"
@@ -173,7 +173,9 @@
                         android:textColor="#344054"
                         android:textSize="14sp"
                         android:buttonTint="#1abcab" />
+
                 </RadioGroup>
+
             </LinearLayout>
 
             <!-- 3. Email ID -->
@@ -181,7 +183,7 @@
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
+                android:layout_marginBottom="10dp"
                 android:hint="Email ID (Optional)"
                 app:boxCornerRadiusBottomEnd="12dp"
                 app:boxCornerRadiusBottomStart="12dp"
@@ -195,10 +197,10 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="textEmailAddress"
-                    android:paddingTop="16dp"
-                    android:paddingBottom="16dp"
+                    android:paddingTop="13dp"
+                    android:paddingBottom="13dp"
                     android:textColor="#101828"
-                    android:textSize="16sp" />
+                    android:textSize="14sp" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- 4. Address -->
@@ -206,7 +208,7 @@
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
+                android:layout_marginBottom="10dp"
                 android:hint="Address (Optional)"
                 app:boxCornerRadiusBottomEnd="12dp"
                 app:boxCornerRadiusBottomStart="12dp"
@@ -222,10 +224,10 @@
                     android:inputType="textMultiLine|textCapSentences"
                     android:minLines="2"
                     android:gravity="top|start"
-                    android:paddingTop="16dp"
-                    android:paddingBottom="16dp"
+                    android:paddingTop="13dp"
+                    android:paddingBottom="13dp"
                     android:textColor="#101828"
-                    android:textSize="16sp" />
+                    android:textSize="14sp" />
             </com.google.android.material.textfield.TextInputLayout>
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSheetSaveFinMate"

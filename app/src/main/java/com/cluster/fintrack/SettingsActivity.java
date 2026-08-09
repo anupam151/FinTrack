@@ -191,21 +191,42 @@ public class SettingsActivity extends AppCompatActivity {
 
     @SuppressLint("SetTextI18n")
     private void showAddCardBottomSheet() {
-        // 1. Create dialog and override touch events to keep keyboard open when switching between text boxes
-        BottomSheetDialog dialog = new BottomSheetDialog(this) {
+        // 1. Create dialog with bulletproof keyboard & focus management
+        com.google.android.material.bottomsheet.BottomSheetDialog dialog = new com.google.android.material.bottomsheet.BottomSheetDialog(this) {
             @Override
-            public boolean dispatchTouchEvent(android.view.MotionEvent event) {
+            public boolean dispatchTouchEvent(@androidx.annotation.NonNull android.view.MotionEvent event) {
                 if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
-                    View v = getCurrentFocus();
+                    android.view.View v = getCurrentFocus();
                     if (v instanceof android.widget.EditText) {
                         android.graphics.Rect outRect = new android.graphics.Rect();
                         v.getGlobalVisibleRect(outRect);
 
-                        // Check if the user touched outside the currently focused text box
+                        // If the user touched outside the CURRENTLY focused EditText
                         if (!outRect.contains((int) event.getRawX(), (int) event.getRawY())) {
-                            // Only close keyboard if the newly touched focus is NOT another EditText
-                            View newFocus = getWindow() != null ? getWindow().getCurrentFocus() : null;
-                            if (!(newFocus instanceof android.widget.EditText)) {
+                            boolean clickedAnotherEditText = false;
+
+                            // Check if the touch actually landed on ANY OTHER EditText in this dialog
+                            if (getWindow() != null) {
+                                int[] editIds = {
+                                        R.id.etSheetCardName, R.id.spinSheetBankName,
+                                        R.id.spinSheetCardType, R.id.etSheetLast4Digits,
+                                        R.id.etSheetTotalLimit, R.id.etSheetBillingDay
+                                };
+                                android.graphics.Rect rect = new android.graphics.Rect();
+                                for (int id : editIds) {
+                                    android.view.View editView = getWindow().findViewById(id);
+                                    if (editView != null && editView.isShown()) {
+                                        editView.getGlobalVisibleRect(rect);
+                                        if (rect.contains((int) event.getRawX(), (int) event.getRawY())) {
+                                            clickedAnotherEditText = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // ONLY hide keyboard if they clicked a blank space or a non-input view (like a button)
+                            if (!clickedAnotherEditText) {
                                 v.clearFocus();
                                 if (getWindow() != null) {
                                     androidx.core.view.WindowInsetsControllerCompat controller =
@@ -220,24 +241,35 @@ public class SettingsActivity extends AppCompatActivity {
             }
         };
 
-        View view = getLayoutInflater().inflate(R.layout.dialog_add_edit_card, findViewById(android.R.id.content), false);
+        android.view.View view = getLayoutInflater().inflate(R.layout.dialog_add_edit_card, findViewById(android.R.id.content), false);
         dialog.setContentView(view);
 
         // 2. DEFINE VIEWS
-        TextView title = view.findViewById(R.id.tvCardSheetTitle);
+        android.widget.TextView title = view.findViewById(R.id.tvCardSheetTitle);
         com.google.android.material.textfield.MaterialAutoCompleteTextView spinBankName = view.findViewById(R.id.spinSheetBankName);
-        TextInputEditText etCardName = view.findViewById(R.id.etSheetCardName);
-        TextInputEditText etTotalLimit = view.findViewById(R.id.etSheetTotalLimit);
-        TextInputEditText etBillingDay = view.findViewById(R.id.etSheetBillingDay);
+        com.google.android.material.textfield.TextInputLayout tilBankName = view.findViewById(R.id.tilSheetBankName);
+
+        com.google.android.material.textfield.MaterialAutoCompleteTextView spinCardType = view.findViewById(R.id.spinSheetCardType);
+        com.google.android.material.textfield.TextInputLayout tilCardType = view.findViewById(R.id.tilSheetCardType);
+
+        com.google.android.material.textfield.TextInputEditText etCardName = view.findViewById(R.id.etSheetCardName);
+        com.google.android.material.textfield.TextInputEditText etLast4Digits = view.findViewById(R.id.etSheetLast4Digits);
+        com.google.android.material.textfield.TextInputEditText etTotalLimit = view.findViewById(R.id.etSheetTotalLimit);
+        com.google.android.material.textfield.TextInputEditText etBillingDay = view.findViewById(R.id.etSheetBillingDay);
 
         com.google.android.material.card.MaterialCardView cardColorPreview = view.findViewById(R.id.cardColorPreview);
-        ImageView btnResetColor = view.findViewById(R.id.btnResetColor);
-        MaterialButton btnSave = view.findViewById(R.id.btnSheetSaveCard);
+        android.widget.ImageView btnResetColor = view.findViewById(R.id.btnResetColor);
+        android.widget.ImageView btnClearAllFields = view.findViewById(R.id.btnClearAllFields);
+        com.google.android.material.button.MaterialButton btnSave = view.findViewById(R.id.btnSheetSaveCard);
 
         title.setText("Add Credit Card");
         btnSave.setText("Save Card");
 
-        // 3. SET AUTO-FOCUS & OPEN KEYBOARD IMMEDIATELY ON CARD NAME
+        // Hide clear button on BOTH dropdowns to destroy Material's click-to-open behavior
+        tilBankName.setEndIconMode(com.google.android.material.textfield.TextInputLayout.END_ICON_NONE);
+        tilCardType.setEndIconMode(com.google.android.material.textfield.TextInputLayout.END_ICON_NONE);
+
+        // 3. SET AUTO-FOCUS & OPEN KEYBOARD
         dialog.setOnShowListener(d -> {
             etCardName.requestFocus();
             if (dialog.getWindow() != null) {
@@ -247,13 +279,30 @@ public class SettingsActivity extends AppCompatActivity {
             }
         });
 
-        // 4. SETUP DROPDOWN (Will NOT open automatically on click, only when typing)
+        // 4. SETUP BANK DROPDOWN
+        spinBankName.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
         spinBankName.setAdapter(getBankArrayAdapter());
         spinBankName.addTextChangedListener(new android.text.TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (spinBankName.hasFocus()) {
+                if (spinBankName.hasFocus() && s.length() > 0) {
                     spinBankName.showDropDown();
+                }
+            }
+            @Override public void afterTextChanged(android.text.Editable s) {}
+        });
+
+        // 5. SETUP CARD TYPE DROPDOWN
+        spinCardType.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
+        String[] cardTypes = new String[]{"RuPay", "Visa", "MasterCard", "Amex", "Discover", "Other"};
+        android.widget.ArrayAdapter<String> cardTypeAdapter = new android.widget.ArrayAdapter<>(
+                this, android.R.layout.simple_dropdown_item_1line, cardTypes);
+        spinCardType.setAdapter(cardTypeAdapter);
+        spinCardType.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (spinCardType.hasFocus() && s.length() > 0) {
+                    spinCardType.showDropDown();
                 }
             }
             @Override public void afterTextChanged(android.text.Editable s) {}
@@ -262,6 +311,29 @@ public class SettingsActivity extends AppCompatActivity {
         final int[] currentColor = {android.graphics.Color.parseColor("#082561")};
         final int defaultColor = android.graphics.Color.parseColor("#082561");
 
+        // GLOBAL RESET BUTTON
+        btnClearAllFields.setOnClickListener(v -> {
+            etCardName.setText("");
+            spinBankName.setText("", false);
+            spinCardType.setText("", false);
+            etLast4Digits.setText("");
+            etTotalLimit.setText("");
+            etBillingDay.setText("");
+
+            currentColor[0] = defaultColor;
+            cardColorPreview.setCardBackgroundColor(defaultColor);
+
+            etCardName.setError(null);
+            spinBankName.setError(null);
+            spinCardType.setError(null);
+            etLast4Digits.setError(null);
+            etTotalLimit.setError(null);
+            etBillingDay.setError(null);
+
+            etCardName.requestFocus();
+        });
+
+        // COLOR PICKER LOGIC
         cardColorPreview.setOnClickListener(v -> {
             yuku.ambilwarna.AmbilWarnaDialog colorPickerDialog = new yuku.ambilwarna.AmbilWarnaDialog(this, currentColor[0], new yuku.ambilwarna.AmbilWarnaDialog.OnAmbilWarnaListener() {
                 @Override
@@ -284,13 +356,14 @@ public class SettingsActivity extends AppCompatActivity {
         btnSave.setOnClickListener(v -> {
             String cardName = String.valueOf(etCardName.getText()).trim();
             String bankName = String.valueOf(spinBankName.getText()).trim();
+            String cardType = String.valueOf(spinCardType.getText()).trim();
+            String last4 = String.valueOf(etLast4Digits.getText()).trim();
             String limitStr = String.valueOf(etTotalLimit.getText()).trim();
             String billingDayStr = String.valueOf(etBillingDay.getText()).trim();
 
-            if (TextUtils.isEmpty(cardName)) { etCardName.setError("Required"); return; }
-            if (TextUtils.isEmpty(bankName)) { spinBankName.setError("Required"); return; }
+            if (android.text.TextUtils.isEmpty(cardName)) { etCardName.setError("Required"); return; }
+            if (android.text.TextUtils.isEmpty(bankName)) { spinBankName.setError("Required"); return; }
 
-            // --- STRICT BANK VALIDATION ---
             String[] validBanks = new String[]{
                     "AU Small Finance Bank", "American Express", "Axis Bank", "Bandhan Bank",
                     "Bank of Baroda", "Bank of India", "Bank of Maharashtra", "Barclays Bank",
@@ -324,26 +397,47 @@ public class SettingsActivity extends AppCompatActivity {
                 spinBankName.requestFocus();
                 return;
             }
-            // ------------------------------
 
-            if (TextUtils.isEmpty(limitStr)) { etTotalLimit.setError("Required"); return; }
-            if (TextUtils.isEmpty(billingDayStr)) { etBillingDay.setError("Required"); return; }
+            if (android.text.TextUtils.isEmpty(cardType)) { spinCardType.setError("Required"); return; }
 
-            double totalLimit = Double.parseDouble(limitStr);
-            int billingDay = Integer.parseInt(billingDayStr);
+            String[] validCardTypes = new String[]{"RuPay", "Visa", "MasterCard", "Amex", "Discover", "Other"};
+            boolean isValidCardType = false;
+            for (String type : validCardTypes) {
+                if (type.equalsIgnoreCase(cardType)) {
+                    isValidCardType = true;
+                    break;
+                }
+            }
 
-            String themeColorHex = String.format("#%06X", (0xFFFFFF & currentColor[0]));
-
-            if (FirebaseAuth.getInstance().getCurrentUser() == null) {
-                Toast.makeText(this, "Error: User not logged in!", Toast.LENGTH_SHORT).show();
+            if (!isValidCardType) {
+                spinCardType.setError("Please select a valid card type from the list");
+                spinCardType.requestFocus();
                 return;
             }
 
-            String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            if (android.text.TextUtils.isEmpty(last4) || last4.length() != 4) { etLast4Digits.setError("Enter 4 digits"); return; }
+            if (android.text.TextUtils.isEmpty(limitStr)) { etTotalLimit.setError("Required"); return; }
+            if (android.text.TextUtils.isEmpty(billingDayStr)) { etBillingDay.setError("Required"); return; }
+
+            double totalLimit = Double.parseDouble(limitStr);
+            int billingDay = Integer.parseInt(billingDayStr);
+            if (billingDay < 1 || billingDay > 31) {
+                etBillingDay.setError("Enter 1-31");
+                return;
+            }
+
+            String themeColorHex = String.format("#%06X", (0xFFFFFF & currentColor[0]));
+
+            if (com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser() == null) {
+                android.widget.Toast.makeText(this, "Error: User not logged in!", android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            String userId = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser().getUid();
+            com.google.firebase.firestore.FirebaseFirestore db = com.google.firebase.firestore.FirebaseFirestore.getInstance();
             String newCardId = db.collection("Users").document(userId).collection("Cards").document().getId();
 
-            Card newCard = new Card(newCardId, bankName, cardName, totalLimit, billingDay, themeColorHex, System.currentTimeMillis());
+            Card newCard = new Card(newCardId, bankName, cardName, cardType, last4, totalLimit, billingDay, themeColorHex, System.currentTimeMillis());
 
             btnSave.setEnabled(false);
             btnSave.setText("Saving...");
@@ -352,11 +446,11 @@ public class SettingsActivity extends AppCompatActivity {
                     .set(newCard)
                     .addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
-                            Toast.makeText(this, "Card Saved Successfully!", Toast.LENGTH_SHORT).show();
+                            android.widget.Toast.makeText(this, "Card Saved Successfully!", android.widget.Toast.LENGTH_SHORT).show();
                             dialog.dismiss();
                         } else {
                             String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error occurred";
-                            Toast.makeText(this, "Failed to save: " + errorMessage, Toast.LENGTH_SHORT).show();
+                            android.widget.Toast.makeText(this, "Failed to save: " + errorMessage, android.widget.Toast.LENGTH_SHORT).show();
                             btnSave.setEnabled(true);
                             btnSave.setText("Save Card");
                         }
