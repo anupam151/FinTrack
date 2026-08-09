@@ -23,21 +23,18 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
 
     private final Context context;
     private final List<Card> cardList;
-    private final OnCardLongClickListener longClickListener; // NEW: Holds the long-click listener
+    private final OnCardLongClickListener longClickListener;
 
-    // --- NEW: Interface for Long Click events ---
     public interface OnCardLongClickListener {
         void onLongClick(Card card, View anchor);
     }
 
-    // Constructor for Activities that DO NOT need long-click (like MainActivity)
     public CardAdapter(Context context, List<Card> cardList) {
         this.context = context;
         this.cardList = cardList;
         this.longClickListener = null;
     }
 
-    // --- NEW: Constructor for Activities that DO need long-click (like CardsActivity) ---
     public CardAdapter(Context context, List<Card> cardList, OnCardLongClickListener longClickListener) {
         this.context = context;
         this.cardList = cardList;
@@ -55,21 +52,28 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
     public void onBindViewHolder(@NonNull CardViewHolder holder, int position) {
         Card card = cardList.get(position);
 
-        // 1. Set Card Name
+        // 1. Set Card Name & Bank Initials
         holder.tvCardName.setText(card.getCardName());
-
-        // 2. Generate Bank Logo Initials
         holder.tvCardLogoText.setText(getBankInitials(card.getBankName()));
 
-        // 3. Set Limit & Used
-        String limitUsedText = String.format(Locale.getDefault(), "Limit: ₹%.0f  |  Used: ₹0", card.getTotalLimit());
-        holder.tvCardLimitUsed.setText(limitUsedText);
+        // 2. Calculate Financials (Used is hardcoded to 0 for now)
+        double totalLimit = card.getTotalLimit();
+        double usedLimit = 0.0;
+        double availableLimit = totalLimit - usedLimit;
 
-        // 4. Set Due Date
-        String dueText = String.format(Locale.getDefault(), "Billing Day: %dth of month", card.getBillingDay());
-        holder.tvCardDue.setText(dueText);
+        // 3. Set Financial Values to the new TextViews
+        holder.tvCardLimit.setText(String.format(Locale.getDefault(), "₹%.0f", totalLimit));
+        holder.tvCardUsed.setText(String.format(Locale.getDefault(), "₹%.0f", usedLimit));
+        holder.tvCardAvailable.setText(String.format(Locale.getDefault(), "₹%.0f", availableLimit));
+        holder.tvCardDue.setText("₹0"); // Hardcoded for now
 
-        // 5. Circular Progress Indicator
+        // 4. Set Due Date with proper ordinal suffix (e.g., 1st, 2nd, 3rd, 21st, etc.)
+        int billingDay = card.getBillingDay();
+        String suffix = getOrdinalSuffix(billingDay);
+        String dueText = String.format(Locale.getDefault(), "%d%s of month", billingDay, suffix);
+        holder.tvCardDueDate.setText(dueText);
+
+        // 5. Circular Progress Indicator (0% for now)
         holder.cpiCardProgress.setProgress(0);
         holder.tvCardProgressPercent.setText("0%\nUsed");
 
@@ -86,11 +90,11 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
         // 7. Standard Click listener
         holder.itemView.setOnClickListener(v -> Toast.makeText(context, "Clicked: " + card.getCardName(), Toast.LENGTH_SHORT).show());
 
-        // --- NEW: Long Click listener attached here ---
+        // 8. Long Click listener
         holder.itemView.setOnLongClickListener(v -> {
             if (longClickListener != null) {
                 longClickListener.onLongClick(card, v);
-                return true; // Return true to indicate the long click was handled
+                return true;
             }
             return false;
         });
@@ -101,10 +105,22 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
         return cardList.size();
     }
 
+    // Helper method to generate correct English ordinal suffixes (st, nd, rd, th)
+    private String getOrdinalSuffix(int day) {
+        if (day >= 11 && day <= 13) {
+            return "th";
+        }
+        switch (day % 10) {
+            case 1:  return "st";
+            case 2:  return "nd";
+            case 3:  return "rd";
+            default: return "th";
+        }
+    }
+
     private String getBankInitials(String bankName) {
         if (bankName == null || bankName.trim().isEmpty()) return "BANK";
 
-        // Map containing exact short names from your Excel file
         Map<String, String> shortNameMap = new HashMap<>();
         shortNameMap.put("AU Small Finance Bank", "AUSFB");
         shortNameMap.put("American Express", "AMEX");
@@ -162,12 +178,10 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
         shortNameMap.put("Utkarsh Small Finance Bank", "USFB");
         shortNameMap.put("YES Bank", "YES");
 
-        // If the bank is in the exact list, return its short name
         if (shortNameMap.containsKey(bankName)) {
             return shortNameMap.get(bankName);
         }
 
-        // Fallback safety logic for manual user input
         String[] words = bankName.trim().split("\\s+");
         if (words.length == 1) {
             return words[0].length() > 4 ? words[0].substring(0, 4).toUpperCase() : words[0].toUpperCase();
@@ -182,16 +196,24 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
 
     public static class CardViewHolder extends RecyclerView.ViewHolder {
         androidx.cardview.widget.CardView cardLogoContainer;
-        TextView tvCardName, tvCardLimitUsed, tvCardDue, tvCardLogoText, tvCardProgressPercent;
+
+        TextView tvCardName, tvCardLogoText, tvCardProgressPercent;
+        TextView tvCardLimit, tvCardDue, tvCardUsed, tvCardAvailable, tvCardDueDate;
+
         CircularProgressIndicator cpiCardProgress;
 
         public CardViewHolder(@NonNull View itemView) {
             super(itemView);
             cardLogoContainer = itemView.findViewById(R.id.cardLogoContainer);
             tvCardName = itemView.findViewById(R.id.tvCardName);
-            tvCardLimitUsed = itemView.findViewById(R.id.tvCardLimitUsed);
-            tvCardDue = itemView.findViewById(R.id.tvCardDue);
             tvCardLogoText = itemView.findViewById(R.id.tvCardLogoText);
+
+            tvCardLimit = itemView.findViewById(R.id.tvCardLimit);
+            tvCardDue = itemView.findViewById(R.id.tvCardDue);
+            tvCardUsed = itemView.findViewById(R.id.tvCardUsed);
+            tvCardAvailable = itemView.findViewById(R.id.tvCardAvailable);
+            tvCardDueDate = itemView.findViewById(R.id.tvCardDueDate);
+
             tvCardProgressPercent = itemView.findViewById(R.id.tvCardProgressPercent);
             cpiCardProgress = itemView.findViewById(R.id.cpiCardProgress);
         }

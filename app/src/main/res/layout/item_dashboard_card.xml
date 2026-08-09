@@ -7,114 +7,283 @@
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="1dp"
     android:layout_marginVertical="6dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
     app:cardBackgroundColor="#FFFFFF"
     app:cardCornerRadius="12dp"
     app:cardElevation="4dp"
     app:strokeWidth="0dp"
-    android:clickable="true"
-    android:focusable="true"
-    android:foreground="?attr/selectableItemBackground">
+    tools:ignore="HardcodedText, ContentDescription">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <!-- MASTER VERTICAL LAYOUT -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingVertical="14dp"
-        tools:ignore="HardcodedText, TooManyViews, SmallSp, ContentDescription, UseCompoundDrawables, TooDeepLayout">
+        android:orientation="vertical">
 
-        <androidx.cardview.widget.CardView
-            android:id="@+id/cardLogoContainer"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="12dp"
-            app:cardBackgroundColor="#082561"
-            app:cardCornerRadius="8dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <TextView
-                android:id="@+id/tvCardLogoText"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:text="BANK"
-                android:textColor="#FFFFFF"
-                android:textStyle="bold"
-                android:maxLines="1"
-                android:padding="2dp"
-                app:autoSizeTextType="uniform"
-                app:autoSizeMinTextSize="6sp"
-                app:autoSizeMaxTextSize="13sp"
-                app:autoSizeStepGranularity="1sp" />
-        </androidx.cardview.widget.CardView>
-
+        <!-- ===================================================== -->
+        <!-- TOP ROW: CARD NAME (Left) & TOTAL LIMIT (Right) -->
+        <!-- ===================================================== -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:orientation="vertical"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/progressContainer"
-            app:layout_constraintStart_toEndOf="@id/cardLogoContainer"
-            app:layout_constraintTop_toTopOf="parent">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingVertical="4dp">
 
+            <!-- Card Name -->
             <TextView
                 android:id="@+id/tvCardName"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="16dp"
+                android:ellipsize="end"
+                android:maxLines="1"
                 android:text="Card Name"
                 android:textColor="#082561"
-                android:textSize="16sp"
+                android:textSize="15sp"
                 android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/tvCardLimitUsed"
+            <!-- Total Limit Block -->
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="Limit: ₹0  |  Used: ₹0"
-                android:textColor="#757575"
-                android:textSize="13sp" />
+                android:orientation="horizontal"
+                android:gravity="end">
 
-            <TextView
-                android:id="@+id/tvCardDue"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="Current Due: ₹0 (Due by 00th Mth)"
-                android:textColor="#1abcab"
-                android:textSize="13sp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="10dp"
+                    android:text="Total Limit"
+                    android:textColor="#949494"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/tvCardLimit"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:text="₹0"
+                    android:textColor="#082561"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
 
-        <RelativeLayout
-            android:id="@+id/progressContainer"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginEnd="12dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+        <!-- Subtle Divider Line -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="12dp"
+            android:background="#F0F0F0" />
 
-            <com.google.android.material.progressindicator.CircularProgressIndicator
-                android:id="@+id/cpiCardProgress"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:progress="0"
-                app:indicatorColor="#1abcab"
-                app:trackColor="#E0E0E0"
-                app:trackThickness="3dp" />
+        <!-- ===================================================== -->
+        <!-- BOTTOM ROW: LOGO + OTHER DETAILS + PROGRESS -->
+        <!-- ===================================================== -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingVertical="4dp"
+            tools:ignore="HardcodedText,TooManyViews,SmallSp,ContentDescription,UseCompoundDrawables,TooDeepLayout">
 
-            <TextView
-                android:id="@+id/tvCardProgressPercent"
-                android:layout_width="wrap_content"
+            <!-- Left: BANK / CARD LOGO -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardLogoContainer"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                app:cardBackgroundColor="#082561"
+                app:cardCornerRadius="8dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <TextView
+                    android:id="@+id/tvCardLogoText"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:padding="2dp"
+                    android:text="BANK"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    app:autoSizeMaxTextSize="14sp"
+                    app:autoSizeMinTextSize="6sp"
+                    app:autoSizeStepGranularity="1sp"
+                    app:autoSizeTextType="uniform" />
+            </androidx.cardview.widget.CardView>
+
+
+            <!-- Middle: CARD DETAILS (Used, Available, Due) -->
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_centerInParent="true"
-                android:gravity="center"
-                android:text="0%\nUsed"
-                android:textColor="#082561"
-                android:textSize="11sp" />
-        </RelativeLayout>
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="2dp"
+                android:orientation="vertical"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/progressContainer"
+                app:layout_constraintStart_toEndOf="@id/cardLogoContainer"
+                app:layout_constraintTop_toTopOf="parent">
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+                <!-- Row 1: Used & Available -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="horizontal"
+                    android:baselineAligned="false">
 
+                    <!-- Used -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Used"
+                            android:textColor="#949494"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/tvCardUsed"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="1dp"
+                            android:text="₹0"
+                            android:textColor="#082561"
+                            android:textSize="13sp"/>
+                    </LinearLayout>
+
+                    <!-- Available -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Available"
+                            android:textColor="#949494"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/tvCardAvailable"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="1dp"
+                            android:text="₹0"
+                            android:textColor="#082561"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Row 2: Current Due & Date -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="6dp"
+                    android:orientation="horizontal"
+                    android:baselineAligned="false">
+
+                    <!-- Used -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Current Due"
+                            android:textColor="#949494"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/tvCardDue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="1dp"
+                            android:text="₹0"
+                            android:textColor="#082561"
+                            android:textSize="13sp"/>
+                    </LinearLayout>
+
+                    <!-- Available -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Due Date"
+                            android:textColor="#949494"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/tvCardDueDate"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="1dp"
+                            android:text="00th Day"
+                            android:textColor="#082561"
+                            android:textSize="13sp"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+            </LinearLayout>
+
+
+            <!-- Right: CIRCULAR USAGE PROGRESS -->
+            <RelativeLayout
+                android:id="@+id/progressContainer"
+                android:layout_width="55dp"
+                android:layout_height="55dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <com.google.android.material.progressindicator.CircularProgressIndicator
+                    android:id="@+id/cpiCardProgress"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:progress="0"
+                    app:indicatorSize="55dp"
+                    app:indicatorInset="0dp"
+                    app:indicatorColor="#1abcab"
+                    app:trackColor="#E0E0E0"
+                    app:trackThickness="3dp" />
+
+                <TextView
+                    android:id="@+id/tvCardProgressPercent"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:gravity="center"
+                    android:text="0%&#10;Used"
+                    android:textColor="#082561"
+                    android:textSize="11sp" />
+
+            </RelativeLayout>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -722,6 +722,20 @@ public class MainActivity extends AppCompatActivity {
                     } else {
                         layoutEmptyCards.setVisibility(View.GONE);
                         recyclerViewCards.setVisibility(View.VISIBLE);
+
+                        // --- SORT BY MOST RECENT ACTIVITY (Timestamp High to Low) ---
+                        cardList.sort((c1, c2) -> Long.compare(c2.getTimestamp(), c1.getTimestamp()));
+
+                        // --- KEEP ONLY THE TOP 2 MOST RECENT CARDS FOR THE DASHBOARD ---
+                        if (cardList.size() > 2) {
+                            List<Card> topTwoCards = new ArrayList<>();
+                            topTwoCards.add(cardList.get(0)); // 1st most recent activity
+                            topTwoCards.add(cardList.get(1)); // 2nd most recent activity
+                            cardList.clear();
+                            cardList.addAll(topTwoCards);
+                        }
+                        // -------------------------------------------------------------
+
                         adapter.notifyDataSetChanged();
                     }
                 });
