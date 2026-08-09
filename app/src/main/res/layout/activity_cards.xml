@@ -174,7 +174,7 @@
             android:elevation="8dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingVertical="12dp"
+            android:paddingVertical="6dp"
             android:paddingHorizontal="8dp"
             android:weightSum="4"
             android:baselineAligned="false"
@@ -189,8 +189,18 @@
                 android:gravity="center"
                 android:orientation="vertical"
                 tools:ignore="UseCompoundDrawables">
-                <ImageView android:layout_width="45dp" android:layout_height="45dp" android:src="@drawable/dashboard" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Dashboard" android:textColor="#082561" android:textSize="12sp" />
+                <ImageView
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:padding="7dp"
+                    android:src="@drawable/dashboard" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Dashboard"
+                    android:textColor="#082561"
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <!-- Cards (ACTIVE - TEAL) -->
@@ -202,8 +212,19 @@
                 android:gravity="center"
                 android:orientation="vertical"
                 tools:ignore="UseCompoundDrawables">
-                <ImageView android:layout_width="45dp" android:layout_height="45dp" android:src="@drawable/card_nav_bottom"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cards" android:textColor="#1abcab" android:textSize="12sp" android:textStyle="bold" />
+                <ImageView
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:padding="4dp"
+                    android:src="@drawable/card_nav_bottom"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Cards"
+                    android:textColor="#1abcab"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp"
+                    android:textStyle="bold" />
             </LinearLayout>
 
             <!-- Ledger -->
@@ -215,8 +236,18 @@
                 android:gravity="center"
                 android:orientation="vertical"
                 tools:ignore="UseCompoundDrawables">
-                <ImageView android:layout_width="45dp" android:layout_height="45dp" android:src="@drawable/finmate"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FinMates" android:textColor="#082561" android:textSize="12sp" />
+                <ImageView
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:padding="4dp"
+                    android:src="@drawable/finmate"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="FinMates"
+                    android:textColor="#082561"
+                    android:layout_marginTop="4dp"
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <!-- Settings -->
@@ -228,8 +259,18 @@
                 android:gravity="center"
                 android:orientation="vertical"
                 tools:ignore="UseCompoundDrawables">
-                <ImageView android:layout_width="45dp" android:layout_height="45dp" android:src="@drawable/settings_nav"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Settings" android:textColor="#082561" android:textSize="12sp" />
+                <ImageView
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:padding="4dp"
+                    android:src="@drawable/settings_nav"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Settings"
+                    android:layout_marginTop="4dp"
+                    android:textColor="#082561"
+                    android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
@@ -241,5 +282,8 @@
         android:layout_gravity="start"
         android:background="#FFFFFF"
         app:headerLayout="@layout/nav_header"
-        app:menu="@menu/drawer_menu" />
+        app:menu="@menu/drawer_menu"
+        app:itemTextColor="#082561"
+        app:itemIconTint="@null"
+        app:itemRippleColor="#E0E0E0" />
 </androidx.drawerlayout.widget.DrawerLayout>

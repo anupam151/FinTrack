@@ -24,6 +24,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.navigation.NavigationView;
@@ -36,6 +38,7 @@ import com.google.firebase.firestore.Query;
 import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings("deprecation")
 public class FinMatesActivity extends AppCompatActivity {
 
     private DrawerLayout drawerLayout;
@@ -91,6 +94,10 @@ public class FinMatesActivity extends AppCompatActivity {
         });
 
         NavigationView navigationView = findViewById(R.id.navigationViewFinMates);
+
+        // --- THIS FIXES THE GREY ICONS PROGRAMMATICALLY ---
+        navigationView.setItemIconTintList(null);
+
         ViewCompat.setOnApplyWindowInsetsListener(navigationView, (v, windowInsets) -> {
             Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(0, insets.top, 0, insets.bottom);
@@ -99,6 +106,45 @@ public class FinMatesActivity extends AppCompatActivity {
 
         ImageView ivMenuDrawerFinMates = findViewById(R.id.ivMenuDrawerFinMates);
         ivMenuDrawerFinMates.setOnClickListener(v -> drawerLayout.openDrawer(GravityCompat.START));
+
+        // --- DRAWER MENU ITEM CLICK LISTENER ---
+        navigationView.setNavigationItemSelectedListener(item -> {
+            int id = item.getItemId();
+            drawerLayout.closeDrawer(GravityCompat.START);
+
+            drawerLayout.postDelayed(() -> {
+                if (id == R.id.nav_drawer_dashboard) {
+                    Intent intent = new Intent(FinMatesActivity.this, MainActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                    startActivity(intent);
+                    disableWindowAnimations();
+                    finish();
+                } else if (id == R.id.nav_drawer_cards) {
+                    Intent intent = new Intent(FinMatesActivity.this, CardsActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                    startActivity(intent);
+                    disableWindowAnimations();
+                    finish();
+                } else if (id == R.id.nav_drawer_ledger) {
+                    Toast.makeText(FinMatesActivity.this, "Already on FinMates", Toast.LENGTH_SHORT).show();
+                } else if (id == R.id.nav_drawer_signout) {
+                    FirebaseAuth.getInstance().signOut();
+                    GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                            .requestIdToken(getString(R.string.default_web_client_id))
+                            .requestEmail()
+                            .build();
+
+                    GoogleSignIn.getClient(FinMatesActivity.this, gso).signOut().addOnCompleteListener(task -> {
+                        Toast.makeText(FinMatesActivity.this, "Signed out successfully", Toast.LENGTH_SHORT).show();
+                        Intent intent = new Intent(FinMatesActivity.this, LoginActivity.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(intent);
+                        finish();
+                    });
+                }
+            }, 250);
+            return false;
+        });
 
         // 3. Initialize RecyclerView & UI Components
         RecyclerView recyclerViewFinMates = findViewById(R.id.recyclerViewFinMates);
@@ -122,8 +168,9 @@ public class FinMatesActivity extends AppCompatActivity {
 
         navItemDashboard.setOnClickListener(v -> {
             Intent intent = new Intent(this, MainActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
             startActivity(intent);
+            disableWindowAnimations();
             finish();
         });
 
@@ -131,6 +178,7 @@ public class FinMatesActivity extends AppCompatActivity {
             Intent intent = new Intent(this, CardsActivity.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
             startActivity(intent);
+            disableWindowAnimations();
             finish();
         });
 
@@ -143,6 +191,15 @@ public class FinMatesActivity extends AppCompatActivity {
 
         // Initial Fetch
         fetchFinMatesFromFirestore();
+    }
+
+    // Helper method to handle Android 14's new transition API safely
+    private void disableWindowAnimations() {
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            overrideActivityTransition(android.app.Activity.OVERRIDE_TRANSITION_OPEN, 0, 0);
+        } else {
+            overridePendingTransition(0, 0);
+        }
     }
 
     @Override
@@ -195,6 +252,7 @@ public class FinMatesActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> {
                     swipeRefreshFinMates.setRefreshing(false);
+                    if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
                     Toast.makeText(this, "Failed to load FinMates: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }

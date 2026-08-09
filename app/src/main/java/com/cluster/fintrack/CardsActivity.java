@@ -9,12 +9,12 @@ import android.text.TextWatcher;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.core.graphics.Insets;
 import androidx.core.view.GravityCompat;
 import androidx.core.view.ViewCompat;
@@ -25,6 +25,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
@@ -36,6 +38,7 @@ import com.google.firebase.firestore.ListenerRegistration;
 import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings("deprecation") // Added to handle GoogleSignIn deprecation warnings safely
 public class CardsActivity extends AppCompatActivity {
 
     private DrawerLayout drawerLayout;
@@ -46,7 +49,7 @@ public class CardsActivity extends AppCompatActivity {
     private TextView tvEmptyCardsList;
     private TextInputEditText etSearchCard;
     private ImageView ivSortCards;
-    private ImageView ivSortOrder; // NEW: Ascending / Descending toggle
+    private ImageView ivSortOrder;
 
     // Data lists & Adapter
     private CardAdapter cardAdapter;
@@ -56,7 +59,7 @@ public class CardsActivity extends AppCompatActivity {
 
     // Sorting state (0 = Recent Activity / Use, 1 = Recently Added, 2 = Name, 3 = Limit)
     private int currentSortMode = 0;
-    private boolean isAscending = false; // Default false so Descending (High->Low / New->Old) is primary
+    private boolean isAscending = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,6 +78,10 @@ public class CardsActivity extends AppCompatActivity {
         });
 
         NavigationView navigationView = findViewById(R.id.navigationViewCards);
+
+        // --- THIS FIXES THE GREY ICONS PROGRAMMATICALLY ---
+        navigationView.setItemIconTintList(null);
+
         ViewCompat.setOnApplyWindowInsetsListener(navigationView, (v, windowInsets) -> {
             Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(0, insets.top, 0, insets.bottom);
@@ -87,32 +94,79 @@ public class CardsActivity extends AppCompatActivity {
         tvEmptyCardsList = findViewById(R.id.tvEmptyCardsList);
         etSearchCard = findViewById(R.id.etSearchCard);
         ivSortCards = findViewById(R.id.ivSortCards);
-        ivSortOrder = findViewById(R.id.ivSortOrder); // NEW: Initialize sort order toggle button
+        ivSortOrder = findViewById(R.id.ivSortOrder);
 
-        // Setup RecyclerView with the Long-Click Listener passed in!
+        // Setup RecyclerView
         recyclerViewCards.setLayoutManager(new LinearLayoutManager(this));
         cardAdapter = new CardAdapter(this, displayedCardList, this::showCardOptionsPopup);
         recyclerViewCards.setAdapter(cardAdapter);
 
         // Setup Clicks & Actions
-        setupNavigation();
+        setupNavigation(navigationView);
         setupSearchAndSort();
         loadCardsFromFirestore();
 
         swipeRefreshCards.setOnRefreshListener(() -> swipeRefreshCards.postDelayed(() -> swipeRefreshCards.setRefreshing(false), 800));
 
-        // If 'null' is passed, it acts as a brand-new card.
         findViewById(R.id.fabAddCard).setOnClickListener(v -> showAddEditCardBottomSheet(null));
     }
 
-    private void setupNavigation() {
+    // Helper method to handle Android 14's new transition API while supporting older devices
+    private void disableWindowAnimations() {
+        if (android.os.Build.VERSION.SDK_INT >= 34) { // Android 14 (API 34) and above
+            overrideActivityTransition(android.app.Activity.OVERRIDE_TRANSITION_OPEN, 0, 0);
+        } else { // Android 13 and below
+            overridePendingTransition(0, 0);
+        }
+    }
+
+    private void setupNavigation(NavigationView navigationView) {
         ImageView ivMenuDrawerCards = findViewById(R.id.ivMenuDrawerCards);
         ivMenuDrawerCards.setOnClickListener(v -> drawerLayout.openDrawer(GravityCompat.START));
 
+        navigationView.setNavigationItemSelectedListener(item -> {
+            int id = item.getItemId();
+            drawerLayout.closeDrawer(GravityCompat.START);
+
+            drawerLayout.postDelayed(() -> {
+                if (id == R.id.nav_drawer_dashboard) {
+                    Intent intent = new Intent(CardsActivity.this, MainActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                    startActivity(intent);
+                    disableWindowAnimations();
+                    finish();
+                } else if (id == R.id.nav_drawer_cards) {
+                    Toast.makeText(CardsActivity.this, "Already on Credit Cards", Toast.LENGTH_SHORT).show();
+                } else if (id == R.id.nav_drawer_ledger) {
+                    Intent intent = new Intent(CardsActivity.this, FinMatesActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                    startActivity(intent);
+                    disableWindowAnimations();
+                    finish();
+                } else if (id == R.id.nav_drawer_signout) {
+                    FirebaseAuth.getInstance().signOut();
+                    GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                            .requestIdToken(getString(R.string.default_web_client_id))
+                            .requestEmail()
+                            .build();
+
+                    GoogleSignIn.getClient(CardsActivity.this, gso).signOut().addOnCompleteListener(task -> {
+                        Toast.makeText(CardsActivity.this, "Signed out successfully", Toast.LENGTH_SHORT).show();
+                        Intent intent = new Intent(CardsActivity.this, LoginActivity.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(intent);
+                        finish();
+                    });
+                }
+            }, 250);
+            return false;
+        });
+
         findViewById(R.id.navItemDashboard).setOnClickListener(v -> {
             Intent intent = new Intent(this, MainActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
             startActivity(intent);
+            disableWindowAnimations();
             finish();
         });
 
@@ -120,6 +174,7 @@ public class CardsActivity extends AppCompatActivity {
             Intent intent = new Intent(this, FinMatesActivity.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
             startActivity(intent);
+            disableWindowAnimations();
             finish();
         });
 
@@ -141,7 +196,6 @@ public class CardsActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {}
         });
 
-        // --- FIXED: Wrap popup menu in ContextThemeWrapper to resolve the pinkish background issue ---
         ivSortCards.setOnClickListener(v -> {
             androidx.appcompat.view.ContextThemeWrapper wrapper =
                     new androidx.appcompat.view.ContextThemeWrapper(this, R.style.CleanPopupMenuTheme);
@@ -160,16 +214,13 @@ public class CardsActivity extends AppCompatActivity {
             popup.show();
         });
 
-        // --- NEW: Toggle Sort Direction (Ascending / Descending) ---
         ivSortOrder.setOnClickListener(v -> {
             isAscending = !isAscending;
-            // Visually change rotation or tint to indicate direction change
             ivSortOrder.animate().rotation(isAscending ? 180f : 0f).setDuration(200).start();
             filterCards(etSearchCard.getText() != null ? etSearchCard.getText().toString() : "");
         });
     }
 
-    // --- Options Popup Menu ---
     private void showCardOptionsPopup(Card card, View anchor) {
         androidx.appcompat.view.ContextThemeWrapper wrapper =
                 new androidx.appcompat.view.ContextThemeWrapper(this, R.style.CleanPopupMenuTheme);
@@ -194,7 +245,6 @@ public class CardsActivity extends AppCompatActivity {
         popup.show();
     }
 
-    // --- Delete Confirmation Dialog ---
     private void showDeleteConfirmationDialog(Card card) {
         com.google.android.material.dialog.MaterialAlertDialogBuilder builder =
                 new com.google.android.material.dialog.MaterialAlertDialogBuilder(this);
@@ -297,6 +347,7 @@ public class CardsActivity extends AppCompatActivity {
                     swipeRefreshCards.setRefreshing(false);
 
                     if (error != null) {
+                        if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
                         Toast.makeText(CardsActivity.this, "Failed to load cards: " + error.getMessage(), Toast.LENGTH_SHORT).show();
                         return;
                     }
@@ -330,20 +381,19 @@ public class CardsActivity extends AppCompatActivity {
             }
         }
 
-        // --- SORTING LOGIC SUPPORTING ASCENDING / DESCENDING ---
-        if (currentSortMode == 0) { // Recent Activity / Use (Default)
+        if (currentSortMode == 0) {
             tempFilteredList.sort((c1, c2) -> isAscending ?
                     Long.compare(c1.getTimestamp(), c2.getTimestamp()) :
                     Long.compare(c2.getTimestamp(), c1.getTimestamp()));
-        } else if (currentSortMode == 1) { // Recently Added
+        } else if (currentSortMode == 1) {
             tempFilteredList.sort((c1, c2) -> isAscending ?
                     Long.compare(c1.getTimestamp(), c2.getTimestamp()) :
                     Long.compare(c2.getTimestamp(), c1.getTimestamp()));
-        } else if (currentSortMode == 2) { // Name (A-Z / Z-A)
+        } else if (currentSortMode == 2) {
             tempFilteredList.sort((c1, c2) -> isAscending ?
                     c1.getCardName().compareToIgnoreCase(c2.getCardName()) :
                     c2.getCardName().compareToIgnoreCase(c1.getCardName()));
-        } else if (currentSortMode == 3) { // Total Limit (Low-High / High-Low)
+        } else if (currentSortMode == 3) {
             tempFilteredList.sort((c1, c2) -> isAscending ?
                     Double.compare(c1.getTotalLimit(), c2.getTotalLimit()) :
                     Double.compare(c2.getTotalLimit(), c1.getTotalLimit()));

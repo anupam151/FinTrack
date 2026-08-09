@@ -75,15 +75,15 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:paddingHorizontal="16dp"
-                    android:paddingTop="16dp"
+                    android:paddingTop="10dp"
                     android:paddingBottom="16dp">
 
                     <!-- Snapshot / Overview -->
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        app:cardBackgroundColor="#FFFFFF"
+                        android:layout_marginBottom="10dp"
+                        app:cardBackgroundColor="#F6F6F6"
                         app:cardCornerRadius="8dp"
                         app:cardElevation="0dp"
                         app:strokeColor="#E0E0E0"
@@ -106,12 +106,7 @@
                                 android:layout_weight="1"
                                 android:gravity="center"
                                 android:orientation="vertical">
-                                <TextView
-                                    android:id="@+id/tvIconCards"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="💳"
-                                    android:textSize="24sp" />
+
                                 <TextView
                                     android:id="@+id/tvLabelCards"
                                     android:layout_width="wrap_content"
@@ -124,6 +119,7 @@
                                     android:id="@+id/tvValueCards"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
                                     android:text="2"
                                     android:textColor="#082561"
                                     android:textSize="14sp"
@@ -139,12 +135,6 @@
                                 android:gravity="center"
                                 android:orientation="vertical">
                                 <TextView
-                                    android:id="@+id/tvIconLimit"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="💼"
-                                    android:textSize="24sp" />
-                                <TextView
                                     android:id="@+id/tvLabelLimit"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
@@ -156,6 +146,7 @@
                                     android:id="@+id/tvValueLimit"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
                                     android:text="₹3,48,000"
                                     android:textColor="#1abcab"
                                     android:textSize="14sp"
@@ -171,12 +162,6 @@
                                 android:gravity="center"
                                 android:orientation="vertical">
                                 <TextView
-                                    android:id="@+id/tvIconUsed"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="📈"
-                                    android:textSize="24sp" />
-                                <TextView
                                     android:id="@+id/tvLabelUsed"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
@@ -188,6 +173,7 @@
                                     android:id="@+id/tvValueUsed"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
                                     android:text="₹1,57,480"
                                     android:textColor="#082561"
                                     android:textSize="14sp"
@@ -203,12 +189,6 @@
                                 android:gravity="center"
                                 android:orientation="vertical">
                                 <TextView
-                                    android:id="@+id/tvIconDue"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="⏳"
-                                    android:textSize="24sp" />
-                                <TextView
                                     android:id="@+id/tvLabelDue"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
@@ -220,6 +200,7 @@
                                     android:id="@+id/tvValueDue"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
                                     android:text="₹26,768"
                                     android:textColor="#1abcab"
                                     android:textSize="14sp"
@@ -233,8 +214,8 @@
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        app:cardBackgroundColor="#FFFFFF"
+                        android:layout_marginBottom="10dp"
+                        app:cardBackgroundColor="#F6F6F6"
                         app:cardCornerRadius="12dp"
                         app:cardElevation="0dp"
                         app:strokeColor="#E0E0E0"
@@ -250,29 +231,28 @@
                             <RelativeLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginBottom="6dp">
+                                android:layout_marginBottom="2dp">
                                 <TextView
                                     android:id="@+id/tvSectionCardsTitle"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_centerVertical="true"
-                                    android:text="SECTION 1: My Credit Cards"
+                                    android:text="Credit Cards"
                                     android:textColor="#082561"
                                     android:textSize="14sp"
                                     android:textStyle="bold" />
 
-                                <TextView
+                                <ImageButton
                                     android:id="@+id/btnAddCard"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
                                     android:layout_alignParentEnd="true"
                                     android:layout_centerVertical="true"
-                                    android:background="?attr/selectableItemBackground"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:contentDescription="More"
                                     android:padding="4dp"
-                                    android:text="More >"
-                                    android:textColor="#1abcab"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold" />
+                                    android:scaleType="fitCenter"
+                                    android:src="@drawable/more"/>
                             </RelativeLayout>
 
                             <!-- Empty State: No Cards -->
@@ -324,8 +304,8 @@
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        app:cardBackgroundColor="#FFFFFF"
+                        android:layout_marginBottom="10dp"
+                        app:cardBackgroundColor="#F6F6F6"
                         app:cardCornerRadius="12dp"
                         app:cardElevation="0dp"
                         app:strokeColor="#E0E0E0"
@@ -342,29 +322,28 @@
                             <RelativeLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginBottom="6dp">
+                                android:layout_marginBottom="2dp">
                                 <TextView
                                     android:id="@+id/tvSectionLedgerTitle"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_centerVertical="true"
-                                    android:text="SECTION 2: Borrower / Lender Ledger"
+                                    android:text="FinMates"
                                     android:textColor="#082561"
                                     android:textSize="14sp"
                                     android:textStyle="bold" />
 
-                                <TextView
+                                <ImageButton
                                     android:id="@+id/btnAddPerson"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
                                     android:layout_alignParentEnd="true"
                                     android:layout_centerVertical="true"
-                                    android:background="?attr/selectableItemBackground"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:contentDescription="More"
                                     android:padding="4dp"
-                                    android:text="More >"
-                                    android:textColor="#1abcab"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold" />
+                                    android:scaleType="fitCenter"
+                                    android:src="@drawable/more"/>
                             </RelativeLayout>
 
                             <!-- Empty State: No FinMates -->
@@ -425,7 +404,7 @@
             android:elevation="8dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingVertical="12dp"
+            android:paddingVertical="6dp"
             android:paddingHorizontal="8dp"
             android:baselineAligned="false"
             android:weightSum="4"
@@ -445,6 +424,7 @@
                     android:id="@+id/ivNavDashboardIcon"
                     android:layout_width="45dp"
                     android:layout_height="45dp"
+                    android:padding="7dp"
                     android:src="@drawable/dashboard" />
                 <TextView
                     android:id="@+id/tvNavDashboardLabel"
@@ -469,6 +449,7 @@
                     android:id="@+id/ivNavCardsIcon"
                     android:layout_width="45dp"
                     android:layout_height="45dp"
+                    android:padding="4dp"
                     android:src="@drawable/card_nav_bottom"/>
                 <TextView
                     android:id="@+id/tvNavCardsLabel"
@@ -492,6 +473,7 @@
                     android:id="@+id/ivNavLedgerIcon"
                     android:layout_width="45dp"
                     android:layout_height="45dp"
+                    android:padding="4dp"
                     android:src="@drawable/finmate"/>
                 <TextView
                     android:id="@+id/tvNavLedgerLabel"
@@ -515,6 +497,7 @@
                     android:id="@+id/ivNavSettingsIcon"
                     android:layout_width="45dp"
                     android:layout_height="45dp"
+                    android:padding="4dp"
                     android:src="@drawable/settings_nav"/>
                 <TextView
                     android:id="@+id/tvNavSettingsLabel"
@@ -536,6 +519,9 @@
         android:layout_gravity="start"
         android:background="#FFFFFF"
         app:headerLayout="@layout/nav_header"
-        app:menu="@menu/drawer_menu" />
+        app:menu="@menu/drawer_menu"
+        app:itemTextColor="#082561"
+        app:itemIconTint="@null"
+        app:itemRippleColor="#E0E0E0"/>
 
 </androidx.drawerlayout.widget.DrawerLayout>

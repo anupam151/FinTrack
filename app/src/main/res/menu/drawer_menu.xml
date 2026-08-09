@@ -22,7 +22,7 @@
         <menu>
             <item
                 android:id="@+id/nav_drawer_signout"
-                android:icon="@drawable/emi"
+                android:icon="@drawable/signout"
                 android:title="Sign Out" />
         </menu>
     </item>

@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
@@ -88,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         NavigationView navigationView = findViewById(R.id.navigationView);
+        navigationView.setItemIconTintList(null);
         ViewCompat.setOnApplyWindowInsetsListener(navigationView, (v, windowInsets) -> {
             androidx.core.graphics.Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(0, insets.top, 0, insets.bottom);
@@ -97,8 +99,8 @@ public class MainActivity extends AppCompatActivity {
         drawerLayout = findViewById(R.id.drawerLayout);
         ImageView ivMenuDrawer = findViewById(R.id.ivMenuDrawer);
         SwipeRefreshLayout swipeRefresh = findViewById(R.id.swipeRefresh);
-        TextView btnAddCard = findViewById(R.id.btnAddCard);
-        TextView btnAddPerson = findViewById(R.id.btnAddPerson);
+        ImageButton btnAddCard = findViewById(R.id.btnAddCard);
+        ImageButton btnAddPerson = findViewById(R.id.btnAddPerson);
 
         LinearLayout navItemCards = findViewById(R.id.navItemCards);
         LinearLayout navItemLedger = findViewById(R.id.navItemLedger);
@@ -122,35 +124,43 @@ public class MainActivity extends AppCompatActivity {
         navigationView.setNavigationItemSelectedListener(item -> {
             int id = item.getItemId();
 
-            if (id == R.id.nav_drawer_dashboard) {
-                Toast.makeText(MainActivity.this, "Already on Dashboard", Toast.LENGTH_SHORT).show();
-            } else if (id == R.id.nav_drawer_cards) {
-                Intent intent = new Intent(MainActivity.this, CardsActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
-                startActivity(intent);
-            } else if (id == R.id.nav_drawer_ledger) {
-                Intent intent = new Intent(MainActivity.this, FinMatesActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
-                startActivity(intent);
-            } else if (id == R.id.nav_drawer_signout) {
-                FirebaseAuth.getInstance().signOut();
-
-                GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                        .requestIdToken(getString(R.string.default_web_client_id))
-                        .requestEmail()
-                        .build();
-
-                GoogleSignIn.getClient(MainActivity.this, gso).signOut().addOnCompleteListener(task -> {
-                    Toast.makeText(MainActivity.this, "Signed out successfully", Toast.LENGTH_SHORT).show();
-                    Intent intent = new Intent(MainActivity.this, LoginActivity.class);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    startActivity(intent);
-                    finish();
-                });
-            }
-
+            // 1. Close the drawer IMMEDIATELY
             drawerLayout.closeDrawer(GravityCompat.START);
-            return true;
+
+            // 2. Wait for the drawer to finish sliding closed (~250ms) before starting the new Activity.
+            // This prevents the screen from flickering while the drawer is moving.
+            drawerLayout.postDelayed(() -> {
+                if (id == R.id.nav_drawer_dashboard) {
+                    Toast.makeText(MainActivity.this, "Already on Dashboard", Toast.LENGTH_SHORT).show();
+                } else if (id == R.id.nav_drawer_cards) {
+                    Intent intent = new Intent(MainActivity.this, CardsActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                    startActivity(intent);
+                    overridePendingTransition(0, 0); // Kills the Android window flash
+                } else if (id == R.id.nav_drawer_ledger) {
+                    Intent intent = new Intent(MainActivity.this, FinMatesActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                    startActivity(intent);
+                    overridePendingTransition(0, 0); // Kills the Android window flash
+                } else if (id == R.id.nav_drawer_signout) {
+                    FirebaseAuth.getInstance().signOut();
+                    GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                            .requestIdToken(getString(R.string.default_web_client_id))
+                            .requestEmail()
+                            .build();
+
+                    GoogleSignIn.getClient(MainActivity.this, gso).signOut().addOnCompleteListener(task -> {
+                        Toast.makeText(MainActivity.this, "Signed out successfully", Toast.LENGTH_SHORT).show();
+                        Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(intent);
+                        finish();
+                    });
+                }
+            }, 250); // 250 milliseconds delay
+
+            // 3. RETURN FALSE: This tells Android NOT to leave the item permanently highlighted (no pink background)
+            return false;
         });
 
         swipeRefresh.setOnRefreshListener(() -> {
@@ -702,6 +712,7 @@ public class MainActivity extends AppCompatActivity {
         db.collection("Users").document(userId).collection("Cards")
                 .addSnapshotListener((snapshot, error) -> {
                     if (error != null) {
+                        if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
                         Toast.makeText(MainActivity.this, "Failed to load cards: " + error.getMessage(), Toast.LENGTH_SHORT).show();
                         return;
                     }
@@ -762,6 +773,7 @@ public class MainActivity extends AppCompatActivity {
         db.collection("Users").document(userId).collection("FinMates")
                 .addSnapshotListener((snapshot, error) -> {
                     if (error != null) {
+                        if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
                         Toast.makeText(MainActivity.this, "Failed to load FinMates: " + error.getMessage(), Toast.LENGTH_SHORT).show();
                         return;
                     }
@@ -782,6 +794,20 @@ public class MainActivity extends AppCompatActivity {
                     } else {
                         layoutEmptyFinMates.setVisibility(View.GONE);
                         recyclerViewFinMates.setVisibility(View.VISIBLE);
+
+                        // --- SORT BY MOST RECENT ACTIVITY (Timestamp High to Low) ---
+                        finMateList.sort((f1, f2) -> Long.compare(f2.getTimestamp(), f1.getTimestamp()));
+
+                        // --- KEEP ONLY THE TOP 2 MOST RECENT FINMATES FOR THE DASHBOARD ---
+                        if (finMateList.size() > 2) {
+                            List<FinMate> topTwoFinMates = new ArrayList<>();
+                            topTwoFinMates.add(finMateList.get(0)); // 1st most recent activity
+                            topTwoFinMates.add(finMateList.get(1)); // 2nd most recent activity
+                            finMateList.clear();
+                            finMateList.addAll(topTwoFinMates);
+                        }
+                        // ---------------------------------------------------------------
+
                         adapter.notifyDataSetChanged();
                     }
                 });
