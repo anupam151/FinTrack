@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <!-- Pure White Background -->
+    <solid android:color="#FFFFFF" />
+
+    <!-- Smooth 16dp Rounded Corners -->
+    <corners android:radius="10dp" />
+
+    <!-- Adds a little breathing room at the top and bottom of the menu -->
+    <padding
+        android:top="8dp"
+        android:bottom="8dp" />
+
+</shape>

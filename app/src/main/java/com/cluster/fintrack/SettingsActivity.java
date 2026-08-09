@@ -191,10 +191,39 @@ public class SettingsActivity extends AppCompatActivity {
 
     @SuppressLint("SetTextI18n")
     private void showAddCardBottomSheet() {
-        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        // 1. Create dialog and override touch events to keep keyboard open when switching between text boxes
+        BottomSheetDialog dialog = new BottomSheetDialog(this) {
+            @Override
+            public boolean dispatchTouchEvent(android.view.MotionEvent event) {
+                if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
+                    View v = getCurrentFocus();
+                    if (v instanceof android.widget.EditText) {
+                        android.graphics.Rect outRect = new android.graphics.Rect();
+                        v.getGlobalVisibleRect(outRect);
+
+                        // Check if the user touched outside the currently focused text box
+                        if (!outRect.contains((int) event.getRawX(), (int) event.getRawY())) {
+                            // Only close keyboard if the newly touched focus is NOT another EditText
+                            View newFocus = getWindow() != null ? getWindow().getCurrentFocus() : null;
+                            if (!(newFocus instanceof android.widget.EditText)) {
+                                v.clearFocus();
+                                if (getWindow() != null) {
+                                    androidx.core.view.WindowInsetsControllerCompat controller =
+                                            new androidx.core.view.WindowInsetsControllerCompat(getWindow(), v);
+                                    controller.hide(androidx.core.view.WindowInsetsCompat.Type.ime());
+                                }
+                            }
+                        }
+                    }
+                }
+                return super.dispatchTouchEvent(event);
+            }
+        };
+
         View view = getLayoutInflater().inflate(R.layout.dialog_add_edit_card, findViewById(android.R.id.content), false);
         dialog.setContentView(view);
 
+        // 2. DEFINE VIEWS
         TextView title = view.findViewById(R.id.tvCardSheetTitle);
         com.google.android.material.textfield.MaterialAutoCompleteTextView spinBankName = view.findViewById(R.id.spinSheetBankName);
         TextInputEditText etCardName = view.findViewById(R.id.etSheetCardName);
@@ -202,17 +231,38 @@ public class SettingsActivity extends AppCompatActivity {
         TextInputEditText etBillingDay = view.findViewById(R.id.etSheetBillingDay);
 
         com.google.android.material.card.MaterialCardView cardColorPreview = view.findViewById(R.id.cardColorPreview);
-        MaterialButton btnPickColor = view.findViewById(R.id.btnPickColor);
-        TextView btnResetColor = view.findViewById(R.id.btnResetColor);
+        ImageView btnResetColor = view.findViewById(R.id.btnResetColor);
         MaterialButton btnSave = view.findViewById(R.id.btnSheetSaveCard);
 
         title.setText("Add Credit Card");
         btnSave.setText("Save Card");
 
+        // 3. SET AUTO-FOCUS & OPEN KEYBOARD IMMEDIATELY ON CARD NAME
+        dialog.setOnShowListener(d -> {
+            etCardName.requestFocus();
+            if (dialog.getWindow() != null) {
+                androidx.core.view.WindowInsetsControllerCompat controller =
+                        new androidx.core.view.WindowInsetsControllerCompat(dialog.getWindow(), etCardName);
+                controller.show(androidx.core.view.WindowInsetsCompat.Type.ime());
+            }
+        });
+
+        // 4. SETUP DROPDOWN (Will NOT open automatically on click, only when typing)
+        spinBankName.setAdapter(getBankArrayAdapter());
+        spinBankName.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (spinBankName.hasFocus()) {
+                    spinBankName.showDropDown();
+                }
+            }
+            @Override public void afterTextChanged(android.text.Editable s) {}
+        });
+
         final int[] currentColor = {android.graphics.Color.parseColor("#082561")};
         final int defaultColor = android.graphics.Color.parseColor("#082561");
 
-        btnPickColor.setOnClickListener(v -> {
+        cardColorPreview.setOnClickListener(v -> {
             yuku.ambilwarna.AmbilWarnaDialog colorPickerDialog = new yuku.ambilwarna.AmbilWarnaDialog(this, currentColor[0], new yuku.ambilwarna.AmbilWarnaDialog.OnAmbilWarnaListener() {
                 @Override
                 public void onCancel(yuku.ambilwarna.AmbilWarnaDialog dialog) {}
@@ -232,13 +282,50 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
         btnSave.setOnClickListener(v -> {
-            String bankName = String.valueOf(spinBankName.getText()).trim();
             String cardName = String.valueOf(etCardName.getText()).trim();
+            String bankName = String.valueOf(spinBankName.getText()).trim();
             String limitStr = String.valueOf(etTotalLimit.getText()).trim();
             String billingDayStr = String.valueOf(etBillingDay.getText()).trim();
 
-            if (TextUtils.isEmpty(bankName)) { spinBankName.setError("Required"); return; }
             if (TextUtils.isEmpty(cardName)) { etCardName.setError("Required"); return; }
+            if (TextUtils.isEmpty(bankName)) { spinBankName.setError("Required"); return; }
+
+            // --- STRICT BANK VALIDATION ---
+            String[] validBanks = new String[]{
+                    "AU Small Finance Bank", "American Express", "Axis Bank", "Bandhan Bank",
+                    "Bank of Baroda", "Bank of India", "Bank of Maharashtra", "Barclays Bank",
+                    "Baroda Gujarat Gramin Bank", "Baroda Rajasthan Kshetriya Gramin Bank",
+                    "Baroda U.P. Bank", "CSB Bank", "Canara Bank", "Capital Small Finance Bank",
+                    "Central Bank of India", "City Union Bank", "Cosmos Co-operative Bank",
+                    "DBS Bank", "DCB Bank", "Deutsche Bank", "Dhanlaxmi Bank",
+                    "Equitas Small Finance Bank", "ESAF Small Finance Bank", "Federal Bank",
+                    "First Abu Dhabi Bank", "HDFC Bank", "HSBC Bank", "ICICI Bank Limited",
+                    "IDFC FIRST Bank", "Indian Bank", "Indian Overseas Bank", "IndusInd Bank",
+                    "Jammu & Kashmir Bank", "Jana Small Finance Bank", "Karnataka Bank",
+                    "Karur Vysya Bank", "Kerala Gramin Bank", "Kotak Mahindra Bank",
+                    "Nainital Bank", "Punjab & Sind Bank", "Punjab National Bank", "RBL Bank",
+                    "Saraswat Co-operative Bank", "SBM Bank India", "South Indian Bank",
+                    "Standard Chartered Bank", "State Bank of India", "Suryoday Small Finance Bank",
+                    "SVC Co-operative Bank", "Tamilnad Mercantile Bank", "UCO Bank",
+                    "Ujjivan Small Finance Bank", "Union Bank of India", "Utkarsh Small Finance Bank",
+                    "YES Bank"
+            };
+
+            boolean isValidBank = false;
+            for (String bank : validBanks) {
+                if (bank.equalsIgnoreCase(bankName)) {
+                    isValidBank = true;
+                    break;
+                }
+            }
+
+            if (!isValidBank) {
+                spinBankName.setError("Please select a valid bank from the list");
+                spinBankName.requestFocus();
+                return;
+            }
+            // ------------------------------
+
             if (TextUtils.isEmpty(limitStr)) { etTotalLimit.setError("Required"); return; }
             if (TextUtils.isEmpty(billingDayStr)) { etBillingDay.setError("Required"); return; }
 
@@ -278,10 +365,93 @@ public class SettingsActivity extends AppCompatActivity {
 
         dialog.show();
     }
+    private android.widget.ArrayAdapter<String> getBankArrayAdapter() {
+        java.util.List<String> bankList = java.util.Arrays.asList(
+                "AU Small Finance Bank", "American Express", "Axis Bank", "Bandhan Bank",
+                "Bank of Baroda", "Bank of India", "Bank of Maharashtra", "Barclays Bank",
+                "Baroda Gujarat Gramin Bank", "Baroda Rajasthan Kshetriya Gramin Bank",
+                "Baroda U.P. Bank", "CSB Bank", "Canara Bank", "Capital Small Finance Bank",
+                "Central Bank of India", "City Union Bank", "Cosmos Co-operative Bank",
+                "DBS Bank", "DCB Bank", "Deutsche Bank", "Dhanlaxmi Bank",
+                "Equitas Small Finance Bank", "ESAF Small Finance Bank", "Federal Bank",
+                "First Abu Dhabi Bank", "HDFC Bank", "HSBC Bank", "ICICI Bank Limited",
+                "IDFC FIRST Bank", "Indian Bank", "Indian Overseas Bank", "IndusInd Bank",
+                "Jammu & Kashmir Bank", "Jana Small Finance Bank", "Karnataka Bank",
+                "Karur Vysya Bank", "Kerala Gramin Bank", "Kotak Mahindra Bank",
+                "Nainital Bank", "Punjab & Sind Bank", "Punjab National Bank", "RBL Bank",
+                "Saraswat Co-operative Bank", "SBM Bank India", "South Indian Bank",
+                "Standard Chartered Bank", "State Bank of India", "Suryoday Small Finance Bank",
+                "SVC Co-operative Bank", "Tamilnad Mercantile Bank", "UCO Bank",
+                "Ujjivan Small Finance Bank", "Union Bank of India", "Utkarsh Small Finance Bank",
+                "YES Bank"
+        );
+
+        // We create a custom adapter to enable "Contains" matching instead of just "Starts With"
+        return new android.widget.ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, new java.util.ArrayList<>(bankList)) {
+            @androidx.annotation.NonNull
+            @Override
+            public android.widget.Filter getFilter() {
+                return new android.widget.Filter() {
+                    @Override
+                    protected FilterResults performFiltering(CharSequence constraint) {
+                        FilterResults results = new FilterResults();
+                        if (constraint == null || constraint.length() == 0) {
+                            results.values = bankList; // Show all if search is empty
+                            results.count = bankList.size();
+                        } else {
+                            java.util.List<String> filteredList = new java.util.ArrayList<>();
+                            String filterPattern = constraint.toString().toLowerCase().trim();
+
+                            // Check if the bank name contains whatever the user typed
+                            for (String bank : bankList) {
+                                if (bank.toLowerCase().contains(filterPattern)) {
+                                    filteredList.add(bank);
+                                }
+                            }
+                            results.values = filteredList;
+                            results.count = filteredList.size();
+                        }
+                        return results;
+                    }
+
+                    @Override
+                    @SuppressWarnings("unchecked")
+                    protected void publishResults(CharSequence constraint, FilterResults results) {
+                        clear();
+                        if (results.values != null) {
+                            addAll((java.util.List<String>) results.values);
+                        }
+                        notifyDataSetChanged(); // Update the dropdown instantly!
+                    }
+                };
+            }
+        };
+    }
 
     @SuppressLint("SetTextI18n")
     private void showAddFinMateBottomSheet() {
-        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        // Create dialog and override touch events to close keyboard when clicking out-side of EditTexts
+        BottomSheetDialog dialog = new BottomSheetDialog(this) {
+            @Override
+            public boolean dispatchTouchEvent(android.view.MotionEvent event) {
+                if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
+                    View v = getCurrentFocus();
+                    if (v instanceof android.widget.EditText) {
+                        android.graphics.Rect outRect = new android.graphics.Rect();
+                        v.getGlobalVisibleRect(outRect);
+                        if (!outRect.contains((int) event.getRawX(), (int) event.getRawY())) {
+                            v.clearFocus();
+                            android.view.inputmethod.InputMethodManager imm =
+                                    (android.view.inputmethod.InputMethodManager) getContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+                            if (imm != null) {
+                                imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+                            }
+                        }
+                    }
+                }
+                return super.dispatchTouchEvent(event);
+            }
+        };
         View view = getLayoutInflater().inflate(R.layout.dialog_add_edit_finmate, findViewById(android.R.id.content), false);
         dialog.setContentView(view);
 
@@ -363,4 +533,6 @@ public class SettingsActivity extends AppCompatActivity {
 
         dialog.show();
     }
+
+
 }
