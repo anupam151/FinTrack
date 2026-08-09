@@ -51,36 +51,105 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toEndOf="@id/ivMenuDrawerFinMates"
                 app:layout_constraintTop_toTopOf="parent" />
-
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-        <!-- CONTENT AREA -->
-        <androidx.core.widget.NestedScrollView
+        <!-- SEARCH AND SORT BAR -->
+        <LinearLayout
+            android:id="@+id/searchSortContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="8dp"
+            android:gravity="center_vertical"
+            app:layout_constraintTop_toBottomOf="@id/topAppBarContainer">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                app:boxCornerRadiusBottomEnd="8dp"
+                app:boxCornerRadiusBottomStart="8dp"
+                app:boxCornerRadiusTopEnd="8dp"
+                app:boxCornerRadiusTopStart="8dp"
+                app:boxBackgroundColor="#FFFFFF"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="1dp"
+                app:endIconMode="clear_text">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etSearchFinMate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Search borrower/lender name..."
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp"
+                    android:singleLine="true"
+                    android:textSize="14sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- ASCENDING / DESCENDING DIRECTION TOGGLE BUTTON -->
+            <ImageView
+                android:id="@+id/ivSortOrderFinMates"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="10dp"
+                android:src="@drawable/arrow_up_down"/>
+
+            <!-- SORT OPTIONS BUTTON -->
+            <ImageView
+                android:id="@+id/ivSortFinMates"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="12dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="8dp"
+                android:src="@drawable/sort"
+                app:tint="#082561" />
+
+        </LinearLayout>
+
+        <!-- CONTENT AREA (SWIPE TO REFRESH & RECYCLER VIEW) -->
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/swipeRefreshFinMates"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:fillViewport="true"
             app:layout_constraintBottom_toTopOf="@+id/bottomNavigationWrapper"
-            app:layout_constraintTop_toBottomOf="@+id/topAppBarContainer">
+            app:layout_constraintTop_toBottomOf="@+id/searchSortContainer">
 
-            <LinearLayout
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+                android:layout_height="match_parent">
+
+                <!-- Recycler View -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recyclerViewFinMates"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clipToPadding="false"
+                    android:paddingHorizontal="12dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="88dp" />
 
                 <!-- Empty State -->
                 <TextView
                     android:id="@+id/tvEmptyFinMatesList"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_gravity="center"
                     android:gravity="center"
-                    android:paddingTop="40dp"
+                    android:padding="32dp"
                     android:text="No FinMates added yet.\nClick the + button below to add a borrower/lender."
                     android:textColor="#757575"
-                    android:textSize="16sp" />
-
-            </LinearLayout>
-        </androidx.core.widget.NestedScrollView>
+                    android:textSize="16sp"
+                    android:visibility="gone" />
+            </FrameLayout>
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
         <!-- FLOATING ACTION BUTTON (+) -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -120,8 +189,16 @@
                 android:gravity="center"
                 android:orientation="vertical"
                 tools:ignore="UseCompoundDrawables">
-                <ImageView android:layout_width="45dp" android:layout_height="45dp" android:src="@drawable/dashboard" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Dashboard" android:textColor="#082561" android:textSize="12sp" />
+                <ImageView
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:src="@drawable/dashboard" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Dashboard"
+                    android:textColor="#082561"
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <!-- Cards -->
@@ -133,11 +210,19 @@
                 android:gravity="center"
                 android:orientation="vertical"
                 tools:ignore="UseCompoundDrawables">
-                <ImageView android:layout_width="45dp" android:layout_height="45dp" android:src="@drawable/card_nav_bottom"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cards" android:textColor="#082561" android:textSize="12sp" />
+                <ImageView
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:src="@drawable/card_nav_bottom"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Cards"
+                    android:textColor="#082561"
+                    android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- Ledger (ACTIVE - TEAL) -->
+            <!-- FinMates (ACTIVE - TEAL) -->
             <LinearLayout
                 android:id="@+id/navItemLedger"
                 android:layout_width="0dp"
@@ -146,8 +231,17 @@
                 android:gravity="center"
                 android:orientation="vertical"
                 tools:ignore="UseCompoundDrawables">
-                <ImageView android:layout_width="45dp" android:layout_height="45dp" android:src="@drawable/finmate"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FinMates" android:textColor="#1abcab" android:textSize="12sp" android:textStyle="bold" />
+                <ImageView
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:src="@drawable/finmate"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="FinMates"
+                    android:textColor="#1abcab"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
             </LinearLayout>
 
             <!-- Settings -->
@@ -159,8 +253,16 @@
                 android:gravity="center"
                 android:orientation="vertical"
                 tools:ignore="UseCompoundDrawables">
-                <ImageView android:layout_width="45dp" android:layout_height="45dp" android:src="@drawable/settings_nav"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Settings" android:textColor="#082561" android:textSize="12sp" />
+                <ImageView
+                    android:layout_width="45dp"
+                    android:layout_height="45dp"
+                    android:src="@drawable/settings_nav"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Settings"
+                    android:textColor="#082561"
+                    android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>

@@ -4,11 +4,16 @@ package com.cluster.fintrack;
 public class FinMate {
     private String finMateId;
     private String name;
-    private String phoneNo;    // Added general contact number
+    private String phoneNo;    // General contact number
     private String whatsappNo; // Empty string if not on WhatsApp, or the number if yes
     private String email;
     private String address;
     private long timestamp;
+
+    // --- Financial amounts ---
+    private double receivableCardAmount;
+    private double receivableCashAmount;
+    private double payableAmount;
 
     // 1. Required empty constructor for Firebase
     public FinMate() {
@@ -23,6 +28,9 @@ public class FinMate {
         this.email = email;
         this.address = address;
         this.timestamp = timestamp;
+        this.receivableCardAmount = 0.0;
+        this.receivableCashAmount = 0.0;
+        this.payableAmount = 0.0;
     }
 
     // 3. Getters
@@ -33,4 +41,18 @@ public class FinMate {
     public String getEmail() { return email; }
     public String getAddress() { return address; }
     public long getTimestamp() { return timestamp; }
+
+    public double getReceivableCardAmount() { return receivableCardAmount; }
+    public double getReceivableCashAmount() { return receivableCashAmount; }
+    public double getPayableAmount() { return payableAmount; }
+
+    // --- Dynamic Total Calculation ---
+    public double getTotalReceivable() {
+        return receivableCardAmount + receivableCashAmount;
+    }
+
+    // 4. Setters
+    public void setReceivableCardAmount(double receivableCardAmount) { this.receivableCardAmount = receivableCardAmount; }
+    public void setReceivableCashAmount(double receivableCashAmount) { this.receivableCashAmount = receivableCashAmount; }
+    public void setPayableAmount(double payableAmount) { this.payableAmount = payableAmount; }
 }

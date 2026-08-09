@@ -3,134 +3,217 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="HardcodedText, TooManyViews, SmallSp, ContentDescription, UseCompoundDrawables, TooDeepLayout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="1dp"
     android:layout_marginVertical="6dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
     app:cardBackgroundColor="#FFFFFF"
     app:cardCornerRadius="12dp"
     app:cardElevation="4dp"
-    app:strokeWidth="0dp"
-    android:clickable="true"
-    android:focusable="true"
-    android:foreground="?attr/selectableItemBackground">
+    app:strokeWidth="0dp">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <!-- MASTER VERTICAL LAYOUT -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingVertical="12dp"
-        tools:ignore="HardcodedText, TooManyViews, SmallSp, ContentDescription, UseCompoundDrawables, TooDeepLayout">
+        android:orientation="vertical">
 
-        <!-- Avatar -->
-        <androidx.cardview.widget.CardView
-            android:id="@+id/finmateAvatarContainer"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_marginStart="12dp"
-            app:cardBackgroundColor="#1abcab"
-            app:cardCornerRadius="22dp"
-            app:cardElevation="0dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <TextView
-                android:id="@+id/tvFinmateInitials"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:text="AB"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-        </androidx.cardview.widget.CardView>
-
-        <!-- Details Section -->
+        <!-- ===================================================== -->
+        <!-- TOP ROW: PERSON NAME (Left) & MOBILE NUMBER (Right) -->
+        <!-- ===================================================== -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="14dp"
-            android:layout_marginEnd="12dp"
-            android:orientation="vertical"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/ivWhatsApp"
-            app:layout_constraintStart_toEndOf="@id/finmateAvatarContainer"
-            app:layout_constraintTop_toTopOf="parent">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="8dp">
 
+            <!-- Person Name -->
             <TextView
                 android:id="@+id/tvFinmateName"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:ellipsize="end"
+                android:maxLines="1"
                 android:text="Person Name"
-                android:textColor="#101828"
-                android:textSize="15sp"
+                android:textColor="#082561"
+                android:textSize="16sp"
                 android:textStyle="bold" />
 
-            <!-- Receivable Row -->
-            <LinearLayout
+            <!-- Mobile Number -->
+            <TextView
+                android:id="@+id/tvFinmateMobile"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:orientation="horizontal">
+                android:text="Mob. No."
+                android:textColor="#667085"
+                android:textSize="13sp" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Receivable: "
-                    android:textColor="#667085"
-                    android:textSize="12sp" />
-
-                <TextView
-                    android:id="@+id/tvFinmateReceivable"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="₹0"
-                    android:textColor="#388E3C"
-                    android:textStyle="bold"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
-            <!-- Payable Row -->
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Payable: "
-                    android:textColor="#667085"
-                    android:textSize="12sp" />
-
-                <TextView
-                    android:id="@+id/tvFinmatePayable"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="₹0"
-                    android:textColor="#D32F2F"
-                    android:textStyle="bold"
-                    android:textSize="12sp" />
-            </LinearLayout>
         </LinearLayout>
 
-        <!-- WhatsApp Button -->
-        <ImageView
-            android:id="@+id/ivWhatsApp"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_marginEnd="12dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:clickable="true"
-            android:focusable="true"
-            android:padding="0dp"
-            android:src="@drawable/whatsapp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:visibility="visible" />
+        <!-- Subtle Divider Line -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="16dp"
+            android:background="#F0F0F0" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+        <!-- ===================================================== -->
+        <!-- BOTTOM SECTION: AVATAR, DETAILS & WHATSAPP -->
+        <!-- ===================================================== -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp"
+            tools:ignore="HardcodedText,TooManyViews,SmallSp,ContentDescription,UseCompoundDrawables,TooDeepLayout">
 
+            <!-- Left: Avatar / Initials Circle -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/finmateAvatarContainer"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                app:cardBackgroundColor="#1abcab"
+                app:cardCornerRadius="22.5dp"
+                app:cardElevation="0dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <TextView
+                    android:id="@+id/tvFinmateInitials"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="AB"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+            </androidx.cardview.widget.CardView>
+
+
+            <!-- 1. Main Label & Amount (Left Side of Details) -->
+            <LinearLayout
+                android:id="@+id/layoutMainBalance"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="8dp"
+                android:orientation="vertical"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/layoutReceivableSubOptions"
+                app:layout_constraintHorizontal_weight="1"
+                app:layout_constraintStart_toEndOf="@id/finmateAvatarContainer"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <TextView
+                    android:id="@+id/tvFinmateBalanceLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Receivable"
+                    android:textColor="#757575"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/tvFinmateBalanceAmount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="₹0.00"
+                    android:textColor="#388E3C"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+
+            <!-- 2. Sub-Options for CC & Cash (Right Side of Details, perfectly balanced) -->
+            <LinearLayout
+                android:id="@+id/layoutReceivableSubOptions"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:orientation="vertical"
+                android:visibility="visible"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/ivWhatsApp"
+                app:layout_constraintHorizontal_weight="1"
+                app:layout_constraintStart_toEndOf="@id/layoutMainBalance"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <!-- Credit Card Sub-Option -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:text="For CC: "
+                        android:textColor="#667085"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tvReceivableCardAmount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="₹0.00"
+                        android:textColor="#101828"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Cash Sub-Option (Naturally aligned with the bottom using top margin) -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="9dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="9dp"
+                        android:text="In Cash: "
+                        android:textColor="#667085"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tvReceivableCashAmount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="₹0.00"
+                        android:textColor="#101828"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+
+            <!-- Far Right: WhatsApp Button -->
+            <ImageView
+                android:id="@+id/ivWhatsApp"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="2dp"
+                android:src="@drawable/whatsapp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:visibility="visible" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

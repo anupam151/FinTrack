@@ -13,23 +13,38 @@ import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.core.graphics.Insets;
 import androidx.core.view.GravityCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class FinMatesActivity extends AppCompatActivity {
 
     private DrawerLayout drawerLayout;
+
+    // RecyclerView & Adapter Variables
+    private FinMateAdapter finMateAdapter;
+    private List<FinMate> finMateList;
+    private TextView tvEmptyFinMatesList;
+    private SwipeRefreshLayout swipeRefreshFinMates;
 
     // Contact Picker Variables
     private TextInputEditText currentEtFinMateName;
@@ -85,6 +100,22 @@ public class FinMatesActivity extends AppCompatActivity {
         ImageView ivMenuDrawerFinMates = findViewById(R.id.ivMenuDrawerFinMates);
         ivMenuDrawerFinMates.setOnClickListener(v -> drawerLayout.openDrawer(GravityCompat.START));
 
+        // 3. Initialize RecyclerView & UI Components
+        RecyclerView recyclerViewFinMates = findViewById(R.id.recyclerViewFinMates);
+        tvEmptyFinMatesList = findViewById(R.id.tvEmptyFinMatesList);
+        swipeRefreshFinMates = findViewById(R.id.swipeRefreshFinMates);
+
+        recyclerViewFinMates.setLayoutManager(new LinearLayoutManager(this));
+        finMateList = new ArrayList<>();
+
+        // Pass long click listener for Edit/Delete action menu
+        finMateAdapter = new FinMateAdapter(this, finMateList, this::showEditDeleteMenu);
+        recyclerViewFinMates.setAdapter(finMateAdapter);
+
+        // Swipe to Refresh listener
+        swipeRefreshFinMates.setOnRefreshListener(this::fetchFinMatesFromFirestore);
+
+        // Bottom Navigation Listeners
         LinearLayout navItemDashboard = findViewById(R.id.navItemDashboard);
         LinearLayout navItemCards = findViewById(R.id.navItemCards);
         LinearLayout navSetings = findViewById(R.id.navSetings);
@@ -108,7 +139,109 @@ public class FinMatesActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        findViewById(R.id.fabAddFinMate).setOnClickListener(v -> showAddFinMateBottomSheet());
+        findViewById(R.id.fabAddFinMate).setOnClickListener(v -> showAddEditFinMateBottomSheet(null));
+
+        // Initial Fetch
+        fetchFinMatesFromFirestore();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        fetchFinMatesFromFirestore();
+    }
+
+    // --- FIRESTORE FETCH LOGIC ---
+    private void fetchFinMatesFromFirestore() {
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            swipeRefreshFinMates.setRefreshing(false);
+            return;
+        }
+
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        swipeRefreshFinMates.setRefreshing(true);
+
+        FirebaseFirestore.getInstance()
+                .collection("Users")
+                .document(userId)
+                .collection("FinMates")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    int previousSize = finMateList.size();
+                    finMateList.clear();
+
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        for (DocumentSnapshot doc : queryDocumentSnapshots) {
+                            FinMate finMate = doc.toObject(FinMate.class);
+                            if (finMate != null) {
+                                finMateList.add(finMate);
+                            }
+                        }
+                        tvEmptyFinMatesList.setVisibility(View.GONE);
+                    } else {
+                        tvEmptyFinMatesList.setVisibility(View.VISIBLE);
+                    }
+
+                    int newSize = finMateList.size();
+                    if (previousSize > 0) {
+                        finMateAdapter.notifyItemRangeRemoved(0, previousSize);
+                    }
+                    if (newSize > 0) {
+                        finMateAdapter.notifyItemRangeInserted(0, newSize);
+                    }
+
+                    swipeRefreshFinMates.setRefreshing(false);
+                })
+                .addOnFailureListener(e -> {
+                    swipeRefreshFinMates.setRefreshing(false);
+                    Toast.makeText(this, "Failed to load FinMates: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    // --- EDIT & DELETE POPUP MENU (LONG PRESS LOGIC) ---
+    private void showEditDeleteMenu(FinMate finMate, View anchor) {
+        PopupMenu popupMenu = new PopupMenu(this, anchor);
+        popupMenu.getMenu().add(0, 1, 0, "Edit");
+        popupMenu.getMenu().add(0, 2, 1, "Delete");
+
+        popupMenu.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == 1) {
+                showAddEditFinMateBottomSheet(finMate);
+                return true;
+            } else if (item.getItemId() == 2) {
+                deleteFinMate(finMate);
+                return true;
+            }
+            return false;
+        });
+        popupMenu.show();
+    }
+
+    private void deleteFinMate(FinMate finMate) {
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
+        FirebaseFirestore.getInstance()
+                .collection("Users")
+                .document(userId)
+                .collection("FinMates")
+                .document(finMate.getFinMateId())
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    int index = finMateList.indexOf(finMate);
+                    if (index != -1) {
+                        finMateList.remove(index);
+                        finMateAdapter.notifyItemRemoved(index);
+                    }
+
+                    if (finMateList.isEmpty()) {
+                        tvEmptyFinMatesList.setVisibility(View.VISIBLE);
+                    }
+
+                    Toast.makeText(this, "FinMate Deleted", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to delete: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
     // --- CONTACT PICKER HELPER METHODS ---
@@ -149,7 +282,8 @@ public class FinMatesActivity extends AppCompatActivity {
     }
 
     @SuppressLint("SetTextI18n")
-    private void showAddFinMateBottomSheet() {
+    private void showAddEditFinMateBottomSheet(FinMate finMateToEdit) {
+        boolean isEditing = (finMateToEdit != null);
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = getLayoutInflater().inflate(R.layout.dialog_add_edit_finmate, findViewById(android.R.id.content), false);
         dialog.setContentView(view);
@@ -167,8 +301,23 @@ public class FinMatesActivity extends AppCompatActivity {
         RadioGroup radioGroupWhatsApp = view.findViewById(R.id.radioGroupWhatsApp);
         MaterialButton btnSave = view.findViewById(R.id.btnSheetSaveFinMate);
 
-        title.setText("Add FinMate");
-        btnSave.setText("Save FinMate");
+        if (isEditing) {
+            title.setText("Edit FinMate");
+            btnSave.setText("Update FinMate");
+            currentEtFinMateName.setText(finMateToEdit.getName());
+            currentEtWhatsAppNo.setText(finMateToEdit.getPhoneNo());
+            etEmail.setText(finMateToEdit.getEmail());
+            etAddress.setText(finMateToEdit.getAddress());
+
+            if (finMateToEdit.getWhatsappNo() != null && !finMateToEdit.getWhatsappNo().isEmpty()) {
+                radioGroupWhatsApp.check(R.id.radioYes);
+            } else {
+                radioGroupWhatsApp.check(R.id.radioNo);
+            }
+        } else {
+            title.setText("Add FinMate");
+            btnSave.setText("Save FinMate");
+        }
 
         // Contact Picker Logic
         btnImportContact.setOnClickListener(v -> {
@@ -179,7 +328,7 @@ public class FinMatesActivity extends AppCompatActivity {
             }
         });
 
-        // Save Logic
+        // Save / Update Logic
         btnSave.setOnClickListener(v -> {
             String name = String.valueOf(currentEtFinMateName.getText()).trim();
             String contactNo = String.valueOf(currentEtWhatsAppNo.getText()).trim();
@@ -198,18 +347,16 @@ public class FinMatesActivity extends AppCompatActivity {
                 return;
             }
 
-            // 3. WhatsApp Choice Validation (Must explicitly select Yes or No)
+            // 3. WhatsApp Choice Validation
             int selectedId = radioGroupWhatsApp.getCheckedRadioButtonId();
             if (selectedId == -1) {
                 Toast.makeText(this, "Please select if this number is on WhatsApp", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            // Determine if WhatsApp button should appear on dashboard
             boolean isWhatsApp = (selectedId == R.id.radioYes);
             String finalWhatsAppNo = isWhatsApp ? contactNo : "";
 
-            // Firestore Integration
             if (FirebaseAuth.getInstance().getCurrentUser() == null) {
                 Toast.makeText(this, "Error: User not logged in!", Toast.LENGTH_SHORT).show();
                 return;
@@ -217,25 +364,47 @@ public class FinMatesActivity extends AppCompatActivity {
 
             String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
             FirebaseFirestore db = FirebaseFirestore.getInstance();
-            String newFinMateId = db.collection("Users").document(userId).collection("FinMates").document().getId();
 
-            // Build the new FinMate object
-            FinMate newFinMate = new FinMate(newFinMateId, name, contactNo, finalWhatsAppNo, email, address, System.currentTimeMillis());
+            String finMateId = isEditing ? finMateToEdit.getFinMateId() : db.collection("Users").document(userId).collection("FinMates").document().getId();
+            long timestamp = isEditing ? finMateToEdit.getTimestamp() : System.currentTimeMillis();
+
+            FinMate finMate = new FinMate(finMateId, name, contactNo, finalWhatsAppNo, email, address, timestamp);
+
+            // Preserve existing financials if editing
+            if (isEditing) {
+                finMate.setReceivableCardAmount(finMateToEdit.getReceivableCardAmount());
+                finMate.setReceivableCashAmount(finMateToEdit.getReceivableCashAmount());
+                finMate.setPayableAmount(finMateToEdit.getPayableAmount());
+            }
 
             btnSave.setEnabled(false);
-            btnSave.setText("Saving...");
+            btnSave.setText(isEditing ? "Updating..." : "Saving...");
 
-            db.collection("Users").document(userId).collection("FinMates").document(newFinMateId)
-                    .set(newFinMate)
+            db.collection("Users").document(userId).collection("FinMates").document(finMateId)
+                    .set(finMate)
                     .addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
-                            Toast.makeText(this, "FinMate Saved Successfully!", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, isEditing ? "FinMate Updated!" : "FinMate Saved Successfully!", Toast.LENGTH_SHORT).show();
                             dialog.dismiss();
+
+                            if (isEditing) {
+                                int index = finMateList.indexOf(finMateToEdit);
+                                if (index != -1) {
+                                    finMateList.set(index, finMate);
+                                    finMateAdapter.notifyItemChanged(index);
+                                } else {
+                                    fetchFinMatesFromFirestore();
+                                }
+                            } else {
+                                finMateList.add(0, finMate);
+                                finMateAdapter.notifyItemInserted(0);
+                                tvEmptyFinMatesList.setVisibility(View.GONE);
+                            }
                         } else {
                             String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error occurred";
-                            Toast.makeText(this, "Failed to save: " + errorMessage, Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "Failed: " + errorMessage, Toast.LENGTH_SHORT).show();
                             btnSave.setEnabled(true);
-                            btnSave.setText("Save FinMate");
+                            btnSave.setText(isEditing ? "Update FinMate" : "Save FinMate");
                         }
                     });
         });

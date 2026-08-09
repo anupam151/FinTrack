@@ -754,7 +754,9 @@ public class MainActivity extends AppCompatActivity {
         recyclerViewFinMates.setLayoutManager(new LinearLayoutManager(this));
 
         List<FinMate> finMateList = new ArrayList<>();
-        FinMateAdapter adapter = new FinMateAdapter(this, finMateList);
+
+        // Pass null for the long-click listener since editing/deleting is managed in FinMatesActivity
+        FinMateAdapter adapter = new FinMateAdapter(this, finMateList, null);
         recyclerViewFinMates.setAdapter(adapter);
 
         db.collection("Users").document(userId).collection("FinMates")
