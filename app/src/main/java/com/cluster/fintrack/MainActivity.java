@@ -705,6 +705,10 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView recyclerViewCards = findViewById(R.id.recyclerViewCards);
         recyclerViewCards.setLayoutManager(new LinearLayoutManager(this));
 
+        // --- NEW: Dashboard Summary TextViews ---
+        TextView tvValueCards = findViewById(R.id.tvValueCards);
+        TextView tvValueLimit = findViewById(R.id.tvValueLimit);
+
         List<Card> cardList = new ArrayList<>();
         CardAdapter adapter = new CardAdapter(this, cardList);
         recyclerViewCards.setAdapter(adapter);
@@ -718,13 +722,34 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     cardList.clear();
+
+                    // --- NEW: Variables for calculation ---
+                    double totalLimitSum = 0.0;
+                    int totalCardsCount = 0;
+
                     if (snapshot != null) {
                         for (DocumentSnapshot doc : snapshot.getDocuments()) {
                             Card card = doc.toObject(Card.class);
                             if (card != null) {
                                 cardList.add(card);
+
+                                // --- NEW: Accumulate data ---
+                                totalLimitSum += card.getTotalLimit();
+                                totalCardsCount++;
                             }
                         }
+                    }
+
+                    // --- NEW: Update Dashboard Summary UI ---
+                    if (tvValueCards != null) {
+                        tvValueCards.setText(String.valueOf(totalCardsCount));
+                    }
+
+                    if (tvValueLimit != null) {
+                        java.util.Locale indianLocale = new java.util.Locale.Builder().setLanguage("en").setRegion("IN").build();
+                        java.text.NumberFormat formatter = java.text.NumberFormat.getCurrencyInstance(indianLocale);
+                        formatter.setMaximumFractionDigits(0); // Removes the .00 decimal
+                        tvValueLimit.setText(formatter.format(totalLimitSum));
                     }
 
                     if (cardList.isEmpty()) {
