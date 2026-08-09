@@ -89,6 +89,19 @@
                     android:textSize="14sp" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- NEW: ASCENDING / DESCENDING DIRECTION TOGGLE BUTTON -->
+            <ImageView
+                android:id="@+id/ivSortOrder"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="10dp"
+                android:src="@drawable/arrow_up_down"/>
+
+            <!-- SORT OPTIONS BUTTON -->
             <ImageView
                 android:id="@+id/ivSortCards"
                 android:layout_width="40dp"
@@ -96,8 +109,9 @@
                 android:layout_marginStart="12dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="8dp"
-                android:src="@android:drawable/ic_menu_sort_by_size"
+                android:src="@drawable/sort"
                 app:tint="#082561" />
+
         </LinearLayout>
 
         <!-- CONTENT AREA (SWIPE TO REFRESH & RECYCLER VIEW) -->
@@ -120,7 +134,7 @@
                     android:clipToPadding="false"
                     android:paddingHorizontal="12dp"
                     android:paddingTop="8dp"
-                    android:paddingBottom="88dp" /> <!-- Extra padding so FAB doesn't cover last item -->
+                    android:paddingBottom="88dp" />
 
                 <!-- Empty State -->
                 <TextView

@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 
+import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -61,11 +62,11 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
         double usedLimit = 0.0;
         double availableLimit = totalLimit - usedLimit;
 
-        // 3. Set Financial Values to the new TextViews
-        holder.tvCardLimit.setText(String.format(Locale.getDefault(), "₹%.0f", totalLimit));
-        holder.tvCardUsed.setText(String.format(Locale.getDefault(), "₹%.0f", usedLimit));
-        holder.tvCardAvailable.setText(String.format(Locale.getDefault(), "₹%.0f", availableLimit));
-        holder.tvCardDue.setText("₹0"); // Hardcoded for now
+        // 3. Set Financial Values formatted with automatic commas and 2 decimal places
+        holder.tvCardLimit.setText(formatCurrency(totalLimit));
+        holder.tvCardUsed.setText(formatCurrency(usedLimit));
+        holder.tvCardAvailable.setText(formatCurrency(availableLimit));
+        holder.tvCardDue.setText(formatCurrency(0.0)); // Hardcoded for now
 
         // 4. Set Due Date with proper ordinal suffix (e.g., 1st, 2nd, 3rd, 21st, etc.)
         int billingDay = card.getBillingDay();
@@ -103,6 +104,15 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
     @Override
     public int getItemCount() {
         return cardList.size();
+    }
+
+    // Helper method to automatically format currency amounts with commas and 2 decimal places
+    private String formatCurrency(double amount) {
+        Locale indianLocale = new Locale.Builder().setLanguage("en").setRegion("IN").build();
+        NumberFormat formatter = NumberFormat.getCurrencyInstance(indianLocale);
+        formatter.setMaximumFractionDigits(2);
+        formatter.setMinimumFractionDigits(2);
+        return formatter.format(amount);
     }
 
     // Helper method to generate correct English ordinal suffixes (st, nd, rd, th)
