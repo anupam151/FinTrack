@@ -3,7 +3,9 @@ package com.cluster.fintrack;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -43,11 +45,22 @@ public class FinMatesActivity extends AppCompatActivity {
 
     private DrawerLayout drawerLayout;
 
-    // RecyclerView & Adapter Variables
-    private FinMateAdapter finMateAdapter;
-    private List<FinMate> finMateList;
+    // UI Elements
+    private RecyclerView recyclerViewFinMates;
     private TextView tvEmptyFinMatesList;
     private SwipeRefreshLayout swipeRefreshFinMates;
+    private TextInputEditText etSearchFinMate;
+    private ImageView ivSortFinMates;
+    private ImageView ivSortOrder;
+
+    // Adapter & Data Lists
+    private FinMateAdapter finMateAdapter;
+    private final List<FinMate> masterFinMateList = new ArrayList<>();
+    private final List<FinMate> displayedFinMateList = new ArrayList<>();
+
+    // Sorting State (0 = Recent, 1 = Name, 2 = Receivable, 3 = Payable)
+    private int currentSortMode = 0;
+    private boolean isAscending = false;
 
     // Contact Picker Variables
     private TextInputEditText currentEtFinMateName;
@@ -94,8 +107,6 @@ public class FinMatesActivity extends AppCompatActivity {
         });
 
         NavigationView navigationView = findViewById(R.id.navigationViewFinMates);
-
-        // --- THIS FIXES THE GREY ICONS PROGRAMMATICALLY ---
         navigationView.setItemIconTintList(null);
 
         ViewCompat.setOnApplyWindowInsetsListener(navigationView, (v, windowInsets) -> {
@@ -107,7 +118,6 @@ public class FinMatesActivity extends AppCompatActivity {
         ImageView ivMenuDrawerFinMates = findViewById(R.id.ivMenuDrawerFinMates);
         ivMenuDrawerFinMates.setOnClickListener(v -> drawerLayout.openDrawer(GravityCompat.START));
 
-        // --- DRAWER MENU ITEM CLICK LISTENER ---
         navigationView.setNavigationItemSelectedListener(item -> {
             int id = item.getItemId();
             drawerLayout.closeDrawer(GravityCompat.START);
@@ -115,7 +125,7 @@ public class FinMatesActivity extends AppCompatActivity {
             drawerLayout.postDelayed(() -> {
                 if (id == R.id.nav_drawer_dashboard) {
                     Intent intent = new Intent(FinMatesActivity.this, MainActivity.class);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NO_ANIMATION);
                     startActivity(intent);
                     disableWindowAnimations();
                     finish();
@@ -146,20 +156,26 @@ public class FinMatesActivity extends AppCompatActivity {
             return false;
         });
 
-        // 3. Initialize RecyclerView & UI Components
-        RecyclerView recyclerViewFinMates = findViewById(R.id.recyclerViewFinMates);
+        // 3. Initialize UI Components
+        recyclerViewFinMates = findViewById(R.id.recyclerViewFinMates);
         tvEmptyFinMatesList = findViewById(R.id.tvEmptyFinMatesList);
         swipeRefreshFinMates = findViewById(R.id.swipeRefreshFinMates);
 
-        recyclerViewFinMates.setLayoutManager(new LinearLayoutManager(this));
-        finMateList = new ArrayList<>();
+        // Ensure these IDs match your XML layout exactly
+        etSearchFinMate = findViewById(R.id.etSearchFinMate);
+        ivSortFinMates = findViewById(R.id.ivSortFinMates);
+        ivSortOrder = findViewById(R.id.ivSortOrderFinMates);
 
-        // Pass long click listener for Edit/Delete action menu
-        finMateAdapter = new FinMateAdapter(this, finMateList, this::showEditDeleteMenu);
+        recyclerViewFinMates.setLayoutManager(new LinearLayoutManager(this));
+
+        // Use displayedFinMateList for the adapter
+        finMateAdapter = new FinMateAdapter(this, displayedFinMateList, this::showEditDeleteMenu);
         recyclerViewFinMates.setAdapter(finMateAdapter);
 
-        // Swipe to Refresh listener
         swipeRefreshFinMates.setOnRefreshListener(this::fetchFinMatesFromFirestore);
+
+        // Setup Search and Sort UI Logic
+        setupSearchAndSort();
 
         // Bottom Navigation Listeners
         LinearLayout navItemDashboard = findViewById(R.id.navItemDashboard);
@@ -168,7 +184,7 @@ public class FinMatesActivity extends AppCompatActivity {
 
         navItemDashboard.setOnClickListener(v -> {
             Intent intent = new Intent(this, MainActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NO_ANIMATION);
             startActivity(intent);
             disableWindowAnimations();
             finish();
@@ -193,7 +209,28 @@ public class FinMatesActivity extends AppCompatActivity {
         fetchFinMatesFromFirestore();
     }
 
-    // Helper method to handle Android 14's new transition API safely
+    // --- ACTIVITY-LEVEL TOUCH EVENT TO DISMISS KEYBOARD ON SEARCH BOX ---
+    @Override
+    public boolean dispatchTouchEvent(android.view.MotionEvent event) {
+        if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
+            View v = getCurrentFocus();
+            // Specifically targets the search box in FinMates Activity
+            if (v != null && v.getId() == R.id.etSearchFinMate) {
+                android.graphics.Rect outRect = new android.graphics.Rect();
+                v.getGlobalVisibleRect(outRect);
+                // If tapped outside search box bounds
+                if (!outRect.contains((int) event.getRawX(), (int) event.getRawY())) {
+                    v.clearFocus();
+                    if (getWindow() != null) {
+                        WindowInsetsControllerCompat controller = new WindowInsetsControllerCompat(getWindow(), v);
+                        controller.hide(WindowInsetsCompat.Type.ime());
+                    }
+                }
+            }
+        }
+        return super.dispatchTouchEvent(event);
+    }
+
     private void disableWindowAnimations() {
         if (android.os.Build.VERSION.SDK_INT >= 34) {
             overrideActivityTransition(android.app.Activity.OVERRIDE_TRANSITION_OPEN, 0, 0);
@@ -206,6 +243,93 @@ public class FinMatesActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         fetchFinMatesFromFirestore();
+    }
+
+    // --- SETUP SEARCH & SORT ---
+    private void setupSearchAndSort() {
+        if (etSearchFinMate == null || ivSortFinMates == null || ivSortOrder == null) return;
+
+        etSearchFinMate.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterFinMates(s.toString());
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+
+        ivSortFinMates.setOnClickListener(v -> {
+            androidx.appcompat.view.ContextThemeWrapper wrapper =
+                    new androidx.appcompat.view.ContextThemeWrapper(this, R.style.CleanPopupMenuTheme);
+            PopupMenu popup = new PopupMenu(wrapper, v);
+
+            popup.getMenu().add(0, 0, 0, "Recent Activity");
+            popup.getMenu().add(0, 1, 0, "Name (A-Z)");
+            popup.getMenu().add(0, 2, 0, "Total Receivable");
+            popup.getMenu().add(0, 3, 0, "Total Payable");
+
+            popup.setOnMenuItemClickListener(item -> {
+                currentSortMode = item.getItemId();
+                filterFinMates(etSearchFinMate.getText() != null ? etSearchFinMate.getText().toString() : "");
+                return true;
+            });
+            popup.show();
+        });
+
+        ivSortOrder.setOnClickListener(v -> {
+            isAscending = !isAscending;
+            ivSortOrder.animate().rotation(isAscending ? 180f : 0f).setDuration(200).start();
+            filterFinMates(etSearchFinMate.getText() != null ? etSearchFinMate.getText().toString() : "");
+        });
+    }
+
+    // --- FILTER & SORT LOGIC ---
+    @SuppressLint("NotifyDataSetChanged")
+    private void filterFinMates(String query) {
+        List<FinMate> tempFilteredList = new ArrayList<>();
+
+        if (TextUtils.isEmpty(query)) {
+            tempFilteredList.addAll(masterFinMateList);
+        } else {
+            String lowerCaseQuery = query.toLowerCase();
+            for (FinMate finMate : masterFinMateList) {
+                if (finMate.getName().toLowerCase().contains(lowerCaseQuery) ||
+                        finMate.getPhoneNo().contains(lowerCaseQuery)) {
+                    tempFilteredList.add(finMate);
+                }
+            }
+        }
+
+        if (currentSortMode == 0) { // Recent Activity
+            tempFilteredList.sort((f1, f2) -> isAscending ?
+                    Long.compare(f1.getTimestamp(), f2.getTimestamp()) :
+                    Long.compare(f2.getTimestamp(), f1.getTimestamp()));
+        } else if (currentSortMode == 1) { // Name
+            tempFilteredList.sort((f1, f2) -> isAscending ?
+                    f1.getName().compareToIgnoreCase(f2.getName()) :
+                    f2.getName().compareToIgnoreCase(f1.getName()));
+        } else if (currentSortMode == 2) { // Total Receivable (Card + Cash)
+            tempFilteredList.sort((f1, f2) -> {
+                double r1 = f1.getReceivableCardAmount() + f1.getReceivableCashAmount();
+                double r2 = f2.getReceivableCardAmount() + f2.getReceivableCashAmount();
+                return isAscending ? Double.compare(r1, r2) : Double.compare(r2, r1);
+            });
+        } else if (currentSortMode == 3) { // Total Payable
+            tempFilteredList.sort((f1, f2) -> isAscending ?
+                    Double.compare(f1.getPayableAmount(), f2.getPayableAmount()) :
+                    Double.compare(f2.getPayableAmount(), f1.getPayableAmount()));
+        }
+
+        displayedFinMateList.clear();
+        displayedFinMateList.addAll(tempFilteredList);
+        finMateAdapter.notifyDataSetChanged();
+
+        if (displayedFinMateList.isEmpty()) {
+            tvEmptyFinMatesList.setVisibility(View.VISIBLE);
+            recyclerViewFinMates.setVisibility(View.GONE);
+        } else {
+            tvEmptyFinMatesList.setVisibility(View.GONE);
+            recyclerViewFinMates.setVisibility(View.VISIBLE);
+        }
     }
 
     // --- FIRESTORE FETCH LOGIC ---
@@ -225,29 +349,19 @@ public class FinMatesActivity extends AppCompatActivity {
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
-                    int previousSize = finMateList.size();
-                    finMateList.clear();
+                    masterFinMateList.clear();
 
                     if (!queryDocumentSnapshots.isEmpty()) {
                         for (DocumentSnapshot doc : queryDocumentSnapshots) {
                             FinMate finMate = doc.toObject(FinMate.class);
                             if (finMate != null) {
-                                finMateList.add(finMate);
+                                masterFinMateList.add(finMate);
                             }
                         }
-                        tvEmptyFinMatesList.setVisibility(View.GONE);
-                    } else {
-                        tvEmptyFinMatesList.setVisibility(View.VISIBLE);
                     }
 
-                    int newSize = finMateList.size();
-                    if (previousSize > 0) {
-                        finMateAdapter.notifyItemRangeRemoved(0, previousSize);
-                    }
-                    if (newSize > 0) {
-                        finMateAdapter.notifyItemRangeInserted(0, newSize);
-                    }
-
+                    // Push master list through the filter to render it
+                    filterFinMates(etSearchFinMate != null && etSearchFinMate.getText() != null ? etSearchFinMate.getText().toString() : "");
                     swipeRefreshFinMates.setRefreshing(false);
                 })
                 .addOnFailureListener(e -> {
@@ -257,23 +371,105 @@ public class FinMatesActivity extends AppCompatActivity {
                 });
     }
 
-    // --- EDIT & DELETE POPUP MENU (LONG PRESS LOGIC) ---
+    // --- EDIT & DELETE POPUP MENU ---
     private void showEditDeleteMenu(FinMate finMate, View anchor) {
-        PopupMenu popupMenu = new PopupMenu(this, anchor);
-        popupMenu.getMenu().add(0, 1, 0, "Edit");
-        popupMenu.getMenu().add(0, 2, 1, "Delete");
+        androidx.appcompat.view.ContextThemeWrapper wrapper =
+                new androidx.appcompat.view.ContextThemeWrapper(this, R.style.CleanPopupMenuTheme);
 
-        popupMenu.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == 1) {
+        androidx.appcompat.widget.PopupMenu popup =
+                new androidx.appcompat.widget.PopupMenu(wrapper, anchor, android.view.Gravity.END);
+
+        popup.getMenu().add(0, 0, 0, "Edit FinMate");
+        popup.getMenu().add(0, 1, 0, "Delete FinMate");
+
+        popup.setForceShowIcon(true);
+
+        popup.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == 0) {
                 showAddEditFinMateBottomSheet(finMate);
-                return true;
-            } else if (item.getItemId() == 2) {
-                deleteFinMate(finMate);
-                return true;
+            } else if (item.getItemId() == 1) {
+                showDeleteConfirmationDialog(finMate);
             }
-            return false;
+            return true;
         });
-        popupMenu.show();
+
+        popup.show();
+    }
+
+    // --- DELETE CONFIRMATION DIALOG ---
+    private void showDeleteConfirmationDialog(FinMate finMate) {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder builder =
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(this);
+
+        builder.setTitle("Delete FinMate");
+        builder.setMessage("Type '" + finMate.getName() + "' to permanently delete this FinMate. This action cannot be undone.");
+
+        android.graphics.drawable.GradientDrawable dialogBackground = new android.graphics.drawable.GradientDrawable();
+        dialogBackground.setColor(android.graphics.Color.WHITE);
+        dialogBackground.setCornerRadius(48f);
+        builder.setBackground(dialogBackground);
+
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        int padding = (int) (24 * getResources().getDisplayMetrics().density);
+        container.setPadding(padding, (int) (8 * getResources().getDisplayMetrics().density), padding, 0);
+
+        com.google.android.material.textfield.TextInputLayout textInputLayout =
+                new com.google.android.material.textfield.TextInputLayout(this);
+        textInputLayout.setBoxBackgroundMode(com.google.android.material.textfield.TextInputLayout.BOX_BACKGROUND_OUTLINE);
+        textInputLayout.setBoxCornerRadii(16f, 16f, 16f, 16f);
+        textInputLayout.setHint("Enter FinMate name");
+        textInputLayout.setErrorEnabled(true);
+
+        com.google.android.material.textfield.TextInputEditText input =
+                new com.google.android.material.textfield.TextInputEditText(textInputLayout.getContext());
+        input.setSingleLine(true);
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        input.setTextColor(android.graphics.Color.parseColor("#082561"));
+
+        textInputLayout.addView(input);
+        container.addView(textInputLayout);
+        builder.setView(container);
+
+        builder.setPositiveButton("Delete", null);
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
+
+        androidx.appcompat.app.AlertDialog dialog = builder.create();
+
+        dialog.setOnShowListener(d -> {
+            input.requestFocus();
+            if (dialog.getWindow() != null) {
+                androidx.core.view.WindowInsetsControllerCompat controller =
+                        new androidx.core.view.WindowInsetsControllerCompat(dialog.getWindow(), input);
+                controller.show(androidx.core.view.WindowInsetsCompat.Type.ime());
+            }
+
+            android.widget.Button positiveButton = dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE);
+            positiveButton.setTextColor(android.graphics.Color.parseColor("#D32F2F"));
+
+            android.widget.Button negativeButton = dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE);
+            negativeButton.setTextColor(android.graphics.Color.parseColor("#667085"));
+
+            positiveButton.setOnClickListener(v -> {
+                String typedText = input.getText() != null ? input.getText().toString().trim() : "";
+                if (typedText.equals(finMate.getName())) {
+                    deleteFinMate(finMate);
+                    dialog.dismiss();
+                } else {
+                    textInputLayout.setError("Name does not match.");
+                }
+            });
+
+            input.addTextChangedListener(new android.text.TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    textInputLayout.setError(null);
+                }
+                @Override public void afterTextChanged(android.text.Editable s) {}
+            });
+        });
+
+        dialog.show();
     }
 
     private void deleteFinMate(FinMate finMate) {
@@ -287,16 +483,9 @@ public class FinMatesActivity extends AppCompatActivity {
                 .document(finMate.getFinMateId())
                 .delete()
                 .addOnSuccessListener(aVoid -> {
-                    int index = finMateList.indexOf(finMate);
-                    if (index != -1) {
-                        finMateList.remove(index);
-                        finMateAdapter.notifyItemRemoved(index);
-                    }
-
-                    if (finMateList.isEmpty()) {
-                        tvEmptyFinMatesList.setVisibility(View.VISIBLE);
-                    }
-
+                    // Update the master list and run the filter to refresh the UI cleanly
+                    masterFinMateList.remove(finMate);
+                    filterFinMates(etSearchFinMate != null && etSearchFinMate.getText() != null ? etSearchFinMate.getText().toString() : "");
                     Toast.makeText(this, "FinMate Deleted", Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> Toast.makeText(this, "Failed to delete: " + e.getMessage(), Toast.LENGTH_SHORT).show());
@@ -445,19 +634,17 @@ public class FinMatesActivity extends AppCompatActivity {
                             Toast.makeText(this, isEditing ? "FinMate Updated!" : "FinMate Saved Successfully!", Toast.LENGTH_SHORT).show();
                             dialog.dismiss();
 
+                            // Update Master List manually to avoid full re-fetch delay, then filter instantly
                             if (isEditing) {
-                                int index = finMateList.indexOf(finMateToEdit);
+                                int index = masterFinMateList.indexOf(finMateToEdit);
                                 if (index != -1) {
-                                    finMateList.set(index, finMate);
-                                    finMateAdapter.notifyItemChanged(index);
-                                } else {
-                                    fetchFinMatesFromFirestore();
+                                    masterFinMateList.set(index, finMate);
                                 }
                             } else {
-                                finMateList.add(0, finMate);
-                                finMateAdapter.notifyItemInserted(0);
-                                tvEmptyFinMatesList.setVisibility(View.GONE);
+                                masterFinMateList.add(0, finMate);
                             }
+                            filterFinMates(etSearchFinMate != null && etSearchFinMate.getText() != null ? etSearchFinMate.getText().toString() : "");
+
                         } else {
                             String errorMessage = task.getException() != null ? task.getException().getMessage() : "Unknown error occurred";
                             Toast.makeText(this, "Failed: " + errorMessage, Toast.LENGTH_SHORT).show();

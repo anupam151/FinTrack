@@ -131,7 +131,7 @@ public class CardsActivity extends AppCompatActivity {
             drawerLayout.postDelayed(() -> {
                 if (id == R.id.nav_drawer_dashboard) {
                     Intent intent = new Intent(CardsActivity.this, MainActivity.class);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NO_ANIMATION);
                     startActivity(intent);
                     disableWindowAnimations();
                     finish();
@@ -164,7 +164,7 @@ public class CardsActivity extends AppCompatActivity {
 
         findViewById(R.id.navItemDashboard).setOnClickListener(v -> {
             Intent intent = new Intent(this, MainActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NO_ANIMATION);
             startActivity(intent);
             disableWindowAnimations();
             finish();
@@ -766,5 +766,30 @@ public class CardsActivity extends AppCompatActivity {
                 };
             }
         };
+    }
+    // --- THIS IS FOR THE MAIN ACTIVITY SEARCH BOX ONLY ---
+    // Place this at the bottom of CardsActivity.java (outside any other method)
+    @Override
+    public boolean dispatchTouchEvent(android.view.MotionEvent event) {
+        if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
+            View v = getCurrentFocus();
+
+            // Check if the currently focused view is the SEARCH BOX
+            if (v != null && v.getId() == R.id.etSearchCard) {
+                android.graphics.Rect outRect = new android.graphics.Rect();
+                v.getGlobalVisibleRect(outRect);
+
+                // If you clicked OUTSIDE the search box
+                if (!outRect.contains((int) event.getRawX(), (int) event.getRawY())) {
+                    v.clearFocus(); // Remove the cursor from the search box
+
+                    if (getWindow() != null) {
+                        WindowInsetsControllerCompat controller = new WindowInsetsControllerCompat(getWindow(), v);
+                        controller.hide(WindowInsetsCompat.Type.ime()); // Hide the keyboard
+                    }
+                }
+            }
+        }
+        return super.dispatchTouchEvent(event);
     }
 }

@@ -3,11 +3,11 @@
   <component name="deploymentTargetSelector">
     <selectionStates>
       <SelectionState runConfigName="app">
-        <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-08-08T19:44:42.536645400Z">
+        <option name="selectionMode" value="DIALOG" />
+        <DropdownSelection timestamp="2026-08-10T05:55:40.633549500Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=RZCT106PWYY" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\Anupam\.android\avd\Pixel_10_Pro_XL.avd" />
             </handle>
           </Target>
         </DropdownSelection>
@@ -15,12 +15,12 @@
           <targets>
             <Target type="DEFAULT_BOOT">
               <handle>
-                <DeviceId pluginId="PhysicalDevice" identifier="serial=RZCT106PWYY" />
+                <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\Anupam\.android\avd\Pixel_10_Pro_XL.avd" />
               </handle>
             </Target>
             <Target type="DEFAULT_BOOT">
               <handle>
-                <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\Anupam\.android\avd\Pixel_10_Pro_XL.avd" />
+                <DeviceId pluginId="PhysicalDevice" identifier="serial=RZCT106PWYY" />
               </handle>
             </Target>
           </targets>
