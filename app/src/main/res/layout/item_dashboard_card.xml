@@ -11,8 +11,8 @@
     android:focusable="true"
     android:foreground="?attr/selectableItemBackground"
     app:cardBackgroundColor="#FFFFFF"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="4dp"
+    app:cardCornerRadius="10dp"
+    app:cardElevation="3dp"
     app:strokeWidth="0dp"
     tools:ignore="HardcodedText, ContentDescription">
 
@@ -32,7 +32,7 @@
             android:gravity="center_vertical"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
-            android:paddingVertical="4dp">
+            android:paddingVertical="8dp">
 
             <!-- Card Name -->
             <TextView
@@ -89,7 +89,7 @@
             android:layout_height="wrap_content"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
-            android:paddingVertical="4dp"
+            android:paddingVertical="8dp"
             tools:ignore="HardcodedText,TooManyViews,SmallSp,ContentDescription,UseCompoundDrawables,TooDeepLayout">
 
             <!-- Left: BANK / CARD LOGO -->

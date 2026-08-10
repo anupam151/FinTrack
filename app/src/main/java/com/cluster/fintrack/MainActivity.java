@@ -199,6 +199,14 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
             startActivity(intent);
         });
+        // Find and set up the Header Transaction Button
+        ImageButton btnAddTransactionHeader = findViewById(R.id.btnAddTransactionHeader);
+        if (btnAddTransactionHeader != null) {
+            btnAddTransactionHeader.setOnClickListener(v -> {
+                Intent intent = new Intent(MainActivity.this, AddTransactionActivity.class);
+                startActivity(intent);
+            });
+        }
     }
 
     // --- CONTACT PICKER HELPER METHODS ---
@@ -762,13 +770,12 @@ public class MainActivity extends AppCompatActivity {
                         // --- SORT BY MOST RECENT ACTIVITY (Timestamp High to Low) ---
                         cardList.sort((c1, c2) -> Long.compare(c2.getTimestamp(), c1.getTimestamp()));
 
-                        // --- KEEP ONLY THE TOP 2 MOST RECENT CARDS FOR THE DASHBOARD ---
-                        if (cardList.size() > 2) {
-                            List<Card> topTwoCards = new ArrayList<>();
-                            topTwoCards.add(cardList.get(0)); // 1st most recent activity
-                            topTwoCards.add(cardList.get(1)); // 2nd most recent activity
+                        // --- KEEP ONLY THE TOP 1 MOST RECENT CARD FOR THE DASHBOARD ---
+                        if (cardList.size() > 1) {
+                            List<Card> topOneCard = new ArrayList<>();
+                            topOneCard.add(cardList.get(0)); // 1st most recent activity
                             cardList.clear();
-                            cardList.addAll(topTwoCards);
+                            cardList.addAll(topOneCard);
                         }
                         // -------------------------------------------------------------
 
@@ -823,13 +830,12 @@ public class MainActivity extends AppCompatActivity {
                         // --- SORT BY MOST RECENT ACTIVITY (Timestamp High to Low) ---
                         finMateList.sort((f1, f2) -> Long.compare(f2.getTimestamp(), f1.getTimestamp()));
 
-                        // --- KEEP ONLY THE TOP 2 MOST RECENT FINMATES FOR THE DASHBOARD ---
-                        if (finMateList.size() > 2) {
-                            List<FinMate> topTwoFinMates = new ArrayList<>();
-                            topTwoFinMates.add(finMateList.get(0)); // 1st most recent activity
-                            topTwoFinMates.add(finMateList.get(1)); // 2nd most recent activity
+                        // --- KEEP ONLY THE TOP 1 MOST RECENT FINMATE FOR THE DASHBOARD ---
+                        if (finMateList.size() > 1) {
+                            List<FinMate> topOneFinMate = new ArrayList<>();
+                            topOneFinMate.add(finMateList.get(0)); // 1st most recent activity
                             finMateList.clear();
-                            finMateList.addAll(topTwoFinMates);
+                            finMateList.addAll(topOneFinMate);
                         }
                         // ---------------------------------------------------------------
 

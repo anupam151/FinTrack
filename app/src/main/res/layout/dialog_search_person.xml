@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:background="#FFFFFF"
+    tools:ignore="HardcodedText, ContentDescription">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Search &amp; Add Person"
+        android:textColor="#082561"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Search Input Box -->
+    <EditText
+        android:id="@+id/etSearchPerson"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:autofillHints=""
+        android:hint="Type name to search..."
+        android:inputType="text"
+        android:maxLines="1"
+        android:padding="12dp"
+        android:background="@android:drawable/editbox_background_normal"
+        android:layout_marginBottom="12dp"
+        android:textSize="14sp" />
+
+    <!-- Filterable List View -->
+    <ListView
+        android:id="@+id/listViewPersons"
+        android:layout_width="match_parent"
+        android:layout_height="220dp"
+        android:divider="#E0E0E0"
+        android:dividerHeight="1dp" />
+
+</LinearLayout>

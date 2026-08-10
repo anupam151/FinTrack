@@ -12,8 +12,8 @@
     android:focusable="true"
     android:foreground="?attr/selectableItemBackground"
     app:cardBackgroundColor="#FFFFFF"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="4dp"
+    app:cardCornerRadius="10dp"
+    app:cardElevation="3dp"
     app:strokeWidth="0dp">
 
     <!-- MASTER VERTICAL LAYOUT -->
@@ -31,8 +31,7 @@
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:paddingHorizontal="16dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="3dp">
+            android:paddingVertical="8dp">
 
             <!-- Person Name -->
             <TextView
@@ -82,7 +81,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingHorizontal="16dp"
-            android:paddingVertical="12dp"
+            android:paddingVertical="16dp"
             tools:ignore="HardcodedText,TooManyViews,SmallSp,ContentDescription,UseCompoundDrawables,TooDeepLayout">
 
             <!-- Left: Avatar / Initials Circle -->
