@@ -86,11 +86,13 @@ public class SettingsActivity extends AppCompatActivity {
             return windowInsets;
         });
 
+
+
         ImageView ivMenuDrawerSettings = findViewById(R.id.ivMenuDrawerSettings);
         TextView tvUserEmail = findViewById(R.id.tvUserEmail);
         TextView btnAddCardSettings = findViewById(R.id.btnAddCardSettings);
         TextView btnAddFinMateSettings = findViewById(R.id.btnAddFinMateSettings);
-        LinearLayout btnCurrency = findViewById(R.id.btnCurrency);
+        LinearLayout btnMasterTransactions = findViewById(R.id.btnMasterTransactions);
         TextView btnExportData = findViewById(R.id.btnExportData);
         TextView btnSupport = findViewById(R.id.btnSupport);
 
@@ -105,6 +107,12 @@ public class SettingsActivity extends AppCompatActivity {
             } else {
                 drawerLayout.openDrawer(GravityCompat.START);
             }
+        });
+
+        btnMasterTransactions.setOnClickListener(v -> {
+            Intent intent = new Intent(SettingsActivity.this, MasterTransactionsActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+            startActivity(intent);
         });
 
         navigationView.setNavigationItemSelectedListener(item -> {
@@ -147,7 +155,6 @@ public class SettingsActivity extends AppCompatActivity {
         btnAddCardSettings.setOnClickListener(v -> showAddCardBottomSheet());
         btnAddFinMateSettings.setOnClickListener(v -> showAddFinMateBottomSheet());
 
-        btnCurrency.setOnClickListener(v -> Toast.makeText(this, "Currency selection coming soon", Toast.LENGTH_SHORT).show());
         btnExportData.setOnClickListener(v -> Toast.makeText(this, "Exporting Ledger to CSV...", Toast.LENGTH_SHORT).show());
         btnSupport.setOnClickListener(v -> Toast.makeText(this, "Opening Support Email...", Toast.LENGTH_SHORT).show());
     }

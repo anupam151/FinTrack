@@ -196,7 +196,7 @@
                     app:strokeWidth="1dp">
 
                     <LinearLayout
-                        android:id="@+id/btnCurrency"
+                        android:id="@+id/btnMasterTransactions"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:background="?attr/selectableItemBackground"
@@ -210,17 +210,10 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Default Currency"
+                            android:text="Master Transactions"
                             android:textColor="#082561"
                             android:textSize="16sp" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="INR (₹)"
-                            android:textColor="#1abcab"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 

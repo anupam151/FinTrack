@@ -42,4 +42,14 @@
     <string name="paid_via_cash">Paid via: Cash</string>
     <string name="paid_via_card_name">Paid via: %1$s</string>
     <string name="paid_via_card">Paid via: Card</string>
+
+    <string name="master_transactions_title">All Transactions</string>
+    <string name="search_transactions_hint">Search transactions…</string>
+    <string name="sort_newest">Newest First</string>
+    <string name="sort_oldest">Oldest First</string>
+    <string name="sort_high_low">Amount: High to Low</string>
+    <string name="sort_low_high">Amount: Low to High</string>
+    <string name="filter_all_sources">All Sources</string>
+    <string name="filter_cash">Cash</string>
+    <string name="filter_settlements">Settlements</string>
 </resources>

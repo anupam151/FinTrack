@@ -44,16 +44,19 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.WriteBatch;
 
+import java.security.SecureRandom;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @SuppressWarnings({"unused", "FieldCanBeLocal"})
 public class AddTransactionActivity extends AppCompatActivity {
@@ -83,6 +86,9 @@ public class AddTransactionActivity extends AppCompatActivity {
     private final List<FinMate> allFinMatesList = new ArrayList<>();
     private final Map<String, String> sourceNameToIdMap = new HashMap<>();
     private final Map<String, String> finMateNameToIdMap = new HashMap<>();
+
+    // NEW: Set to hold existing IDs to ensure 100% uniqueness
+    private final Set<String> existingTxIds = new HashSet<>();
 
     private final Map<String, View> activeSplitRows = new HashMap<>();
     private final Map<String, TextInputEditText> activeSplitInputs = new HashMap<>();
@@ -318,9 +324,8 @@ public class AddTransactionActivity extends AppCompatActivity {
                     for (DocumentSnapshot doc : snapshot) {
                         Card card = doc.toObject(Card.class);
                         if (card != null) {
-                            // USING getBankInitials() HERE
                             String shortBankName = getBankInitials(card.getBankName());
-                            String displayName = card.getCardName() + " - " + shortBankName + "(" + card.getLast4Digits() + ")";
+                            String displayName = card.getCardName() + " - " + shortBankName + " (" + card.getLast4Digits() + ")";
                             sourceNames.add(displayName);
                             sourceNameToIdMap.put(displayName, card.getCardId());
                         }
@@ -352,6 +357,38 @@ public class AddTransactionActivity extends AppCompatActivity {
                     ArrayAdapter<String> receiveAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, finMateNames);
                     spinReceivePerson.setAdapter(receiveAdapter);
                 });
+
+        // NEW: Fetch existing transaction IDs to guarantee unique ID generation
+        db.collection("Users").document(userId).collection("Transactions")
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    existingTxIds.clear();
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        existingTxIds.add(doc.getId());
+                    }
+                });
+    }
+
+    // ==========================================
+    // CUSTOM RANDOM 6-CHAR ID GENERATOR
+    // ==========================================
+    private String generateUniqueTransactionId() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        SecureRandom random = new SecureRandom();
+        String newId;
+
+        // Loop guarantees the generated ID doesn't already exist for this user
+        do {
+            StringBuilder sb = new StringBuilder(6);
+            for (int i = 0; i < 6; i++) {
+                sb.append(chars.charAt(random.nextInt(chars.length())));
+            }
+            newId = sb.toString();
+        } while (existingTxIds.contains(newId));
+
+        // Add it to our local cache so subsequent immediate saves don't duplicate
+        existingTxIds.add(newId);
+        return newId;
     }
 
     private void fetchUnpaidTransactions(String finMateId, String finMateName) {
@@ -672,7 +709,9 @@ public class AddTransactionActivity extends AppCompatActivity {
         String userId = currentUser.getUid();
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-        String transactionId = db.collection("Users").document(userId).collection("Transactions").document().getId();
+
+        // NEW: Generate our custom 6-character ID
+        String transactionId = generateUniqueTransactionId();
 
         String txType = cardId.equals("CASH") ? "CASH_SPEND" : "CARD_SPEND";
 
@@ -781,7 +820,8 @@ public class AddTransactionActivity extends AppCompatActivity {
 
         WriteBatch batch = db.batch();
 
-        String settlementTxId = db.collection("Users").document(userId).collection("Transactions").document().getId();
+        // NEW: Generate our custom 6-character ID
+        String settlementTxId = generateUniqueTransactionId();
 
         Transaction settlementTx = new Transaction(
                 settlementTxId,

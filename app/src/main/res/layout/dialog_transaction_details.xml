@@ -33,7 +33,6 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <!-- FIXED: Added contentDescription -->
         <ImageView
             android:id="@+id/ivCloseSheet"
             android:layout_width="24dp"
@@ -103,6 +102,7 @@
                     android:id="@+id/tvSheetTotalAmount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginEnd="24dp"
                     android:text="₹5,000.00"
                     android:textColor="#082561"
                     android:textSize="14sp"
@@ -113,6 +113,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
+                android:gravity="center_vertical"
                 android:layout_marginBottom="8dp">
 
                 <TextView
@@ -131,6 +132,17 @@
                     android:textColor="#101828"
                     android:textSize="13sp"
                     android:textStyle="bold" />
+
+                <!-- NEW: Copy Button -->
+                <ImageView
+                    android:id="@+id/ivCopyTxId"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="8dp"
+                    android:src="@drawable/copy"
+                    app:tint="#545454"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Copy Transaction ID"/>
             </LinearLayout>
 
             <LinearLayout
@@ -150,7 +162,8 @@
                     android:id="@+id/tvSheetSource"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="ICICI Bank (••7890)"
+                    android:layout_marginEnd="24dp"
+                    android:text="ICICI Bank (7890)"
                     android:textColor="#101828"
                     android:textSize="13sp"
                     android:textStyle="bold" />

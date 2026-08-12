@@ -61,6 +61,12 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- NEW: Master Transaction Screen -->
+        <activity
+            android:name=".MasterTransactionsActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
     </application>
 
 </manifest>

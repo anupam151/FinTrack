@@ -1,6 +1,8 @@
 package com.cluster.fintrack;
 
 import android.annotation.SuppressLint;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -487,8 +489,19 @@ public class FinMateLedgerActivity extends AppCompatActivity {
             TextView tvSheetTotalAmount = sheetView.findViewById(R.id.tvSheetTotalAmount);
             LinearLayout layoutSplitsContainer = sheetView.findViewById(R.id.layoutSplitsContainer);
             ImageView ivCloseSheet = sheetView.findViewById(R.id.ivCloseSheet);
+            ImageView ivCopyTxId = sheetView.findViewById(R.id.ivCopyTxId); // Bound the new copy icon
 
             ivCloseSheet.setOnClickListener(v -> sheetDialog.dismiss());
+
+            // Add Copy functionality
+            ivCopyTxId.setOnClickListener(v -> {
+                ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                ClipData clip = ClipData.newPlainText("Transaction ID", tx.getTransactionId());
+                if (clipboard != null) {
+                    clipboard.setPrimaryClip(clip);
+                    Toast.makeText(context, "Transaction ID copied", Toast.LENGTH_SHORT).show();
+                }
+            });
 
             tvSheetTxTitle.setText(tx.getTitle());
             // Use dateTimeFormat here
