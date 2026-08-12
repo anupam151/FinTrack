@@ -37,20 +37,29 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- Cards Screen -->
         <activity
             android:name=".CardsActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- FinMates Screen -->
         <activity
             android:name=".FinMatesActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- Add Transaction Screen -->
         <activity
             android:name=".AddTransactionActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
 
+        <!-- NEW: FinMate Ledger Screen -->
+        <activity
+            android:name=".FinMateLedgerActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
 
     </application>
 

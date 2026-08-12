@@ -10,7 +10,6 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -102,8 +101,13 @@ public class FinMateAdapter extends RecyclerView.Adapter<FinMateAdapter.FinMateV
             });
         }
 
-        // 6. Standard item click listener
-        holder.itemView.setOnClickListener(v -> Toast.makeText(context, "Clicked: " + finmate.getName(), Toast.LENGTH_SHORT).show());
+        // 6. Standard item click listener -> Opens Ledger Activity
+        holder.itemView.setOnClickListener(v -> {
+            Intent intent = new Intent(context, FinMateLedgerActivity.class);
+            intent.putExtra("FINMATE_ID", finmate.getFinMateId());
+            intent.putExtra("FINMATE_NAME", finmate.getName());
+            context.startActivity(intent);
+        });
 
         // 7. Long click listener for Edit/Delete menu
         holder.itemView.setOnLongClickListener(v -> {

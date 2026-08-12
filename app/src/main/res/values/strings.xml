@@ -5,4 +5,41 @@
     <string name="sign_in_text">Sign in with Google to continue</string>
     <string name="continue_with_google">Continue with Google</string>
     <string name="default_web_client_id">314557012220-hgi5rfskvskp42p3q0rl3q7j4t9dhpre.apps.googleusercontent.com</string>
+
+    <!-- AddTransactionActivity Strings -->
+    <string name="new_transaction_spend">New Transaction (Spend)</string>
+    <string name="save_spend">Save Spend</string>
+    <string name="settle_up_receive">Settle Up (Receive)</string>
+    <string name="save_settlement">Save Settlement</string>
+    <string name="fetching_unpaid_dues">Fetching unpaid dues for %1$s…</string>
+    <string name="no_unpaid_dues">No unpaid dues found for %1$s.</string>
+    <string name="failed_to_load_transactions">Failed to load transactions.</string>
+    <string name="checkbox_unpaid_due">%1$s (%2$s)\nRemaining: %3$s</string>
+    <string name="advance_credit_title">Advance / Credit</string>
+    <string name="advance_added_format">₹%1$.2f will be added as advance</string>
+    <string name="partial_settlement_title">Partial Settlement</string>
+    <string name="short_by_format">Short by ₹%1$.2f to clear selected dues</string>
+    <string name="exact_settlement_title">Exact Settlement</string>
+    <string name="exact_settlement_desc">Payment exactly matches selected dues.</string>
+    <string name="saving_transaction">Saving Transaction…</string>
+    <string name="save_transaction">Save Transaction</string>
+    <string name="saving_settlement">Saving Settlement…</string>
+
+    <!-- FinMateLedgerActivity Strings -->
+    <string name="finmate_ledger_title">%1$s\'s Ledger</string>
+    <string name="ledger_title">Ledger</string>
+    <string name="txn_number_format">Txn: #%1$s</string>
+    <string name="total_amount_format">Total: %1$s</string>
+    <string name="positive_amount_format">+%1$s</string>
+    <string name="status_settled">Settled</string>
+    <string name="status_paid">Paid</string>
+    <string name="status_partially_paid">Partially Paid</string>
+    <string name="status_unpaid">Unpaid</string>
+    <string name="advance_format">%1$s (Advance)</string>
+
+    <string name="advance_label">(Advance)</string>
+
+    <string name="paid_via_cash">Paid via: Cash</string>
+    <string name="paid_via_card_name">Paid via: %1$s</string>
+    <string name="paid_via_card">Paid via: Card</string>
 </resources>

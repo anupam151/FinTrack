@@ -7,6 +7,7 @@ import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
@@ -114,6 +115,15 @@ public class FinMatesActivity extends AppCompatActivity {
             v.setPadding(0, insets.top, 0, insets.bottom);
             return windowInsets;
         });
+
+        // Find and set up the Header Transaction Button
+        ImageButton btnAddTransactionHeader = findViewById(R.id.btnAddTransactionHeader);
+        if (btnAddTransactionHeader != null) {
+            btnAddTransactionHeader.setOnClickListener(v -> {
+                Intent intent = new Intent(FinMatesActivity.this, AddTransactionActivity.class);
+                startActivity(intent);
+            });
+        }
 
         ImageView ivMenuDrawerFinMates = findViewById(R.id.ivMenuDrawerFinMates);
         ivMenuDrawerFinMates.setOnClickListener(v -> drawerLayout.openDrawer(GravityCompat.START));

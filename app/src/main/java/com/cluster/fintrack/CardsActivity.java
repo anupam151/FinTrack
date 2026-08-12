@@ -7,6 +7,7 @@ import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -109,6 +110,15 @@ public class CardsActivity extends AppCompatActivity {
         swipeRefreshCards.setOnRefreshListener(() -> swipeRefreshCards.postDelayed(() -> swipeRefreshCards.setRefreshing(false), 800));
 
         findViewById(R.id.fabAddCard).setOnClickListener(v -> showAddEditCardBottomSheet(null));
+
+        // Find and set up the Header Transaction Button
+        ImageButton btnAddTransactionHeader = findViewById(R.id.btnAddTransactionHeader);
+        if (btnAddTransactionHeader != null) {
+            btnAddTransactionHeader.setOnClickListener(v -> {
+                Intent intent = new Intent(CardsActivity.this, AddTransactionActivity.class);
+                startActivity(intent);
+            });
+        }
     }
 
     // Helper method to handle Android 14's new transition API while supporting older devices

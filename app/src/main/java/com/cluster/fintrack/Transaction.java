@@ -73,22 +73,18 @@ public class Transaction {
 
     // =========================================================================
     // NESTED CLASS 1: THE SPLIT OBJECT
-    // This brilliantly handles BOTH Spends and Settlements!
     // =========================================================================
     public static class TransactionSplit {
-        // If SPENDING: This is the absolute Bank Principal they owe.
-        // If SETTLING: This is how much of their payment goes to clearing Card Debt.
         private double cardAmount;
-
-        // If SPENDING: This is your stealthy Privilege Charge (Cash Profit).
-        // If SETTLING: This is how much of their payment goes to clearing Cash Debt.
         private double cashAmount;
+        private double paidAmount;
 
         public TransactionSplit() {}
 
-        public TransactionSplit(double cardAmount, double cashAmount) {
+        public TransactionSplit(double cardAmount, double cashAmount, double paidAmount) {
             this.cardAmount = cardAmount;
             this.cashAmount = cashAmount;
+            this.paidAmount = paidAmount;
         }
 
         public double getCardAmount() { return cardAmount; }
@@ -96,6 +92,9 @@ public class Transaction {
 
         public double getCashAmount() { return cashAmount; }
         public void setCashAmount(double cashAmount) { this.cashAmount = cashAmount; }
+
+        public double getPaidAmount() { return paidAmount; }
+        public void setPaidAmount(double paidAmount) { this.paidAmount = paidAmount; }
 
         // The "Stealth" Total that the FinMate actually sees on their receipt
         public double getCombinedStealthAmount() {
@@ -105,7 +104,6 @@ public class Transaction {
 
     // =========================================================================
     // NESTED CLASS 2: EMI DATA
-    // Holds the Bank's extra fees and the full Amortization Schedule
     // =========================================================================
     public static class EmiData {
         private double bankProcessingFee;
@@ -131,14 +129,14 @@ public class Transaction {
     }
 
     // =========================================================================
-    // NESTED CLASS 3: EMI MONTH (The Editable Grid Row)
+    // NESTED CLASS 3: EMI MONTH
     // =========================================================================
     public static class EmiMonth {
         private int monthNumber;
         private double bankPrincipal;
         private double bankInterest;
         private double bankGst;
-        private boolean isBilled; // Turns true when the billing date passes, and it hits the card limit
+        private boolean isBilled;
 
         public EmiMonth() {}
 
