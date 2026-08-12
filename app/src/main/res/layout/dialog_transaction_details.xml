@@ -95,6 +95,30 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:text="Total Transaction Amount"
+                    android:textColor="#667085"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/tvSheetTotalAmount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="₹5,000.00"
+                    android:textColor="#082561"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
                     android:text="Transaction ID"
                     android:textColor="#667085"
                     android:textSize="13sp" />
@@ -112,8 +136,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="8dp">
+                android:orientation="horizontal">
 
                 <TextView
                     android:layout_width="0dp"
@@ -130,29 +153,6 @@
                     android:text="ICICI Bank (••7890)"
                     android:textColor="#101828"
                     android:textSize="13sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Total Transaction Amount"
-                    android:textColor="#667085"
-                    android:textSize="13sp" />
-
-                <TextView
-                    android:id="@+id/tvSheetTotalAmount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="₹5,000.00"
-                    android:textColor="#082561"
-                    android:textSize="14sp"
                     android:textStyle="bold" />
             </LinearLayout>
 

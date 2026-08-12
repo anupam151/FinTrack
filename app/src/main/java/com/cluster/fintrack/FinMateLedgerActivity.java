@@ -112,7 +112,6 @@ public class FinMateLedgerActivity extends AppCompatActivity {
 
         recyclerViewLedger.setLayoutManager(new LinearLayoutManager(this));
 
-        // Pass userCardsMap to the adapter here
         adapter = new LedgerAdapter(displayList, finMateId, userCardsMap);
         recyclerViewLedger.setAdapter(adapter);
     }
@@ -130,7 +129,10 @@ public class FinMateLedgerActivity extends AppCompatActivity {
                     for (DocumentSnapshot doc : snapshot) {
                         Card card = doc.toObject(Card.class);
                         if (card != null) {
-                            userCardsMap.put(card.getCardId(), card.getBankName() + " (••" + card.getLast4Digits() + ")");
+                            String shortBankName = getBankInitials(card.getBankName());
+                            String displayName = card.getCardName() + " - " + shortBankName + " (" + card.getLast4Digits() + ")";
+
+                            userCardsMap.put(card.getCardId(), displayName);
                         }
                     }
                     if (adapter != null) {
@@ -290,12 +292,92 @@ public class FinMateLedgerActivity extends AppCompatActivity {
         filterDialog.show();
     }
 
+    private String getBankInitials(String bankName) {
+        if (bankName == null || bankName.trim().isEmpty()) return "BANK";
+
+        Map<String, String> shortNameMap = new HashMap<>();
+        shortNameMap.put("AU Small Finance Bank", "AUSFB");
+        shortNameMap.put("American Express", "AMEX");
+        shortNameMap.put("Axis Bank", "AXIS");
+        shortNameMap.put("Bandhan Bank", "BANDHAN");
+        shortNameMap.put("Bank of Baroda", "BOB");
+        shortNameMap.put("Bank of India", "BOI");
+        shortNameMap.put("Bank of Maharashtra", "BOM");
+        shortNameMap.put("Barclays Bank", "BARB");
+        shortNameMap.put("Baroda Gujarat Gramin Bank", "BGGB");
+        shortNameMap.put("Baroda Rajasthan Kshetriya Gramin Bank", "BRKGB");
+        shortNameMap.put("Baroda U.P. Bank", "BUPB");
+        shortNameMap.put("CSB Bank", "CSB");
+        shortNameMap.put("Canara Bank", "CAN");
+        shortNameMap.put("Capital Small Finance Bank", "CSFB");
+        shortNameMap.put("Central Bank of India", "CBI");
+        shortNameMap.put("City Union Bank", "CUB");
+        shortNameMap.put("Cosmos Co-operative Bank", "CCB");
+        shortNameMap.put("DBS Bank", "DBS");
+        shortNameMap.put("DCB Bank", "DCB");
+        shortNameMap.put("Deutsche Bank", "DB");
+        shortNameMap.put("Dhanlaxmi Bank", "DLB");
+        shortNameMap.put("ESAF Small Finance Bank", "ESFB");
+        shortNameMap.put("Equitas Small Finance Bank", "ESFB");
+        shortNameMap.put("Federal Bank", "FED");
+        shortNameMap.put("First Abu Dhabi Bank", "FAB");
+        shortNameMap.put("HDFC Bank", "HDFC");
+        shortNameMap.put("HSBC Bank", "HSBC");
+        shortNameMap.put("ICICI Bank Limited", "ICICI");
+        shortNameMap.put("IDFC FIRST Bank", "IDFC");
+        shortNameMap.put("Indian Bank", "IB");
+        shortNameMap.put("Indian Overseas Bank", "IOB");
+        shortNameMap.put("IndusInd Bank", "IND");
+        shortNameMap.put("Jammu & Kashmir Bank", "J&K");
+        shortNameMap.put("Jana Small Finance Bank", "JSFB");
+        shortNameMap.put("Karnataka Bank", "KBL");
+        shortNameMap.put("Karur Vysya Bank", "KVB");
+        shortNameMap.put("Kerala Gramin Bank", "KGB");
+        shortNameMap.put("Kotak Mahindra Bank", "KOTAK");
+        shortNameMap.put("Nainital Bank", "NB");
+        shortNameMap.put("Punjab & Sind Bank", "PSB");
+        shortNameMap.put("Punjab National Bank", "PNB");
+        shortNameMap.put("RBL Bank", "RBL");
+        shortNameMap.put("SBM Bank India", "SBM");
+        shortNameMap.put("SVC Co-operative Bank", "SVC");
+        shortNameMap.put("Saraswat Co-operative Bank", "SCB");
+        shortNameMap.put("South Indian Bank", "SIB");
+        shortNameMap.put("Standard Chartered Bank", "SCB");
+        shortNameMap.put("State Bank of India", "SBI");
+        shortNameMap.put("Suryoday Small Finance Bank", "SSFB");
+        shortNameMap.put("Tamilnad Mercantile Bank", "TMB");
+        shortNameMap.put("UCO Bank", "UCO");
+        shortNameMap.put("Ujjivan Small Finance Bank", "USFB");
+        shortNameMap.put("Union Bank of India", "UBI");
+        shortNameMap.put("Utkarsh Small Finance Bank", "USFB");
+        shortNameMap.put("YES Bank", "YES");
+
+        if (shortNameMap.containsKey(bankName)) {
+            return shortNameMap.get(bankName);
+        }
+
+        String[] words = bankName.trim().split("\\s+");
+        if (words.length == 1) {
+            return words[0].length() > 4 ? words[0].substring(0, 4).toUpperCase() : words[0].toUpperCase();
+        } else {
+            StringBuilder initials = new StringBuilder();
+            for (String word : words) {
+                if (!word.isEmpty()) initials.append(word.charAt(0));
+            }
+            return initials.toString().toUpperCase();
+        }
+    }
+
     public static class LedgerAdapter extends RecyclerView.Adapter<LedgerAdapter.ViewHolder> {
 
         private final List<Transaction> transactions;
         private final String targetFinMateId;
         private final Map<String, String> userCardsMap;
-        private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault());
+
+        // Split formatting into two separate formatters
+        private final SimpleDateFormat dateOnlyFormat = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
+        private final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault());
+
         private final NumberFormat currencyFormatter;
 
         public LedgerAdapter(List<Transaction> transactions, String targetFinMateId, Map<String, String> userCardsMap) {
@@ -321,7 +403,8 @@ public class FinMateLedgerActivity extends AppCompatActivity {
             if (split == null) return;
 
             holder.tvTxTitle.setText(tx.getTitle());
-            holder.tvTxDate.setText(dateFormat.format(new Date(tx.getTimestamp())));
+            // Use dateOnlyFormat here
+            holder.tvTxDate.setText(dateOnlyFormat.format(new Date(tx.getTimestamp())));
 
             holder.tvTxAmount.setText(currencyFormatter.format(split.getCombinedStealthAmount()));
 
@@ -330,7 +413,6 @@ public class FinMateLedgerActivity extends AppCompatActivity {
                     : "UNKNOWN";
             holder.tvTxNumber.setText(holder.itemView.getContext().getString(R.string.txn_number_format, shortId));
 
-            // Display Payment Source (Cash or Specific Card) safely using string resources
             if ("SETTLEMENT".equals(tx.getTransactionType())) {
                 holder.tvTxSource.setVisibility(View.GONE);
             } else {
@@ -388,9 +470,6 @@ public class FinMateLedgerActivity extends AppCompatActivity {
                 }
             }
 
-            // ==========================================
-            // NEW: Click Listener to open Bottom Sheet
-            // ==========================================
             holder.itemView.setOnClickListener(v -> showTransactionDetailsSheet(v.getContext(), tx));
         }
 
@@ -398,7 +477,6 @@ public class FinMateLedgerActivity extends AppCompatActivity {
         private void showTransactionDetailsSheet(Context context, Transaction tx) {
             BottomSheetDialog sheetDialog = new BottomSheetDialog(context);
 
-            // InflateParams warning is suppressed because passing null is standard for Dialogs
             View sheetView = LayoutInflater.from(context).inflate(R.layout.dialog_transaction_details, null);
             sheetDialog.setContentView(sheetView);
 
@@ -413,7 +491,8 @@ public class FinMateLedgerActivity extends AppCompatActivity {
             ivCloseSheet.setOnClickListener(v -> sheetDialog.dismiss());
 
             tvSheetTxTitle.setText(tx.getTitle());
-            tvSheetTxDate.setText(dateFormat.format(new Date(tx.getTimestamp())));
+            // Use dateTimeFormat here
+            tvSheetTxDate.setText(dateTimeFormat.format(new Date(tx.getTimestamp())));
 
             String shortId = tx.getTransactionId() != null && tx.getTransactionId().length() >= 6
                     ? tx.getTransactionId().substring(0, 6).toUpperCase()
@@ -455,6 +534,15 @@ public class FinMateLedgerActivity extends AppCompatActivity {
                                 String personName = mateNames.getOrDefault(mateId, "Unknown Person");
 
                                 View splitRow = LayoutInflater.from(context).inflate(android.R.layout.simple_list_item_2, layoutSplitsContainer, false);
+
+                                // ==========================================
+                                // FIX: Remove default massive spacing
+                                // ==========================================
+                                splitRow.setMinimumHeight(0); // Removes the default 64dp height
+                                int verticalPadding = (int) (2 * context.getResources().getDisplayMetrics().density); // Convert 6dp to pixels
+                                splitRow.setPadding(0, verticalPadding, 0, verticalPadding); // Squeeze the spacing tightly
+                                // ==========================================
+
                                 TextView text1 = splitRow.findViewById(android.R.id.text1);
                                 TextView text2 = splitRow.findViewById(android.R.id.text2);
 

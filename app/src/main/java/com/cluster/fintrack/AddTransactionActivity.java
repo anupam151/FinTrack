@@ -318,7 +318,9 @@ public class AddTransactionActivity extends AppCompatActivity {
                     for (DocumentSnapshot doc : snapshot) {
                         Card card = doc.toObject(Card.class);
                         if (card != null) {
-                            String displayName = card.getCardName() + " - " + card.getBankName() + " (... " + card.getLast4Digits() + ")";
+                            // USING getBankInitials() HERE
+                            String shortBankName = getBankInitials(card.getBankName());
+                            String displayName = card.getCardName() + " - " + shortBankName + "(" + card.getLast4Digits() + ")";
                             sourceNames.add(displayName);
                             sourceNameToIdMap.put(displayName, card.getCardId());
                         }
@@ -541,11 +543,11 @@ public class AddTransactionActivity extends AppCompatActivity {
         listViewPersons.setAdapter(adapter);
 
         etSearchPerson.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(@NonNull CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(@NonNull CharSequence s, int start, int before, int count) {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 adapter.getFilter().filter(s);
             }
-            @Override public void afterTextChanged(@NonNull Editable s) {}
+            @Override public void afterTextChanged(Editable s) {}
         });
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
@@ -828,5 +830,82 @@ public class AddTransactionActivity extends AppCompatActivity {
                 btnSaveTransaction.setText(R.string.save_settlement);
             }
         });
+    }
+
+    // Helper method to get the short bank name based on CardAdapter logic
+    private String getBankInitials(String bankName) {
+        if (bankName == null || bankName.trim().isEmpty()) return "BANK";
+
+        Map<String, String> shortNameMap = new HashMap<>();
+        shortNameMap.put("AU Small Finance Bank", "AUSFB");
+        shortNameMap.put("American Express", "AMEX");
+        shortNameMap.put("Axis Bank", "AXIS");
+        shortNameMap.put("Bandhan Bank", "BANDHAN");
+        shortNameMap.put("Bank of Baroda", "BOB");
+        shortNameMap.put("Bank of India", "BOI");
+        shortNameMap.put("Bank of Maharashtra", "BOM");
+        shortNameMap.put("Barclays Bank", "BARB");
+        shortNameMap.put("Baroda Gujarat Gramin Bank", "BGGB");
+        shortNameMap.put("Baroda Rajasthan Kshetriya Gramin Bank", "BRKGB");
+        shortNameMap.put("Baroda U.P. Bank", "BUPB");
+        shortNameMap.put("CSB Bank", "CSB");
+        shortNameMap.put("Canara Bank", "CAN");
+        shortNameMap.put("Capital Small Finance Bank", "CSFB");
+        shortNameMap.put("Central Bank of India", "CBI");
+        shortNameMap.put("City Union Bank", "CUB");
+        shortNameMap.put("Cosmos Co-operative Bank", "CCB");
+        shortNameMap.put("DBS Bank", "DBS");
+        shortNameMap.put("DCB Bank", "DCB");
+        shortNameMap.put("Deutsche Bank", "DB");
+        shortNameMap.put("Dhanlaxmi Bank", "DLB");
+        shortNameMap.put("ESAF Small Finance Bank", "ESFB");
+        shortNameMap.put("Equitas Small Finance Bank", "ESFB");
+        shortNameMap.put("Federal Bank", "FED");
+        shortNameMap.put("First Abu Dhabi Bank", "FAB");
+        shortNameMap.put("HDFC Bank", "HDFC");
+        shortNameMap.put("HSBC Bank", "HSBC");
+        shortNameMap.put("ICICI Bank Limited", "ICICI");
+        shortNameMap.put("IDFC FIRST Bank", "IDFC");
+        shortNameMap.put("Indian Bank", "IB");
+        shortNameMap.put("Indian Overseas Bank", "IOB");
+        shortNameMap.put("IndusInd Bank", "IND");
+        shortNameMap.put("Jammu & Kashmir Bank", "J&K");
+        shortNameMap.put("Jana Small Finance Bank", "JSFB");
+        shortNameMap.put("Karnataka Bank", "KBL");
+        shortNameMap.put("Karur Vysya Bank", "KVB");
+        shortNameMap.put("Kerala Gramin Bank", "KGB");
+        shortNameMap.put("Kotak Mahindra Bank", "KOTAK");
+        shortNameMap.put("Nainital Bank", "NB");
+        shortNameMap.put("Punjab & Sind Bank", "PSB");
+        shortNameMap.put("Punjab National Bank", "PNB");
+        shortNameMap.put("RBL Bank", "RBL");
+        shortNameMap.put("SBM Bank India", "SBM");
+        shortNameMap.put("SVC Co-operative Bank", "SVC");
+        shortNameMap.put("Saraswat Co-operative Bank", "SCB");
+        shortNameMap.put("South Indian Bank", "SIB");
+        shortNameMap.put("Standard Chartered Bank", "SCB");
+        shortNameMap.put("State Bank of India", "SBI");
+        shortNameMap.put("Suryoday Small Finance Bank", "SSFB");
+        shortNameMap.put("Tamilnad Mercantile Bank", "TMB");
+        shortNameMap.put("UCO Bank", "UCO");
+        shortNameMap.put("Ujjivan Small Finance Bank", "USFB");
+        shortNameMap.put("Union Bank of India", "UBI");
+        shortNameMap.put("Utkarsh Small Finance Bank", "USFB");
+        shortNameMap.put("YES Bank", "YES");
+
+        if (shortNameMap.containsKey(bankName)) {
+            return shortNameMap.get(bankName);
+        }
+
+        String[] words = bankName.trim().split("\\s+");
+        if (words.length == 1) {
+            return words[0].length() > 4 ? words[0].substring(0, 4).toUpperCase() : words[0].toUpperCase();
+        } else {
+            StringBuilder initials = new StringBuilder();
+            for (String word : words) {
+                if (!word.isEmpty()) initials.append(word.charAt(0));
+            }
+            return initials.toString().toUpperCase();
+        }
     }
 }
