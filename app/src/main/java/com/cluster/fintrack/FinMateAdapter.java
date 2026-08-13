@@ -1,5 +1,6 @@
 package com.cluster.fintrack;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
@@ -18,7 +19,8 @@ import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
 
-@SuppressWarnings({"unused", "SetTextI18n"})
+@SuppressWarnings({"unused"})
+@SuppressLint("SetTextI18n")
 public class FinMateAdapter extends RecyclerView.Adapter<FinMateAdapter.FinMateViewHolder> {
 
     private final Context context;
@@ -29,7 +31,6 @@ public class FinMateAdapter extends RecyclerView.Adapter<FinMateAdapter.FinMateV
         void onLongClick(FinMate finMate, View anchor);
     }
 
-    // Constructor with long click listener
     public FinMateAdapter(Context context, List<FinMate> finMateList, OnFinMateLongClickListener longClickListener) {
         this.context = context;
         this.finMateList = finMateList;
@@ -47,52 +48,52 @@ public class FinMateAdapter extends RecyclerView.Adapter<FinMateAdapter.FinMateV
     public void onBindViewHolder(@NonNull FinMateViewHolder holder, int position) {
         FinMate finmate = finMateList.get(position);
 
-        // 1. Set Name and Mobile Number
         holder.tvFinmateName.setText(finmate.getName());
         holder.tvFinmateMobile.setText(finmate.getPhoneNo() != null && !finmate.getPhoneNo().isEmpty() ? finmate.getPhoneNo() : "");
 
-        // 2. Set Avatar Initials
         holder.tvFinmateInitials.setText(getInitials(finmate.getName()));
 
-        // 3. Dynamic Financial Calculations from FinMate Model
         double totalReceivable = finmate.getTotalReceivable();
         double payableAmount = finmate.getPayableAmount();
 
-        // Net balance: Positive means Receivable, Negative means Payable
         double netBalance = totalReceivable - payableAmount;
 
-        // 4. Format Currency Helper (using non-deprecated Locale builder)
         Locale indianLocale = new Locale.Builder().setLanguage("en").setRegion("IN").build();
         NumberFormat formatter = NumberFormat.getCurrencyInstance(indianLocale);
         formatter.setMaximumFractionDigits(2);
         formatter.setMinimumFractionDigits(2);
 
-        if (netBalance >= 0) {
-            // === RECEIVABLE VIEW ===
+        if (netBalance > 0.01) {
             holder.tvFinmateBalanceLabel.setText("Receivable");
             holder.tvFinmateBalanceAmount.setText(formatter.format(netBalance));
-            holder.tvFinmateBalanceAmount.setTextColor(Color.parseColor("#388E3C")); // Green
+            holder.tvFinmateBalanceAmount.setTextColor(Color.parseColor("#388E3C"));
 
-            // Populate Sub-options for Credit Card and Cash
             holder.tvReceivableCardAmount.setText(formatter.format(finmate.getReceivableCardAmount()));
             holder.tvReceivableCashAmount.setText(formatter.format(finmate.getReceivableCashAmount()));
             holder.layoutReceivableSubOptions.setVisibility(View.VISIBLE);
-        } else {
-            // === PAYABLE VIEW ===
+
+        } else if (netBalance < -0.01) {
+            // FIX: Explicitly changed from "Payable / Advance" to "Payable" as requested
             holder.tvFinmateBalanceLabel.setText("Payable");
             holder.tvFinmateBalanceAmount.setText(formatter.format(Math.abs(netBalance)));
-            holder.tvFinmateBalanceAmount.setTextColor(Color.parseColor("#D32F2F")); // Red
+            holder.tvFinmateBalanceAmount.setTextColor(Color.parseColor("#E65100"));
 
-            // Hide sub-options for payables
             holder.layoutReceivableSubOptions.setVisibility(View.GONE);
+
+        } else {
+            holder.tvFinmateBalanceLabel.setText("Settled");
+            holder.tvFinmateBalanceAmount.setText(formatter.format(0));
+            holder.tvFinmateBalanceAmount.setTextColor(Color.parseColor("#667085"));
+
+            holder.tvReceivableCardAmount.setText(formatter.format(0));
+            holder.tvReceivableCashAmount.setText(formatter.format(0));
+            holder.layoutReceivableSubOptions.setVisibility(View.VISIBLE);
         }
 
-        // 5. WhatsApp Button Visibility and Action
         if (finmate.getWhatsappNo() == null || finmate.getWhatsappNo().isEmpty()) {
             holder.ivWhatsApp.setVisibility(View.GONE);
         } else {
             holder.ivWhatsApp.setVisibility(View.VISIBLE);
-
             holder.ivWhatsApp.setOnClickListener(v -> {
                 String url = "https://api.whatsapp.com/send?phone=+91" + finmate.getWhatsappNo();
                 Intent intent = new Intent(Intent.ACTION_VIEW);
@@ -101,7 +102,6 @@ public class FinMateAdapter extends RecyclerView.Adapter<FinMateAdapter.FinMateV
             });
         }
 
-        // 6. Standard item click listener -> Opens Ledger Activity
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(context, FinMateLedgerActivity.class);
             intent.putExtra("FINMATE_ID", finmate.getFinMateId());
@@ -109,7 +109,6 @@ public class FinMateAdapter extends RecyclerView.Adapter<FinMateAdapter.FinMateV
             context.startActivity(intent);
         });
 
-        // 7. Long click listener for Edit/Delete menu
         holder.itemView.setOnLongClickListener(v -> {
             if (longClickListener != null) {
                 longClickListener.onLongClick(finmate, v);
@@ -124,7 +123,6 @@ public class FinMateAdapter extends RecyclerView.Adapter<FinMateAdapter.FinMateV
         return finMateList.size();
     }
 
-    // --- HELPER LOGIC THAT TURNS "Anupam Das" INTO "AD" ---
     private String getInitials(String name) {
         if (name == null || name.trim().isEmpty()) return "?";
         String[] words = name.trim().split("\\s+");
@@ -147,14 +145,11 @@ public class FinMateAdapter extends RecyclerView.Adapter<FinMateAdapter.FinMateV
             tvFinmateName = itemView.findViewById(R.id.tvFinmateName);
             tvFinmateMobile = itemView.findViewById(R.id.tvFinmateMobile);
             tvFinmateInitials = itemView.findViewById(R.id.tvFinmateInitials);
-
             tvFinmateBalanceLabel = itemView.findViewById(R.id.tvFinmateBalanceLabel);
             tvFinmateBalanceAmount = itemView.findViewById(R.id.tvFinmateBalanceAmount);
-
             tvReceivableCardAmount = itemView.findViewById(R.id.tvReceivableCardAmount);
             tvReceivableCashAmount = itemView.findViewById(R.id.tvReceivableCashAmount);
             layoutReceivableSubOptions = itemView.findViewById(R.id.layoutReceivableSubOptions);
-
             ivWhatsApp = itemView.findViewById(R.id.ivWhatsApp);
         }
     }

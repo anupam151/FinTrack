@@ -39,6 +39,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.SetOptions;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -183,14 +184,73 @@ public class MasterTransactionsActivity extends AppCompatActivity {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null || tx.getTransactionId() == null) return;
 
-        FirebaseFirestore.getInstance()
-                .collection("Users")
-                .document(currentUser.getUid())
-                .collection("Transactions")
-                .document(tx.getTransactionId())
+        String userId = currentUser.getUid();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        db.collection("Users").document(userId).collection("Transactions").document(tx.getTransactionId())
                 .delete()
-                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Transaction deleted successfully", Toast.LENGTH_SHORT).show())
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Transaction deleted successfully", Toast.LENGTH_SHORT).show();
+
+                    if (tx.getSplits() != null) {
+                        for (String fId : tx.getSplits().keySet()) {
+                            if (!fId.equals("self")) {
+                                recalculateFinMateBalance(userId, fId);
+                            }
+                        }
+                    }
+                })
                 .addOnFailureListener(e -> Toast.makeText(this, "Failed to delete: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+    }
+
+    private void recalculateFinMateBalance(String userId, String finMateId) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.collection("Users").document(userId).collection("Transactions").get().addOnSuccessListener(snap -> {
+            double cardSpend = 0.0, cashSpend = 0.0, cardPaid = 0.0, cashPaid = 0.0, inbound = 0.0, outbound = 0.0;
+            for (DocumentSnapshot doc : snap.getDocuments()) {
+                Transaction t = doc.toObject(Transaction.class);
+                if (t != null && t.getSplits() != null && t.getSplits().containsKey(finMateId)) {
+                    Transaction.TransactionSplit split = t.getSplits().get(finMateId);
+                    if (split != null) {
+                        double amt = split.getCombinedStealthAmount();
+                        double paid = split.getPaidAmount();
+                        String type = t.getTransactionType();
+                        if ("CARD_SPEND".equals(type)) { cardSpend += amt; cardPaid += paid; }
+                        else if ("CASH_SPEND".equals(type)) { cashSpend += amt; cashPaid += paid; }
+                        else if ("SETTLEMENT".equals(type) || "TAKE_CREDIT".equals(type)) { inbound += amt; }
+                        else if ("PAY_CREDIT".equals(type)) { outbound += amt; }
+                    }
+                }
+            }
+
+            double netBalance = (cardSpend + cashSpend + outbound) - inbound;
+            double finalReceivable = 0.0, finalPayable = 0.0, finalCard = 0.0, finalCash = 0.0;
+            if (netBalance > 0.01) {
+                finalReceivable = netBalance;
+                double calcCard = Math.max(0, cardSpend - cardPaid);
+                double calcCash = Math.max(0, cashSpend - cashPaid);
+                if (Math.abs((calcCard + calcCash) - netBalance) < 0.1) {
+                    finalCard = calcCard; finalCash = calcCash;
+                } else {
+                    double totalSpends = cardSpend + cashSpend;
+                    if (totalSpends > 0) {
+                        finalCard = netBalance * (cardSpend / totalSpends);
+                        finalCash = netBalance * (cashSpend / totalSpends);
+                    }
+                }
+            } else if (netBalance < -0.01) {
+                finalPayable = Math.abs(netBalance);
+            }
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("totalReceivable", finalReceivable);
+            data.put("payableAmount", finalPayable);
+            data.put("receivableCardAmount", finalCard);
+            data.put("receivableCashAmount", finalCash);
+
+            db.collection("Users").document(userId).collection("FinMates").document(finMateId)
+                    .set(data, SetOptions.merge());
+        });
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -494,7 +554,6 @@ public class MasterTransactionsActivity extends AppCompatActivity {
                     : "UNKNOWN";
             holder.tvTxNumber.setText(holder.itemView.getContext().getString(R.string.txn_number_format, shortId));
 
-            // NEW: Properly distinguish incoming vs outgoing money visually
             if ("SETTLEMENT".equals(tx.getTransactionType()) || "TAKE_CREDIT".equals(tx.getTransactionType())) {
                 if ("TAKE_CREDIT".equals(tx.getTransactionType())) {
                     holder.tvTxSource.setText("Credit Received");

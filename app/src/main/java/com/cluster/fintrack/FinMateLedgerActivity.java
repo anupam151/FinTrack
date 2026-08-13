@@ -35,9 +35,11 @@ import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.SetOptions;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -48,7 +50,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-@SuppressLint("SetTextI18n") // Suppresses the string literal warnings cleanly
+@SuppressLint("SetTextI18n")
 public class FinMateLedgerActivity extends AppCompatActivity {
 
     private TextView tvTotalPending, tvCurrentDue;
@@ -134,7 +136,6 @@ public class FinMateLedgerActivity extends AppCompatActivity {
                         if (card != null) {
                             String shortBankName = getBankInitials(card.getBankName());
                             String displayName = card.getCardName() + " - " + shortBankName + " (" + card.getLast4Digits() + ")";
-
                             userCardsMap.put(card.getCardId(), displayName);
                         }
                     }
@@ -160,6 +161,13 @@ public class FinMateLedgerActivity extends AppCompatActivity {
                     }
 
                     masterLedgerList.clear();
+
+                    double cardSpend = 0.0;
+                    double cashSpend = 0.0;
+                    double cardPaid = 0.0;
+                    double cashPaid = 0.0;
+                    double inbound = 0.0;
+                    double outbound = 0.0;
                     double currentDue = 0.0;
 
                     if (snapshot != null) {
@@ -171,21 +179,69 @@ public class FinMateLedgerActivity extends AppCompatActivity {
 
                                 Transaction.TransactionSplit split = tx.getSplits().get(finMateId);
                                 if (split != null) {
-                                    // Take Credit and Settlements SUBTRACT from what they owe us (pushes to negative/Advance)
-                                    if ("SETTLEMENT".equals(tx.getTransactionType()) || "TAKE_CREDIT".equals(tx.getTransactionType())) {
-                                        currentDue -= split.getCombinedStealthAmount();
+                                    double amt = split.getCombinedStealthAmount();
+                                    double paid = split.getPaidAmount();
+                                    String type = tx.getTransactionType();
+
+                                    if ("CARD_SPEND".equals(type)) {
+                                        cardSpend += amt;
+                                        cardPaid += paid;
+                                    } else if ("CASH_SPEND".equals(type)) {
+                                        cashSpend += amt;
+                                        cashPaid += paid;
+                                    } else if ("SETTLEMENT".equals(type) || "TAKE_CREDIT".equals(type)) {
+                                        inbound += amt;
+                                    } else if ("PAY_CREDIT".equals(type)) {
+                                        outbound += amt;
                                     }
-                                    // Spends and Paying Back Credit ADD to the balance (pushes to positive/Due)
-                                    else {
-                                        currentDue += split.getCombinedStealthAmount();
+
+                                    if ("SETTLEMENT".equals(type) || "TAKE_CREDIT".equals(type)) {
+                                        currentDue -= amt;
+                                    } else {
+                                        currentDue += amt;
                                     }
                                 }
                             }
                         }
+
+                        // MASTER SELF-HEALING SYNC: Forces the Dashboard to mirror this exact math
+                        double netBalance = (cardSpend + cashSpend + outbound) - inbound;
+                        double finalReceivable = 0.0;
+                        double finalPayable = 0.0;
+                        double finalCard = 0.0;
+                        double finalCash = 0.0;
+
+                        if (netBalance > 0.01) {
+                            finalReceivable = netBalance;
+
+                            double calcCard = Math.max(0, cardSpend - cardPaid);
+                            double calcCash = Math.max(0, cashSpend - cashPaid);
+
+                            if (Math.abs((calcCard + calcCash) - netBalance) < 0.1) {
+                                finalCard = calcCard;
+                                finalCash = calcCash;
+                            } else {
+                                double totalSpends = cardSpend + cashSpend;
+                                if (totalSpends > 0) {
+                                    finalCard = netBalance * (cardSpend / totalSpends);
+                                    finalCash = netBalance * (cashSpend / totalSpends);
+                                }
+                            }
+                        } else if (netBalance < -0.01) {
+                            finalPayable = Math.abs(netBalance);
+                        }
+
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("totalReceivable", finalReceivable);
+                        data.put("payableAmount", finalPayable);
+                        data.put("receivableCardAmount", finalCard);
+                        data.put("receivableCashAmount", finalCash);
+
+                        DocumentReference fmRef = db.collection("Users").document(currentUser.getUid()).collection("FinMates").document(finMateId);
+                        fmRef.set(data, SetOptions.merge());
                     }
 
-                    double totalDue = 0.0; // Placeholder
-
+                    double totalDue = 0.0;
                     updateTotalPendingUI(totalDue, currentDue);
                     filterTransactions(etSearchLedger.getText() != null ? etSearchLedger.getText().toString() : "");
                 });
@@ -250,7 +306,6 @@ public class FinMateLedgerActivity extends AppCompatActivity {
         adapter.notifyDataSetChanged();
     }
 
-    // Expanded Search Logic with NPE Fix
     private boolean matchesSearchFilter(Transaction tx, String query) {
         if (query.isEmpty()) return true;
 
@@ -272,7 +327,6 @@ public class FinMateLedgerActivity extends AppCompatActivity {
         }
 
         double splitAmount = 0.0;
-        // PERFECT NPE FIX: Extracted to a safe null-check structure
         if (tx.getSplits() != null) {
             Transaction.TransactionSplit split = tx.getSplits().get(finMateId);
             if (split != null) {
@@ -286,10 +340,9 @@ public class FinMateLedgerActivity extends AppCompatActivity {
         return title.contains(query) || txId.contains(query) || cardName.contains(query) || amountStr.contains(query) || totalAmountStr.contains(query);
     }
 
+    @SuppressLint("InflateParams")
     private void showFilterBottomSheet() {
         BottomSheetDialog filterDialog = new BottomSheetDialog(this);
-
-        // FIX: Pass the activity's root content view as the parent, but attachToRoot = false
         View view = getLayoutInflater().inflate(R.layout.bottom_sheet_ledger_filter, findViewById(android.R.id.content), false);
         filterDialog.setContentView(view);
 
@@ -342,58 +395,11 @@ public class FinMateLedgerActivity extends AppCompatActivity {
         shortNameMap.put("AU Small Finance Bank", "AUSFB");
         shortNameMap.put("American Express", "AMEX");
         shortNameMap.put("Axis Bank", "AXIS");
-        shortNameMap.put("Bandhan Bank", "BANDHAN");
         shortNameMap.put("Bank of Baroda", "BOB");
-        shortNameMap.put("Bank of India", "BOI");
-        shortNameMap.put("Bank of Maharashtra", "BOM");
-        shortNameMap.put("Barclays Bank", "BARB");
-        shortNameMap.put("Baroda Gujarat Gramin Bank", "BGGB");
-        shortNameMap.put("Baroda Rajasthan Kshetriya Gramin Bank", "BRKGB");
-        shortNameMap.put("Baroda U.P. Bank", "BUPB");
-        shortNameMap.put("CSB Bank", "CSB");
-        shortNameMap.put("Canara Bank", "CAN");
-        shortNameMap.put("Capital Small Finance Bank", "CSFB");
-        shortNameMap.put("Central Bank of India", "CBI");
-        shortNameMap.put("City Union Bank", "CUB");
-        shortNameMap.put("Cosmos Co-operative Bank", "CCB");
-        shortNameMap.put("DBS Bank", "DBS");
-        shortNameMap.put("DCB Bank", "DCB");
-        shortNameMap.put("Deutsche Bank", "DB");
-        shortNameMap.put("Dhanlaxmi Bank", "DLB");
-        shortNameMap.put("ESAF Small Finance Bank", "ESFB");
-        shortNameMap.put("Equitas Small Finance Bank", "ESFB");
-        shortNameMap.put("Federal Bank", "FED");
-        shortNameMap.put("First Abu Dhabi Bank", "FAB");
         shortNameMap.put("HDFC Bank", "HDFC");
-        shortNameMap.put("HSBC Bank", "HSBC");
         shortNameMap.put("ICICI Bank Limited", "ICICI");
-        shortNameMap.put("IDFC FIRST Bank", "IDFC");
-        shortNameMap.put("Indian Bank", "IB");
-        shortNameMap.put("Indian Overseas Bank", "IOB");
-        shortNameMap.put("IndusInd Bank", "IND");
-        shortNameMap.put("Jammu & Kashmir Bank", "J&K");
-        shortNameMap.put("Jana Small Finance Bank", "JSFB");
-        shortNameMap.put("Karnataka Bank", "KBL");
-        shortNameMap.put("Karur Vysya Bank", "KVB");
-        shortNameMap.put("Kerala Gramin Bank", "KGB");
         shortNameMap.put("Kotak Mahindra Bank", "KOTAK");
-        shortNameMap.put("Nainital Bank", "NB");
-        shortNameMap.put("Punjab & Sind Bank", "PSB");
-        shortNameMap.put("Punjab National Bank", "PNB");
-        shortNameMap.put("RBL Bank", "RBL");
-        shortNameMap.put("SBM Bank India", "SBM");
-        shortNameMap.put("SVC Co-operative Bank", "SVC");
-        shortNameMap.put("Saraswat Co-operative Bank", "SCB");
-        shortNameMap.put("South Indian Bank", "SIB");
-        shortNameMap.put("Standard Chartered Bank", "SCB");
         shortNameMap.put("State Bank of India", "SBI");
-        shortNameMap.put("Suryoday Small Finance Bank", "SSFB");
-        shortNameMap.put("Tamilnad Mercantile Bank", "TMB");
-        shortNameMap.put("UCO Bank", "UCO");
-        shortNameMap.put("Ujjivan Small Finance Bank", "USFB");
-        shortNameMap.put("Union Bank of India", "UBI");
-        shortNameMap.put("Utkarsh Small Finance Bank", "USFB");
-        shortNameMap.put("YES Bank", "YES");
 
         if (shortNameMap.containsKey(bankName)) {
             return shortNameMap.get(bankName);
@@ -523,11 +529,10 @@ public class FinMateLedgerActivity extends AppCompatActivity {
             holder.itemView.setOnClickListener(v -> showTransactionDetailsSheet(v.getContext(), tx));
         }
 
-        @SuppressLint("SetTextI18n")
+        @SuppressLint({"SetTextI18n", "InflateParams"})
         private void showTransactionDetailsSheet(Context context, Transaction tx) {
             BottomSheetDialog sheetDialog = new BottomSheetDialog(context);
 
-            // FIX: Pass a dummy FrameLayout to preserve the XML root's layout parameters
             View sheetView = LayoutInflater.from(context).inflate(R.layout.dialog_transaction_details, new android.widget.FrameLayout(context), false);
             sheetDialog.setContentView(sheetView);
 

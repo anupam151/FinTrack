@@ -45,6 +45,7 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.firestore.WriteBatch;
 
 import java.security.SecureRandom;
@@ -559,103 +560,90 @@ public class AddTransactionActivity extends AppCompatActivity {
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        db.collection("Users").document(currentUser.getUid()).collection("FinMates").document(finMateId)
+        db.collection("Users").document(currentUser.getUid()).collection("Transactions")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
                 .get()
-                .addOnSuccessListener(finMateDoc -> {
-                    FinMate targetMate = finMateDoc.toObject(FinMate.class);
-                    double globalAdvanceCredit = 0.0;
-                    if (targetMate != null) {
-                        double net = targetMate.getTotalReceivable() - targetMate.getPayableAmount();
-                        if (net < 0) {
-                            globalAdvanceCredit = Math.abs(net);
+                .addOnSuccessListener(snapshot -> {
+                    layoutUnpaidTransactionsContainer.removeAllViews();
+                    boolean hasUnpaid = false;
+
+                    Locale indianLocale = new Locale.Builder().setLanguage("en").setRegion("IN").build();
+                    NumberFormat formatter = NumberFormat.getCurrencyInstance(indianLocale);
+                    SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
+
+                    double totalSettlements = 0.0;
+                    double totalSpends = 0.0;
+
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        Transaction tx = doc.toObject(Transaction.class);
+                        if (tx != null && tx.getSplits() != null && tx.getSplits().containsKey(finMateId)) {
+                            Transaction.TransactionSplit split = tx.getSplits().get(finMateId);
+                            if (split != null) {
+                                if ("SETTLEMENT".equals(tx.getTransactionType())) {
+                                    totalSettlements += split.getCombinedStealthAmount();
+                                } else if ("CASH_SPEND".equals(tx.getTransactionType()) || "CARD_SPEND".equals(tx.getTransactionType())) {
+                                    totalSpends += split.getCombinedStealthAmount();
+                                }
+                            }
                         }
                     }
 
-                    final double availableAdvance = globalAdvanceCredit;
+                    double remainingAdvancePool = Math.max(0, totalSettlements - totalSpends);
 
-                    db.collection("Users").document(currentUser.getUid()).collection("Transactions")
-                            .orderBy("timestamp", Query.Direction.DESCENDING)
-                            .get()
-                            .addOnSuccessListener(snapshot -> {
-                                layoutUnpaidTransactionsContainer.removeAllViews();
-                                boolean hasUnpaid = false;
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        Transaction tx = doc.toObject(Transaction.class);
 
-                                Locale indianLocale = new Locale.Builder().setLanguage("en").setRegion("IN").build();
-                                NumberFormat formatter = NumberFormat.getCurrencyInstance(indianLocale);
-                                SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
+                        if (tx != null && ("CASH_SPEND".equals(tx.getTransactionType()) || "CARD_SPEND".equals(tx.getTransactionType())) && tx.getSplits() != null && tx.getSplits().containsKey(finMateId)) {
+                            Transaction.TransactionSplit split = tx.getSplits().get(finMateId);
 
-                                double netNormalBalance = 0.0;
-                                for (DocumentSnapshot doc : snapshot.getDocuments()) {
-                                    Transaction tx = doc.toObject(Transaction.class);
-                                    if (tx != null && tx.getSplits() != null && tx.getSplits().containsKey(finMateId)) {
-                                        Transaction.TransactionSplit split = tx.getSplits().get(finMateId);
-                                        if (split != null) {
-                                            if ("SETTLEMENT".equals(tx.getTransactionType())) {
-                                                netNormalBalance += (split.getCombinedStealthAmount() - split.getPaidAmount());
-                                            } else if ("CASH_SPEND".equals(tx.getTransactionType()) || "CARD_SPEND".equals(tx.getTransactionType())) {
-                                                netNormalBalance -= (split.getCombinedStealthAmount() - split.getPaidAmount());
+                            if (split != null) {
+                                double baseRemainingDue = split.getCombinedStealthAmount() - split.getPaidAmount();
+
+                                if (baseRemainingDue > 0.01) {
+                                    double effectiveDue = baseRemainingDue;
+                                    if (remainingAdvancePool > 0) {
+                                        double absorption = Math.min(remainingAdvancePool, baseRemainingDue);
+                                        effectiveDue -= absorption;
+                                        remainingAdvancePool -= absorption;
+                                    }
+
+                                    if (effectiveDue > 0.01) {
+                                        hasUnpaid = true;
+
+                                        MaterialCheckBox checkBox = new MaterialCheckBox(this);
+                                        String dateStr = sdf.format(new Date(tx.getTimestamp()));
+
+                                        checkBox.setText(getString(R.string.checkbox_unpaid_due, tx.getTitle(), dateStr, formatter.format(effectiveDue)));
+                                        checkBox.setTextColor(Color.parseColor("#082561"));
+                                        checkBox.setTextSize(14f);
+                                        checkBox.setPadding(16, 24, 16, 24);
+
+                                        checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                                            if (isChecked) {
+                                                selectedUnpaidTransactions.put(tx.getTransactionId(), tx);
+                                            } else {
+                                                selectedUnpaidTransactions.remove(tx.getTransactionId());
                                             }
-                                        }
+                                            calculateSettleAdvanceOrPartial();
+                                        });
+
+                                        layoutUnpaidTransactionsContainer.addView(checkBox);
                                     }
                                 }
+                            }
+                        }
+                    }
 
-                                double remainingAdvancePool = Math.max(0, netNormalBalance);
-
-                                for (DocumentSnapshot doc : snapshot.getDocuments()) {
-                                    Transaction tx = doc.toObject(Transaction.class);
-
-                                    if (tx != null && ("CASH_SPEND".equals(tx.getTransactionType()) || "CARD_SPEND".equals(tx.getTransactionType())) && tx.getSplits() != null && tx.getSplits().containsKey(finMateId)) {
-                                        Transaction.TransactionSplit split = tx.getSplits().get(finMateId);
-
-                                        if (split != null) {
-                                            double baseRemainingDue = split.getCombinedStealthAmount() - split.getPaidAmount();
-
-                                            if (baseRemainingDue > 0.01) {
-                                                double effectiveDue = baseRemainingDue;
-                                                if (remainingAdvancePool > 0) {
-                                                    double absorption = Math.min(remainingAdvancePool, baseRemainingDue);
-                                                    effectiveDue -= absorption;
-                                                    remainingAdvancePool -= absorption;
-                                                }
-
-                                                if (effectiveDue > 0.01) {
-                                                    hasUnpaid = true;
-
-                                                    MaterialCheckBox checkBox = new MaterialCheckBox(this);
-                                                    String dateStr = sdf.format(new Date(tx.getTimestamp()));
-
-                                                    checkBox.setText(getString(R.string.checkbox_unpaid_due, tx.getTitle(), dateStr, formatter.format(effectiveDue)));
-                                                    checkBox.setTextColor(Color.parseColor("#082561"));
-                                                    checkBox.setTextSize(14f);
-                                                    checkBox.setPadding(16, 24, 16, 24);
-
-                                                    checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                                                        if (isChecked) {
-                                                            selectedUnpaidTransactions.put(tx.getTransactionId(), tx);
-                                                        } else {
-                                                            selectedUnpaidTransactions.remove(tx.getTransactionId());
-                                                        }
-                                                        calculateSettleAdvanceOrPartial();
-                                                    });
-
-                                                    layoutUnpaidTransactionsContainer.addView(checkBox);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                if (hasUnpaid) {
-                                    tvNoUnpaidTx.setVisibility(View.GONE);
-                                } else {
-                                    tvNoUnpaidTx.setVisibility(View.VISIBLE);
-                                    tvNoUnpaidTx.setText(getString(R.string.no_unpaid_dues, finMateName));
-                                }
-                            })
-                            .addOnFailureListener(e -> {
-                                tvNoUnpaidTx.setVisibility(View.VISIBLE);
-                                tvNoUnpaidTx.setText(R.string.failed_to_load_transactions);
-                            });
+                    if (hasUnpaid) {
+                        tvNoUnpaidTx.setVisibility(View.GONE);
+                    } else {
+                        tvNoUnpaidTx.setVisibility(View.VISIBLE);
+                        tvNoUnpaidTx.setText(getString(R.string.no_unpaid_dues, finMateName));
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    tvNoUnpaidTx.setVisibility(View.VISIBLE);
+                    tvNoUnpaidTx.setText(R.string.failed_to_load_transactions);
                 });
     }
 
@@ -881,7 +869,7 @@ public class AddTransactionActivity extends AppCompatActivity {
                             cb.setText("Utilize available credit (" + formatter.format(outstandingCredit) + ")");
                             cb.setTextColor(Color.parseColor("#E65100"));
                             cb.setTextSize(13f);
-                            cb.setChecked(true);
+                            cb.setChecked(false);
 
                             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                             params.setMargins(16, 0, 0, 16);
@@ -921,6 +909,99 @@ public class AddTransactionActivity extends AppCompatActivity {
                 saveTakeCreditTransaction();
             }
         }
+    }
+
+    // ==========================================
+    // THE MASTER MATHEMATICAL "SELF-HEALING" DASHBOARD LOGIC
+    // ==========================================
+    private void updateFinMateBalancesInBatch(WriteBatch batch, String userId, String finMateId, List<DocumentSnapshot> allTxDocs, Transaction newTx) {
+        if (finMateId == null || finMateId.equals("self")) return;
+
+        double cardSpend = 0.0;
+        double cashSpend = 0.0;
+        double cardPaid = 0.0;
+        double cashPaid = 0.0;
+        double inbound = 0.0;
+        double outbound = 0.0;
+
+        for (DocumentSnapshot doc : allTxDocs) {
+            Transaction tx = doc.toObject(Transaction.class);
+            if (tx != null && tx.getSplits() != null && tx.getSplits().containsKey(finMateId)) {
+                Transaction.TransactionSplit split = tx.getSplits().get(finMateId);
+                if (split != null) {
+                    double amt = split.getCombinedStealthAmount();
+                    double paid = split.getPaidAmount();
+                    String type = tx.getTransactionType();
+                    if ("CARD_SPEND".equals(type)) {
+                        cardSpend += amt;
+                        cardPaid += paid;
+                    } else if ("CASH_SPEND".equals(type)) {
+                        cashSpend += amt;
+                        cashPaid += paid;
+                    } else if ("SETTLEMENT".equals(type) || "TAKE_CREDIT".equals(type)) {
+                        inbound += amt;
+                    } else if ("PAY_CREDIT".equals(type)) {
+                        outbound += amt;
+                    }
+                }
+            }
+        }
+
+        if (newTx != null && newTx.getSplits() != null && newTx.getSplits().containsKey(finMateId)) {
+            Transaction.TransactionSplit split = newTx.getSplits().get(finMateId);
+            if (split != null) {
+                double amt = split.getCombinedStealthAmount();
+                double paid = split.getPaidAmount();
+                String type = newTx.getTransactionType();
+                if ("CARD_SPEND".equals(type)) {
+                    cardSpend += amt;
+                    cardPaid += paid;
+                } else if ("CASH_SPEND".equals(type)) {
+                    cashSpend += amt;
+                    cashPaid += paid;
+                } else if ("SETTLEMENT".equals(type) || "TAKE_CREDIT".equals(type)) {
+                    inbound += amt;
+                } else if ("PAY_CREDIT".equals(type)) {
+                    outbound += amt;
+                }
+            }
+        }
+
+        double netBalance = (cardSpend + cashSpend + outbound) - inbound;
+
+        double finalReceivable = 0.0;
+        double finalPayable = 0.0;
+        double finalCard = 0.0;
+        double finalCash = 0.0;
+
+        if (netBalance > 0.01) {
+            finalReceivable = netBalance;
+
+            double calcCard = Math.max(0, cardSpend - cardPaid);
+            double calcCash = Math.max(0, cashSpend - cashPaid);
+
+            if (Math.abs((calcCard + calcCash) - netBalance) < 0.1) {
+                finalCard = calcCard;
+                finalCash = calcCash;
+            } else {
+                double totalSpends = cardSpend + cashSpend;
+                if (totalSpends > 0) {
+                    finalCard = netBalance * (cardSpend / totalSpends);
+                    finalCash = netBalance * (cashSpend / totalSpends);
+                }
+            }
+        } else if (netBalance < -0.01) {
+            finalPayable = Math.abs(netBalance);
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("totalReceivable", finalReceivable);
+        data.put("payableAmount", finalPayable);
+        data.put("receivableCardAmount", finalCard);
+        data.put("receivableCashAmount", finalCash);
+
+        DocumentReference fmRef = FirebaseFirestore.getInstance().collection("Users").document(userId).collection("FinMates").document(finMateId);
+        batch.set(fmRef, data, SetOptions.merge());
     }
 
     // ==========================================
@@ -991,7 +1072,11 @@ public class AddTransactionActivity extends AppCompatActivity {
         String txType = cardId.equals("CASH") ? "CASH_SPEND" : "CARD_SPEND";
 
         db.collection("Users").document(userId).collection("Transactions").get().addOnSuccessListener(txSnapshot -> {
-            Map<String, Double> netCredits = new HashMap<>();
+
+            Map<String, Double> totalSettlementsMap = new HashMap<>();
+            Map<String, Double> totalSpendsMap = new HashMap<>();
+
+            Map<String, List<Transaction>> availableSettlements = new HashMap<>();
             Map<String, List<Transaction>> availableCreditTransactions = new HashMap<>();
 
             for (DocumentSnapshot doc : txSnapshot.getDocuments()) {
@@ -1003,16 +1088,29 @@ public class AddTransactionActivity extends AppCompatActivity {
                     Transaction.TransactionSplit split = splitEntry.getValue();
                     if (split == null) continue;
 
-                    Double existingBalObj = netCredits.get(mateId);
-                    double existingBal = (existingBalObj != null) ? existingBalObj : 0.0;
+                    double amount = split.getCombinedStealthAmount();
+                    double paid = split.getPaidAmount();
 
                     if ("SETTLEMENT".equals(tx.getTransactionType())) {
-                        netCredits.put(mateId, existingBal + (split.getCombinedStealthAmount() - split.getPaidAmount()));
+                        Double currentSetObj = totalSettlementsMap.get(mateId);
+                        double currentSet = (currentSetObj != null) ? currentSetObj : 0.0;
+                        totalSettlementsMap.put(mateId, currentSet + amount);
+
+                        if (amount - paid > 0.01) {
+                            List<Transaction> setList = availableSettlements.get(mateId);
+                            if (setList == null) {
+                                setList = new ArrayList<>();
+                                availableSettlements.put(mateId, setList);
+                            }
+                            setList.add(tx);
+                        }
                     } else if ("CASH_SPEND".equals(tx.getTransactionType()) || "CARD_SPEND".equals(tx.getTransactionType())) {
-                        netCredits.put(mateId, existingBal - (split.getCombinedStealthAmount() - split.getPaidAmount()));
+                        Double currentSpdObj = totalSpendsMap.get(mateId);
+                        double currentSpd = (currentSpdObj != null) ? currentSpdObj : 0.0;
+                        totalSpendsMap.put(mateId, currentSpd + amount);
+
                     } else if ("TAKE_CREDIT".equals(tx.getTransactionType())) {
-                        double due = split.getCombinedStealthAmount() - split.getPaidAmount();
-                        if (due > 0.01) {
+                        if (amount - paid > 0.01) {
                             List<Transaction> creditList = availableCreditTransactions.get(mateId);
                             if (creditList == null) {
                                 creditList = new ArrayList<>();
@@ -1037,25 +1135,50 @@ public class AddTransactionActivity extends AppCompatActivity {
             );
 
             Map<String, Transaction.TransactionSplit> splitsMap = new HashMap<>();
+
             for (Map.Entry<String, Double> entry : validatedSplits.entrySet()) {
                 String personId = entry.getKey();
                 double amtToPay = entry.getValue();
                 double totalPaidForThisSplit = 0.0;
 
-                Double netCredObj = netCredits.get(personId);
-                double standardAdvance = Math.max(0, netCredObj != null ? netCredObj : 0.0);
-                if (standardAdvance > 0) {
-                    double utilized = Math.min(standardAdvance, amtToPay);
+                Double tSetObj = totalSettlementsMap.get(personId);
+                Double tSpdObj = totalSpendsMap.get(personId);
+                double tSet = (tSetObj != null) ? tSetObj : 0.0;
+                double tSpd = (tSpdObj != null) ? tSpdObj : 0.0;
+
+                double trueStandardAdvance = Math.max(0, tSet - tSpd);
+
+                if (trueStandardAdvance > 0.01) {
+                    double utilized = Math.min(trueStandardAdvance, amtToPay);
                     totalPaidForThisSplit += utilized;
                     amtToPay -= utilized;
+
+                    List<Transaction> settlements = availableSettlements.get(personId);
+                    if (settlements != null) {
+                        double tempUtilize = utilized;
+                        for (Transaction setTx : settlements) {
+                            if (tempUtilize <= 0.01) break;
+                            Transaction.TransactionSplit sSplit = setTx.getSplits().get(personId);
+                            if (sSplit != null) {
+                                double due = sSplit.getCombinedStealthAmount() - sSplit.getPaidAmount();
+                                double apply = Math.min(due, tempUtilize);
+
+                                double newPaidAmt = sSplit.getPaidAmount() + apply;
+                                DocumentReference setRef = db.collection("Users").document(userId).collection("Transactions").document(setTx.getTransactionId());
+                                batch.update(setRef, "splits." + personId + ".paidAmount", newPaidAmt);
+
+                                tempUtilize -= apply;
+                            }
+                        }
+                    }
                 }
 
                 MaterialCheckBox cb = creditCheckBoxes.get(personId);
-                if (amtToPay > 0 && cb != null && cb.isChecked()) {
+                if (amtToPay > 0.01 && cb != null && cb.isChecked()) {
                     List<Transaction> credits = availableCreditTransactions.get(personId);
                     if (credits != null) {
                         for (Transaction creditTx : credits) {
-                            if (amtToPay <= 0) break;
+                            if (amtToPay <= 0.01) break;
                             Transaction.TransactionSplit cSplit = creditTx.getSplits().get(personId);
                             if (cSplit != null) {
                                 double due = cSplit.getCombinedStealthAmount() - cSplit.getPaidAmount();
@@ -1080,6 +1203,10 @@ public class AddTransactionActivity extends AppCompatActivity {
             }
 
             transaction.setSplits(splitsMap);
+
+            for (String personId : validatedSplits.keySet()) {
+                updateFinMateBalancesInBatch(batch, userId, personId, txSnapshot.getDocuments(), transaction);
+            }
 
             DocumentReference newTxRef = db.collection("Users").document(userId).collection("Transactions").document(transactionId);
             batch.set(newTxRef, transaction);
@@ -1134,66 +1261,69 @@ public class AddTransactionActivity extends AppCompatActivity {
             return;
         }
 
-        double paymentSent = Double.parseDouble(totalStr);
-        double originalPaymentSent = paymentSent;
-        double amountApplied = 0.0;
-
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null) return;
         String userId = currentUser.getUid();
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        WriteBatch batch = db.batch();
+        db.collection("Users").document(userId).collection("Transactions").get().addOnSuccessListener(txSnapshot -> {
+            double paymentSent = Double.parseDouble(totalStr);
+            double tempPaymentSent = paymentSent;
+            double amountApplied = 0.0;
 
-        String payBackTxId = generateUniqueTransactionId();
+            WriteBatch batch = db.batch();
+            String payBackTxId = generateUniqueTransactionId();
 
-        for (Transaction oldTx : selectedCreditTransactions.values()) {
-            if (paymentSent <= 0) break;
+            for (Transaction oldTx : selectedCreditTransactions.values()) {
+                if (tempPaymentSent <= 0) break;
 
-            Transaction.TransactionSplit oldSplit = oldTx.getSplits().get(currentSelectedPayBackFinMateId);
-            if (oldSplit != null) {
-                double remainingDue = oldSplit.getCombinedStealthAmount() - oldSplit.getPaidAmount();
-                double allocation = Math.min(paymentSent, remainingDue);
+                Transaction.TransactionSplit oldSplit = oldTx.getSplits().get(currentSelectedPayBackFinMateId);
+                if (oldSplit != null) {
+                    double remainingDue = oldSplit.getCombinedStealthAmount() - oldSplit.getPaidAmount();
+                    double allocation = Math.min(tempPaymentSent, remainingDue);
 
-                double newPaidAmount = oldSplit.getPaidAmount() + allocation;
-                amountApplied += allocation;
-                paymentSent -= allocation;
+                    double newPaidAmount = oldSplit.getPaidAmount() + allocation;
+                    amountApplied += allocation;
+                    tempPaymentSent -= allocation;
 
-                DocumentReference oldTxRef = db.collection("Users").document(userId).collection("Transactions").document(oldTx.getTransactionId());
-                batch.update(oldTxRef, "splits." + currentSelectedPayBackFinMateId + ".paidAmount", newPaidAmount);
+                    DocumentReference oldTxRef = db.collection("Users").document(userId).collection("Transactions").document(oldTx.getTransactionId());
+                    batch.update(oldTxRef, "splits." + currentSelectedPayBackFinMateId + ".paidAmount", newPaidAmount);
+                }
             }
-        }
 
-        Transaction payBackTx = new Transaction(
-                payBackTxId,
-                "PAY_CREDIT",
-                !cardId.equals("CASH") ? cardId : null,
-                title,
-                selectedTransactionTimestamp,
-                originalPaymentSent,
-                false
-        );
+            Transaction payBackTx = new Transaction(
+                    payBackTxId,
+                    "PAY_CREDIT",
+                    !cardId.equals("CASH") ? cardId : null,
+                    title,
+                    selectedTransactionTimestamp,
+                    paymentSent,
+                    false
+            );
 
-        Map<String, Transaction.TransactionSplit> splitsMap = new HashMap<>();
-        splitsMap.put(currentSelectedPayBackFinMateId, new Transaction.TransactionSplit(0.0, originalPaymentSent, amountApplied));
-        payBackTx.setSplits(splitsMap);
+            Map<String, Transaction.TransactionSplit> splitsMap = new HashMap<>();
+            splitsMap.put(currentSelectedPayBackFinMateId, new Transaction.TransactionSplit(0.0, paymentSent, amountApplied));
+            payBackTx.setSplits(splitsMap);
 
-        DocumentReference payBackRef = db.collection("Users").document(userId).collection("Transactions").document(payBackTxId);
-        batch.set(payBackRef, payBackTx);
+            DocumentReference payBackRef = db.collection("Users").document(userId).collection("Transactions").document(payBackTxId);
+            batch.set(payBackRef, payBackTx);
 
-        btnSaveTransaction.setEnabled(false);
-        btnSaveTransaction.setText("Saving Payment...");
+            updateFinMateBalancesInBatch(batch, userId, currentSelectedPayBackFinMateId, txSnapshot.getDocuments(), payBackTx);
 
-        batch.commit().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                Toast.makeText(this, "Credit Payment Saved!", Toast.LENGTH_SHORT).show();
-                finish();
-            } else {
-                String err = task.getException() != null ? task.getException().getMessage() : "Unknown error";
-                Toast.makeText(this, "Failed to save: " + err, Toast.LENGTH_SHORT).show();
-                btnSaveTransaction.setEnabled(true);
-                btnSaveTransaction.setText("Pay Back Credit");
-            }
+            btnSaveTransaction.setEnabled(false);
+            btnSaveTransaction.setText("Saving Payment...");
+
+            batch.commit().addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    Toast.makeText(this, "Credit Payment Saved!", Toast.LENGTH_SHORT).show();
+                    finish();
+                } else {
+                    String err = task.getException() != null ? task.getException().getMessage() : "Unknown error";
+                    Toast.makeText(this, "Failed to save: " + err, Toast.LENGTH_SHORT).show();
+                    btnSaveTransaction.setEnabled(true);
+                    btnSaveTransaction.setText("Pay Back Credit");
+                }
+            });
         });
     }
 
@@ -1222,66 +1352,69 @@ public class AddTransactionActivity extends AppCompatActivity {
             return;
         }
 
-        double paymentReceived = Double.parseDouble(totalStr);
-        double originalPaymentReceived = paymentReceived;
-        double amountApplied = 0.0;
-
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null) return;
         String userId = currentUser.getUid();
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        WriteBatch batch = db.batch();
+        db.collection("Users").document(userId).collection("Transactions").get().addOnSuccessListener(txSnapshot -> {
+            double paymentReceived = Double.parseDouble(totalStr);
+            double tempPaymentReceived = paymentReceived;
+            double amountApplied = 0.0;
 
-        String settlementTxId = generateUniqueTransactionId();
+            WriteBatch batch = db.batch();
+            String settlementTxId = generateUniqueTransactionId();
 
-        for (Transaction oldTx : selectedUnpaidTransactions.values()) {
-            if (paymentReceived <= 0) break;
+            for (Transaction oldTx : selectedUnpaidTransactions.values()) {
+                if (tempPaymentReceived <= 0) break;
 
-            Transaction.TransactionSplit oldSplit = oldTx.getSplits().get(currentSelectedReceiveFinMateId);
-            if (oldSplit != null) {
-                double remainingDue = oldSplit.getCombinedStealthAmount() - oldSplit.getPaidAmount();
-                double allocation = Math.min(paymentReceived, remainingDue);
+                Transaction.TransactionSplit oldSplit = oldTx.getSplits().get(currentSelectedReceiveFinMateId);
+                if (oldSplit != null) {
+                    double remainingDue = oldSplit.getCombinedStealthAmount() - oldSplit.getPaidAmount();
+                    double allocation = Math.min(tempPaymentReceived, remainingDue);
 
-                double newPaidAmount = oldSplit.getPaidAmount() + allocation;
-                amountApplied += allocation;
-                paymentReceived -= allocation;
+                    double newPaidAmount = oldSplit.getPaidAmount() + allocation;
+                    amountApplied += allocation;
+                    tempPaymentReceived -= allocation;
 
-                DocumentReference oldTxRef = db.collection("Users").document(userId).collection("Transactions").document(oldTx.getTransactionId());
-                batch.update(oldTxRef, "splits." + currentSelectedReceiveFinMateId + ".paidAmount", newPaidAmount);
+                    DocumentReference oldTxRef = db.collection("Users").document(userId).collection("Transactions").document(oldTx.getTransactionId());
+                    batch.update(oldTxRef, "splits." + currentSelectedReceiveFinMateId + ".paidAmount", newPaidAmount);
+                }
             }
-        }
 
-        Transaction settlementTx = new Transaction(
-                settlementTxId,
-                "SETTLEMENT",
-                null,
-                title,
-                selectedTransactionTimestamp,
-                originalPaymentReceived,
-                false
-        );
+            Transaction settlementTx = new Transaction(
+                    settlementTxId,
+                    "SETTLEMENT",
+                    null,
+                    title,
+                    selectedTransactionTimestamp,
+                    paymentReceived,
+                    false
+            );
 
-        Map<String, Transaction.TransactionSplit> splitsMap = new HashMap<>();
-        splitsMap.put(currentSelectedReceiveFinMateId, new Transaction.TransactionSplit(0.0, originalPaymentReceived, amountApplied));
-        settlementTx.setSplits(splitsMap);
+            Map<String, Transaction.TransactionSplit> splitsMap = new HashMap<>();
+            splitsMap.put(currentSelectedReceiveFinMateId, new Transaction.TransactionSplit(0.0, paymentReceived, amountApplied));
+            settlementTx.setSplits(splitsMap);
 
-        DocumentReference settlementRef = db.collection("Users").document(userId).collection("Transactions").document(settlementTxId);
-        batch.set(settlementRef, settlementTx);
+            DocumentReference settlementRef = db.collection("Users").document(userId).collection("Transactions").document(settlementTxId);
+            batch.set(settlementRef, settlementTx);
 
-        btnSaveTransaction.setEnabled(false);
-        btnSaveTransaction.setText("Saving Settlement...");
+            updateFinMateBalancesInBatch(batch, userId, currentSelectedReceiveFinMateId, txSnapshot.getDocuments(), settlementTx);
 
-        batch.commit().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                Toast.makeText(this, "Settlement Saved Successfully!", Toast.LENGTH_SHORT).show();
-                finish();
-            } else {
-                String err = task.getException() != null ? task.getException().getMessage() : "Unknown error";
-                Toast.makeText(this, "Failed to save: " + err, Toast.LENGTH_SHORT).show();
-                btnSaveTransaction.setEnabled(true);
-                btnSaveTransaction.setText("Save Settlement");
-            }
+            btnSaveTransaction.setEnabled(false);
+            btnSaveTransaction.setText("Saving Settlement...");
+
+            batch.commit().addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    Toast.makeText(this, "Settlement Saved Successfully!", Toast.LENGTH_SHORT).show();
+                    finish();
+                } else {
+                    String err = task.getException() != null ? task.getException().getMessage() : "Unknown error";
+                    Toast.makeText(this, "Failed to save: " + err, Toast.LENGTH_SHORT).show();
+                    btnSaveTransaction.setEnabled(true);
+                    btnSaveTransaction.setText("Save Settlement");
+                }
+            });
         });
     }
 
@@ -1310,45 +1443,51 @@ public class AddTransactionActivity extends AppCompatActivity {
             return;
         }
 
-        double creditTaken = Double.parseDouble(totalStr);
-
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null) return;
         String userId = currentUser.getUid();
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        String takeCreditTxId = generateUniqueTransactionId();
+        db.collection("Users").document(userId).collection("Transactions").get().addOnSuccessListener(txSnapshot -> {
+            double creditTaken = Double.parseDouble(totalStr);
 
-        Transaction takeCreditTx = new Transaction(
-                takeCreditTxId,
-                "TAKE_CREDIT",
-                null,
-                title,
-                selectedTransactionTimestamp,
-                creditTaken,
-                false
-        );
+            WriteBatch batch = db.batch();
+            String takeCreditTxId = generateUniqueTransactionId();
 
-        Map<String, Transaction.TransactionSplit> splitsMap = new HashMap<>();
-        splitsMap.put(currentSelectedReceiveFinMateId, new Transaction.TransactionSplit(0.0, creditTaken, 0.0));
-        takeCreditTx.setSplits(splitsMap);
+            Transaction takeCreditTx = new Transaction(
+                    takeCreditTxId,
+                    "TAKE_CREDIT",
+                    null,
+                    title,
+                    selectedTransactionTimestamp,
+                    creditTaken,
+                    false
+            );
 
-        btnSaveTransaction.setEnabled(false);
-        btnSaveTransaction.setText("Logging Credit...");
+            Map<String, Transaction.TransactionSplit> splitsMap = new HashMap<>();
+            splitsMap.put(currentSelectedReceiveFinMateId, new Transaction.TransactionSplit(0.0, creditTaken, 0.0));
+            takeCreditTx.setSplits(splitsMap);
 
-        db.collection("Users").document(userId).collection("Transactions").document(takeCreditTxId)
-                .set(takeCreditTx)
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        Toast.makeText(this, "Credit Logged Successfully!", Toast.LENGTH_SHORT).show();
-                        finish();
-                    } else {
-                        String err = task.getException() != null ? task.getException().getMessage() : "Unknown error";
-                        Toast.makeText(this, "Failed to save: " + err, Toast.LENGTH_SHORT).show();
-                        btnSaveTransaction.setEnabled(true);
-                        btnSaveTransaction.setText("Take Credit");
-                    }
-                });
+            DocumentReference newTxRef = db.collection("Users").document(userId).collection("Transactions").document(takeCreditTxId);
+            batch.set(newTxRef, takeCreditTx);
+
+            updateFinMateBalancesInBatch(batch, userId, currentSelectedReceiveFinMateId, txSnapshot.getDocuments(), takeCreditTx);
+
+            btnSaveTransaction.setEnabled(false);
+            btnSaveTransaction.setText("Logging Credit...");
+
+            batch.commit().addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    Toast.makeText(this, "Credit Logged Successfully!", Toast.LENGTH_SHORT).show();
+                    finish();
+                } else {
+                    String err = task.getException() != null ? task.getException().getMessage() : "Unknown error";
+                    Toast.makeText(this, "Failed to save: " + err, Toast.LENGTH_SHORT).show();
+                    btnSaveTransaction.setEnabled(true);
+                    btnSaveTransaction.setText("Take Credit");
+                }
+            });
+        });
     }
 
     private String getBankInitials(String bankName) {
