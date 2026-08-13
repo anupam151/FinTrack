@@ -70,7 +70,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:weightSum="2"
-                android:layout_marginBottom="16dp">
+                android:layout_marginBottom="12dp">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnTypeSpend"
@@ -105,6 +105,55 @@
                     app:elevation="0dp" />
 
             </LinearLayout>
+
+            <!-- SPEND SUB-OPTIONS -->
+            <RadioGroup
+                android:id="@+id/rgSpendOptions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp"
+                android:checkedButton="@+id/rbNormalSpend">
+                <RadioButton
+                    android:id="@+id/rbNormalSpend"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Normal Spend"
+                    android:textColor="#082561" />
+                <RadioButton
+                    android:id="@+id/rbPayBackCredit"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Pay Back Credit"
+                    android:textColor="#082561" />
+            </RadioGroup>
+
+            <!-- RECEIVE SUB-OPTIONS -->
+            <RadioGroup
+                android:id="@+id/rgReceiveOptions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone"
+                android:checkedButton="@+id/rbSettleDues">
+                <RadioButton
+                    android:id="@+id/rbSettleDues"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Settle Dues"
+                    android:textColor="#082561" />
+                <RadioButton
+                    android:id="@+id/rbTakeCredit"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Take Credit"
+                    android:textColor="#082561" />
+            </RadioGroup>
 
             <!-- PAYMENT SOURCE CARD -->
             <com.google.android.material.card.MaterialCardView
@@ -157,7 +206,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- RECEIVE MODE: SELECT FINMATE TO SETTLE -->
+            <!-- RECEIVE MODE: SELECT FINMATE TO SETTLE OR TAKE CREDIT FROM -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardReceivePerson"
                 android:layout_width="match_parent"
@@ -176,6 +225,7 @@
                     android:padding="16dp">
 
                     <TextView
+                        android:id="@+id/tvReceivePersonTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="8dp"
@@ -327,7 +377,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- SPEND MODE: THE SPLIT ENGINE CONTAINER -->
+            <!-- SPEND MODE: THE NORMAL SPLIT ENGINE -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardSplitEngine"
                 android:layout_width="match_parent"
@@ -386,7 +436,130 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- RECEIVE MODE: DYNAMIC CHECKLIST -->
+            <!-- SPEND MODE: PAY BACK CREDIT -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardPayBackCredit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:text="Select Person to Pay Back"
+                        android:textColor="#082561"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Choose FinMate"
+                        app:boxCornerRadiusBottomEnd="8dp"
+                        app:boxCornerRadiusBottomStart="8dp"
+                        app:boxCornerRadiusTopEnd="8dp"
+                        app:boxCornerRadiusTopStart="8dp"
+                        app:boxStrokeColor="#1abcab"
+                        app:hintTextColor="#1abcab">
+
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/spinPayBackPerson"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:popupBackground="@drawable/bg_rounded_popup"
+                            android:textColor="#101828" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <TextView
+                        android:id="@+id/tvNoCreditTx"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:paddingVertical="12dp"
+                        android:text="No credits to pay back."
+                        android:textColor="#949494"
+                        android:textSize="14sp"
+                        android:visibility="gone" />
+
+                    <LinearLayout
+                        android:id="@+id/layoutCreditTransactionsContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="vertical" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- SPEND MODE: PAY BACK ADVANCE / SHORTAGE -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardPayBackAdvance"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="#E8F5E9"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#388E3C">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:id="@+id/ivPayBackAdvanceIcon"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/rupee"
+                        app:tint="#388E3C"
+                        tools:ignore="ContentDescription" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginStart="12dp">
+
+                        <TextView
+                            android:id="@+id/tvPayBackAdvanceTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Advance / Credit"
+                            android:textColor="#388E3C"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvPayBackAdvanceAmount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="₹0.00 will be added as advance"
+                            android:textColor="#2E7D32"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- RECEIVE MODE: DYNAMIC CHECKLIST (Settle Dues) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardReceiveUnpaidList"
                 android:layout_width="match_parent"
@@ -424,7 +597,6 @@
                         android:textSize="14sp"
                         android:visibility="gone" />
 
-                    <!-- Checkboxes will be injected here via Java -->
                     <LinearLayout
                         android:id="@+id/layoutUnpaidTransactionsContainer"
                         android:layout_width="match_parent"

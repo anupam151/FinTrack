@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+@SuppressLint("SetTextI18n") // Suppresses the string literal warnings cleanly
 public class FinMateLedgerActivity extends AppCompatActivity {
 
     private TextView tvTotalPending, tvCurrentDue;
@@ -170,9 +171,12 @@ public class FinMateLedgerActivity extends AppCompatActivity {
 
                                 Transaction.TransactionSplit split = tx.getSplits().get(finMateId);
                                 if (split != null) {
-                                    if ("SETTLEMENT".equals(tx.getTransactionType())) {
+                                    // Take Credit and Settlements SUBTRACT from what they owe us (pushes to negative/Advance)
+                                    if ("SETTLEMENT".equals(tx.getTransactionType()) || "TAKE_CREDIT".equals(tx.getTransactionType())) {
                                         currentDue -= split.getCombinedStealthAmount();
-                                    } else {
+                                    }
+                                    // Spends and Paying Back Credit ADD to the balance (pushes to positive/Due)
+                                    else {
                                         currentDue += split.getCombinedStealthAmount();
                                     }
                                 }
@@ -180,7 +184,7 @@ public class FinMateLedgerActivity extends AppCompatActivity {
                         }
                     }
 
-                    double totalDue = 0.0;
+                    double totalDue = 0.0; // Placeholder
 
                     updateTotalPendingUI(totalDue, currentDue);
                     filterTransactions(etSearchLedger.getText() != null ? etSearchLedger.getText().toString() : "");
@@ -193,12 +197,12 @@ public class FinMateLedgerActivity extends AppCompatActivity {
 
         tvTotalPending.setText(formatter.format(totalDue));
 
-        if (currentDue < 0) {
+        if (currentDue < -0.01) {
             double advanceAmount = Math.abs(currentDue);
             tvCurrentDue.setText(formatter.format(advanceAmount));
             tvAdvanceBadge.setVisibility(View.VISIBLE);
         } else {
-            tvCurrentDue.setText(formatter.format(currentDue));
+            tvCurrentDue.setText(formatter.format(Math.max(0, currentDue)));
             tvAdvanceBadge.setVisibility(View.GONE);
         }
     }
@@ -229,7 +233,7 @@ public class FinMateLedgerActivity extends AppCompatActivity {
         } else {
             String lowerCaseQuery = query.toLowerCase().trim();
             for (Transaction tx : masterLedgerList) {
-                if (tx.getTitle() != null && tx.getTitle().toLowerCase().contains(lowerCaseQuery)) {
+                if (matchesSearchFilter(tx, lowerCaseQuery)) {
                     displayList.add(tx);
                 }
             }
@@ -246,17 +250,54 @@ public class FinMateLedgerActivity extends AppCompatActivity {
         adapter.notifyDataSetChanged();
     }
 
-    @SuppressLint("InflateParams")
+    // Expanded Search Logic with NPE Fix
+    private boolean matchesSearchFilter(Transaction tx, String query) {
+        if (query.isEmpty()) return true;
+
+        String title = tx.getTitle() != null ? tx.getTitle().toLowerCase() : "";
+        String txId = tx.getTransactionId() != null ? tx.getTransactionId().toLowerCase() : "";
+
+        String cardName;
+        if ("SETTLEMENT".equals(tx.getTransactionType())) {
+            cardName = "settlement";
+        } else if ("TAKE_CREDIT".equals(tx.getTransactionType())) {
+            cardName = "credit";
+        } else if ("PAY_CREDIT".equals(tx.getTransactionType())) {
+            cardName = "credit paid back";
+        } else if (tx.getCardId() == null || "CASH".equals(tx.getCardId())) {
+            cardName = "cash";
+        } else {
+            String fetchedName = userCardsMap.get(tx.getCardId());
+            cardName = fetchedName != null ? fetchedName.toLowerCase() : "";
+        }
+
+        double splitAmount = 0.0;
+        // PERFECT NPE FIX: Extracted to a safe null-check structure
+        if (tx.getSplits() != null) {
+            Transaction.TransactionSplit split = tx.getSplits().get(finMateId);
+            if (split != null) {
+                splitAmount = split.getCombinedStealthAmount();
+            }
+        }
+
+        String amountStr = String.valueOf(splitAmount);
+        String totalAmountStr = String.valueOf(tx.getTotalAmount());
+
+        return title.contains(query) || txId.contains(query) || cardName.contains(query) || amountStr.contains(query) || totalAmountStr.contains(query);
+    }
+
     private void showFilterBottomSheet() {
         BottomSheetDialog filterDialog = new BottomSheetDialog(this);
-        View view = getLayoutInflater().inflate(R.layout.bottom_sheet_ledger_filter, null);
+
+        // FIX: Pass the activity's root content view as the parent, but attachToRoot = false
+        View view = getLayoutInflater().inflate(R.layout.bottom_sheet_ledger_filter, findViewById(android.R.id.content), false);
         filterDialog.setContentView(view);
 
         ChipGroup cgTransactionType = view.findViewById(R.id.cgTransactionType);
 
         List<String> usedCardIds = new ArrayList<>();
         for (Transaction tx : masterLedgerList) {
-            if ("CARD_SPEND".equals(tx.getTransactionType()) && tx.getCardId() != null) {
+            if (("CARD_SPEND".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType())) && tx.getCardId() != null) {
                 if (!usedCardIds.contains(tx.getCardId())) {
                     usedCardIds.add(tx.getCardId());
                 }
@@ -376,7 +417,6 @@ public class FinMateLedgerActivity extends AppCompatActivity {
         private final String targetFinMateId;
         private final Map<String, String> userCardsMap;
 
-        // Split formatting into two separate formatters
         private final SimpleDateFormat dateOnlyFormat = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
         private final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault());
 
@@ -405,7 +445,6 @@ public class FinMateLedgerActivity extends AppCompatActivity {
             if (split == null) return;
 
             holder.tvTxTitle.setText(tx.getTitle());
-            // Use dateOnlyFormat here
             holder.tvTxDate.setText(dateOnlyFormat.format(new Date(tx.getTimestamp())));
 
             holder.tvTxAmount.setText(currencyFormatter.format(split.getCombinedStealthAmount()));
@@ -415,7 +454,7 @@ public class FinMateLedgerActivity extends AppCompatActivity {
                     : "UNKNOWN";
             holder.tvTxNumber.setText(holder.itemView.getContext().getString(R.string.txn_number_format, shortId));
 
-            if ("SETTLEMENT".equals(tx.getTransactionType())) {
+            if ("SETTLEMENT".equals(tx.getTransactionType()) || "TAKE_CREDIT".equals(tx.getTransactionType())) {
                 holder.tvTxSource.setVisibility(View.GONE);
             } else {
                 holder.tvTxSource.setVisibility(View.VISIBLE);
@@ -438,14 +477,19 @@ public class FinMateLedgerActivity extends AppCompatActivity {
                 holder.tvTxTotalAmount.setVisibility(View.GONE);
             }
 
-            if ("SETTLEMENT".equals(tx.getTransactionType())) {
+            if ("SETTLEMENT".equals(tx.getTransactionType()) || "TAKE_CREDIT".equals(tx.getTransactionType())) {
                 holder.cardIconContainer.setCardBackgroundColor(Color.parseColor("#E0F2F1"));
                 holder.ivTxIcon.setColorFilter(Color.parseColor("#1abcab"));
 
                 holder.tvTxAmount.setTextColor(Color.parseColor("#1abcab"));
                 holder.tvTxAmount.setText(holder.itemView.getContext().getString(R.string.positive_amount_format, currencyFormatter.format(split.getCombinedStealthAmount())));
 
-                holder.tvTxStatus.setText(R.string.status_settled);
+                if ("TAKE_CREDIT".equals(tx.getTransactionType())) {
+                    holder.tvTxStatus.setText("Credit Taken");
+                } else {
+                    holder.tvTxStatus.setText(R.string.status_settled);
+                }
+
                 holder.tvTxStatus.setTextColor(Color.parseColor("#1abcab"));
                 holder.badgeStatus.setCardBackgroundColor(Color.parseColor("#E0F2F1"));
             } else {
@@ -457,7 +501,11 @@ public class FinMateLedgerActivity extends AppCompatActivity {
                 double totalOwed = split.getCombinedStealthAmount();
                 double amountPaid = split.getPaidAmount();
 
-                if (amountPaid >= totalOwed && totalOwed > 0) {
+                if ("PAY_CREDIT".equals(tx.getTransactionType())) {
+                    holder.tvTxStatus.setText("Paid Credit");
+                    holder.tvTxStatus.setTextColor(Color.parseColor("#388E3C"));
+                    holder.badgeStatus.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
+                } else if (amountPaid >= totalOwed && totalOwed > 0) {
                     holder.tvTxStatus.setText(R.string.status_paid);
                     holder.tvTxStatus.setTextColor(Color.parseColor("#388E3C"));
                     holder.badgeStatus.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
@@ -475,11 +523,12 @@ public class FinMateLedgerActivity extends AppCompatActivity {
             holder.itemView.setOnClickListener(v -> showTransactionDetailsSheet(v.getContext(), tx));
         }
 
-        @SuppressLint({"SetTextI18n", "InflateParams"})
+        @SuppressLint("SetTextI18n")
         private void showTransactionDetailsSheet(Context context, Transaction tx) {
             BottomSheetDialog sheetDialog = new BottomSheetDialog(context);
 
-            View sheetView = LayoutInflater.from(context).inflate(R.layout.dialog_transaction_details, null);
+            // FIX: Pass a dummy FrameLayout to preserve the XML root's layout parameters
+            View sheetView = LayoutInflater.from(context).inflate(R.layout.dialog_transaction_details, new android.widget.FrameLayout(context), false);
             sheetDialog.setContentView(sheetView);
 
             TextView tvSheetTxTitle = sheetView.findViewById(R.id.tvSheetTxTitle);
@@ -489,11 +538,10 @@ public class FinMateLedgerActivity extends AppCompatActivity {
             TextView tvSheetTotalAmount = sheetView.findViewById(R.id.tvSheetTotalAmount);
             LinearLayout layoutSplitsContainer = sheetView.findViewById(R.id.layoutSplitsContainer);
             ImageView ivCloseSheet = sheetView.findViewById(R.id.ivCloseSheet);
-            ImageView ivCopyTxId = sheetView.findViewById(R.id.ivCopyTxId); // Bound the new copy icon
+            ImageView ivCopyTxId = sheetView.findViewById(R.id.ivCopyTxId);
 
             ivCloseSheet.setOnClickListener(v -> sheetDialog.dismiss());
 
-            // Add Copy functionality
             ivCopyTxId.setOnClickListener(v -> {
                 ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
                 ClipData clip = ClipData.newPlainText("Transaction ID", tx.getTransactionId());
@@ -504,7 +552,6 @@ public class FinMateLedgerActivity extends AppCompatActivity {
             });
 
             tvSheetTxTitle.setText(tx.getTitle());
-            // Use dateTimeFormat here
             tvSheetTxDate.setText(dateTimeFormat.format(new Date(tx.getTimestamp())));
 
             String shortId = tx.getTransactionId() != null && tx.getTransactionId().length() >= 6
@@ -514,6 +561,10 @@ public class FinMateLedgerActivity extends AppCompatActivity {
 
             if ("SETTLEMENT".equals(tx.getTransactionType())) {
                 tvSheetSource.setText("Settlement Payment");
+            } else if ("TAKE_CREDIT".equals(tx.getTransactionType())) {
+                tvSheetSource.setText("Credit Received");
+            } else if ("PAY_CREDIT".equals(tx.getTransactionType())) {
+                tvSheetSource.setText("Credit Paid Back");
             } else if (tx.getCardId() == null || "CASH".equals(tx.getCardId())) {
                 tvSheetSource.setText("Cash");
             } else {
@@ -548,13 +599,9 @@ public class FinMateLedgerActivity extends AppCompatActivity {
 
                                 View splitRow = LayoutInflater.from(context).inflate(android.R.layout.simple_list_item_2, layoutSplitsContainer, false);
 
-                                // ==========================================
-                                // FIX: Remove default massive spacing
-                                // ==========================================
-                                splitRow.setMinimumHeight(0); // Removes the default 64dp height
-                                int verticalPadding = (int) (2 * context.getResources().getDisplayMetrics().density); // Convert 6dp to pixels
-                                splitRow.setPadding(0, verticalPadding, 0, verticalPadding); // Squeeze the spacing tightly
-                                // ==========================================
+                                splitRow.setMinimumHeight(0);
+                                int verticalPadding = (int) (2 * context.getResources().getDisplayMetrics().density);
+                                splitRow.setPadding(0, verticalPadding, 0, verticalPadding);
 
                                 TextView text1 = splitRow.findViewById(android.R.id.text1);
                                 TextView text2 = splitRow.findViewById(android.R.id.text2);

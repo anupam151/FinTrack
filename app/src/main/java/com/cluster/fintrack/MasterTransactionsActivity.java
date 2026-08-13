@@ -61,10 +61,9 @@ public class MasterTransactionsActivity extends AppCompatActivity {
     private final List<Transaction> filteredList = new ArrayList<>();
     private final Map<String, String> userCardsMap = new HashMap<>();
 
-    // State Variables
     private String currentSearchQuery = "";
-    private String currentSortOption = "DATE_DESC"; // DATE_DESC, DATE_ASC, AMT_DESC, AMT_ASC
-    private String currentFilterSourceId = "ALL"; // "ALL", "CASH", "SETTLEMENT", or cardId
+    private String currentSortOption = "DATE_DESC";
+    private String currentFilterSourceId = "ALL";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -121,9 +120,6 @@ public class MasterTransactionsActivity extends AppCompatActivity {
         btnFilter.setOnClickListener(v -> showFilterBottomSheet());
     }
 
-    // ==========================================
-    // OPTIONS & DELETE LOGIC
-    // ==========================================
     private void showTransactionOptions(Transaction tx, View anchor) {
         androidx.appcompat.view.ContextThemeWrapper wrapper =
                 new androidx.appcompat.view.ContextThemeWrapper(this, R.style.CleanPopupMenuTheme);
@@ -153,12 +149,12 @@ public class MasterTransactionsActivity extends AppCompatActivity {
         dialog.setOnShowListener(d -> {
             android.widget.Button positiveButton = dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE);
             if (positiveButton != null) {
-                positiveButton.setTextColor(Color.parseColor("#D32F2F")); // Red Delete
+                positiveButton.setTextColor(Color.parseColor("#D32F2F"));
             }
 
             android.widget.Button negativeButton = dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE);
             if (negativeButton != null) {
-                negativeButton.setTextColor(Color.parseColor("#667085")); // Grey Cancel
+                negativeButton.setTextColor(Color.parseColor("#667085"));
             }
         });
 
@@ -197,9 +193,6 @@ public class MasterTransactionsActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> Toast.makeText(this, "Failed to delete: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
-    // ==========================================
-    // DATA FETCHING & FILTERING
-    // ==========================================
     @SuppressLint("NotifyDataSetChanged")
     private void fetchUserCards() {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
@@ -218,7 +211,7 @@ public class MasterTransactionsActivity extends AppCompatActivity {
                             userCardsMap.put(card.getCardId(), displayName);
                         }
                     }
-                    fetchMasterLedgerData(); // Fetch transactions only after we know the cards
+                    fetchMasterLedgerData();
                 });
     }
 
@@ -254,10 +247,7 @@ public class MasterTransactionsActivity extends AppCompatActivity {
         String query = currentSearchQuery.toLowerCase().trim();
 
         for (Transaction tx : allTransactionsList) {
-            // 1. Text Search Filter (Expanded to Title, ID, Source, Amount)
             boolean matchesSearch = matchesSearchFilter(tx, query);
-
-            // 2. Source Filter
             boolean matchesSource = matchesSourceFilter(tx);
 
             if (matchesSearch && matchesSource) {
@@ -265,7 +255,6 @@ public class MasterTransactionsActivity extends AppCompatActivity {
             }
         }
 
-        // 3. Apply Sorting
         filteredList.sort((t1, t2) -> {
             switch (currentSortOption) {
                 case "DATE_ASC":
@@ -291,7 +280,6 @@ public class MasterTransactionsActivity extends AppCompatActivity {
         adapter.notifyDataSetChanged();
     }
 
-    // Helper to calculate total safely at the activity level
     private double calculateTransactionTotal(Transaction tx) {
         if (tx.getTotalAmount() > 0) return tx.getTotalAmount();
         double total = 0;
@@ -309,10 +297,13 @@ public class MasterTransactionsActivity extends AppCompatActivity {
         String title = tx.getTitle() != null ? tx.getTitle().toLowerCase() : "";
         String txId = tx.getTransactionId() != null ? tx.getTransactionId().toLowerCase() : "";
 
-        // Check Card Source
-        String cardName; // Initializer removed to fix the redundant warning
+        String cardName;
         if ("SETTLEMENT".equals(tx.getTransactionType())) {
             cardName = "settlement";
+        } else if ("TAKE_CREDIT".equals(tx.getTransactionType())) {
+            cardName = "credit";
+        } else if ("PAY_CREDIT".equals(tx.getTransactionType())) {
+            cardName = "credit paid back";
         } else if (tx.getCardId() == null || "CASH".equals(tx.getCardId())) {
             cardName = "cash";
         } else {
@@ -320,7 +311,6 @@ public class MasterTransactionsActivity extends AppCompatActivity {
             cardName = fetchedName != null ? fetchedName.toLowerCase() : "";
         }
 
-        // Check Amount (ignoring commas natively, but matching raw values)
         String amountStr = String.valueOf(calculateTransactionTotal(tx));
 
         return title.contains(query) || txId.contains(query) || cardName.contains(query) || amountStr.contains(query);
@@ -330,7 +320,7 @@ public class MasterTransactionsActivity extends AppCompatActivity {
         if ("ALL".equals(currentFilterSourceId)) {
             return true;
         } else if ("SETTLEMENT".equals(currentFilterSourceId)) {
-            return "SETTLEMENT".equals(tx.getTransactionType());
+            return "SETTLEMENT".equals(tx.getTransactionType()) || "TAKE_CREDIT".equals(tx.getTransactionType());
         } else if ("CASH".equals(currentFilterSourceId)) {
             return tx.getCardId() == null || "CASH".equals(tx.getCardId());
         } else {
@@ -338,10 +328,9 @@ public class MasterTransactionsActivity extends AppCompatActivity {
         }
     }
 
-    @SuppressLint("InflateParams")
     private void showSortBottomSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
-        View view = getLayoutInflater().inflate(R.layout.bottom_sheet_ledger_filter, null);
+        View view = getLayoutInflater().inflate(R.layout.bottom_sheet_ledger_filter, findViewById(android.R.id.content), false);
         dialog.setContentView(view);
 
         ChipGroup cgOptions = view.findViewById(R.id.cgTransactionType);
@@ -383,10 +372,9 @@ public class MasterTransactionsActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    @SuppressLint("InflateParams")
     private void showFilterBottomSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
-        View view = getLayoutInflater().inflate(R.layout.bottom_sheet_ledger_filter, null);
+        View view = getLayoutInflater().inflate(R.layout.bottom_sheet_ledger_filter, findViewById(android.R.id.content), false);
         dialog.setContentView(view);
 
         ChipGroup cgOptions = view.findViewById(R.id.cgTransactionType);
@@ -395,7 +383,7 @@ public class MasterTransactionsActivity extends AppCompatActivity {
 
         addChipToGroup(cgOptions, getString(R.string.filter_all_sources), "ALL");
         addChipToGroup(cgOptions, getString(R.string.filter_cash), "CASH");
-        addChipToGroup(cgOptions, getString(R.string.filter_settlements), "SETTLEMENT");
+        addChipToGroup(cgOptions, "Received / Credits", "SETTLEMENT");
 
         for (Map.Entry<String, String> entry : userCardsMap.entrySet()) {
             addChipToGroup(cgOptions, entry.getValue(), entry.getKey());
@@ -462,10 +450,6 @@ public class MasterTransactionsActivity extends AppCompatActivity {
         }
     }
 
-    // ==========================================
-    // ADAPTER FOR MASTER TRANSACTIONS
-    // ==========================================
-
     public interface OnTransactionLongClickListener {
         void onTransactionLongClick(Transaction tx, View anchor);
     }
@@ -510,8 +494,13 @@ public class MasterTransactionsActivity extends AppCompatActivity {
                     : "UNKNOWN";
             holder.tvTxNumber.setText(holder.itemView.getContext().getString(R.string.txn_number_format, shortId));
 
-            if ("SETTLEMENT".equals(tx.getTransactionType())) {
-                holder.tvTxSource.setText(holder.itemView.getContext().getString(R.string.filter_settlements));
+            // NEW: Properly distinguish incoming vs outgoing money visually
+            if ("SETTLEMENT".equals(tx.getTransactionType()) || "TAKE_CREDIT".equals(tx.getTransactionType())) {
+                if ("TAKE_CREDIT".equals(tx.getTransactionType())) {
+                    holder.tvTxSource.setText("Credit Received");
+                } else {
+                    holder.tvTxSource.setText(holder.itemView.getContext().getString(R.string.filter_settlements));
+                }
 
                 holder.cardIconContainer.setCardBackgroundColor(Color.parseColor("#E0F2F1"));
                 holder.ivTxIcon.setColorFilter(Color.parseColor("#1abcab"));
@@ -520,7 +509,9 @@ public class MasterTransactionsActivity extends AppCompatActivity {
                 holder.tvTxType.setText("Received");
                 holder.tvTxType.setTextColor(Color.parseColor("#1abcab"));
             } else {
-                if (tx.getCardId() == null || "CASH".equals(tx.getCardId())) {
+                if ("PAY_CREDIT".equals(tx.getTransactionType())) {
+                    holder.tvTxSource.setText("Credit Paid Back");
+                } else if (tx.getCardId() == null || "CASH".equals(tx.getCardId())) {
                     holder.tvTxSource.setText(holder.itemView.getContext().getString(R.string.paid_via_cash));
                 } else {
                     String cardName = userCardsMap.get(tx.getCardId());
@@ -531,27 +522,27 @@ public class MasterTransactionsActivity extends AppCompatActivity {
                 holder.ivTxIcon.setColorFilter(Color.parseColor("#1565C0"));
 
                 holder.badgeStatus.setCardBackgroundColor(Color.parseColor("#E3F2FD"));
-                holder.tvTxType.setText("Spend");
+
+                if ("PAY_CREDIT".equals(tx.getTransactionType())) {
+                    holder.tvTxType.setText("Paid Credit");
+                } else {
+                    holder.tvTxType.setText("Spend");
+                }
                 holder.tvTxType.setTextColor(Color.parseColor("#1565C0"));
             }
 
-            // Normal Tap -> Shows Details Sheet
             holder.itemView.setOnClickListener(v -> showTransactionDetailsSheet(v.getContext(), tx));
 
-            // Long Tap -> Shows Options Menu
             holder.itemView.setOnLongClickListener(v -> {
                 longClickListener.onTransactionLongClick(tx, v);
                 return true;
             });
         }
 
-        // ==========================================
-        // TRANSACTION DETAILS BOTTOM SHEET (SINGLE CLICK)
-        // ==========================================
         @SuppressLint({"SetTextI18n", "InflateParams"})
         private void showTransactionDetailsSheet(Context context, Transaction tx) {
             BottomSheetDialog sheetDialog = new BottomSheetDialog(context);
-            View sheetView = LayoutInflater.from(context).inflate(R.layout.dialog_transaction_details, null);
+            View sheetView = LayoutInflater.from(context).inflate(R.layout.dialog_transaction_details, new android.widget.FrameLayout(context), false);
             sheetDialog.setContentView(sheetView);
 
             TextView tvSheetTxTitle = sheetView.findViewById(R.id.tvSheetTxTitle);
@@ -561,11 +552,10 @@ public class MasterTransactionsActivity extends AppCompatActivity {
             TextView tvSheetTotalAmount = sheetView.findViewById(R.id.tvSheetTotalAmount);
             LinearLayout layoutSplitsContainer = sheetView.findViewById(R.id.layoutSplitsContainer);
             ImageView ivCloseSheet = sheetView.findViewById(R.id.ivCloseSheet);
-            ImageView ivCopyTxId = sheetView.findViewById(R.id.ivCopyTxId); // New Copy Icon
+            ImageView ivCopyTxId = sheetView.findViewById(R.id.ivCopyTxId);
 
             ivCloseSheet.setOnClickListener(v -> sheetDialog.dismiss());
 
-            // Handle Copy Functionality
             ivCopyTxId.setOnClickListener(v -> {
                 ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
                 ClipData clip = ClipData.newPlainText("Transaction ID", tx.getTransactionId());
@@ -585,6 +575,10 @@ public class MasterTransactionsActivity extends AppCompatActivity {
 
             if ("SETTLEMENT".equals(tx.getTransactionType())) {
                 tvSheetSource.setText("Settlement Payment");
+            } else if ("TAKE_CREDIT".equals(tx.getTransactionType())) {
+                tvSheetSource.setText("Credit Received");
+            } else if ("PAY_CREDIT".equals(tx.getTransactionType())) {
+                tvSheetSource.setText("Credit Paid Back");
             } else if (tx.getCardId() == null || "CASH".equals(tx.getCardId())) {
                 tvSheetSource.setText("Cash");
             } else {
@@ -620,7 +614,7 @@ public class MasterTransactionsActivity extends AppCompatActivity {
                                 View splitRow = LayoutInflater.from(context).inflate(android.R.layout.simple_list_item_2, layoutSplitsContainer, false);
 
                                 splitRow.setMinimumHeight(0);
-                                int verticalPadding = (int) (6 * context.getResources().getDisplayMetrics().density);
+                                int verticalPadding = (int) (2 * context.getResources().getDisplayMetrics().density);
                                 splitRow.setPadding(0, verticalPadding, 0, verticalPadding);
 
                                 TextView text1 = splitRow.findViewById(android.R.id.text1);
