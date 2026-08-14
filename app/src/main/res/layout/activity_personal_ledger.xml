@@ -8,7 +8,7 @@
     android:layout_height="match_parent"
     android:background="#F5F7FA"
     tools:context=".PersonalLedgerActivity"
-    tools:ignore="HardcodedText, ContentDescription">
+    tools:ignore="HardcodedText, ContentDescription, UseCompoundDrawables">
 
     <!-- TOP APP BAR -->
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -146,23 +146,23 @@
             android:paddingVertical="4dp" />
     </HorizontalScrollView>
 
-    <!-- SEARCH BAR -->
+    <!-- SEARCH & FILTER BAR -->
     <LinearLayout
-        android:id="@+id/layoutSearch"
+        android:id="@+id/layoutSearchFilter"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="12dp"
-        android:baselineAligned="false"
+        android:layout_marginTop="16dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        app:layout_constraintTop_toBottomOf="@id/scrollBreakdown">
+        app:layout_constraintTop_toBottomOf="@+id/scrollBreakdown">
 
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="12dp"
             app:boxCornerRadiusBottomEnd="24dp"
             app:boxCornerRadiusBottomStart="24dp"
             app:boxCornerRadiusTopEnd="24dp"
@@ -177,12 +177,33 @@
                 android:id="@+id/etSearchPersonal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Search personal transactions..."
+                android:hint="Search personal expenses..."
                 android:inputType="text"
                 android:paddingVertical="12dp"
                 android:textColor="#101828"
                 android:textSize="14sp" />
         </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/btnFilterPersonal"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            app:cardBackgroundColor="#1abcab"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:src="@android:drawable/ic_menu_sort_by_size"
+                app:tint="#FFFFFF"
+                tools:ignore="ContentDescription" />
+        </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 
     <!-- RECYCLER VIEW -->
@@ -195,7 +216,7 @@
         android:clipToPadding="false"
         android:paddingBottom="20dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/layoutSearch" />
+        app:layout_constraintTop_toBottomOf="@id/layoutSearchFilter" />
 
     <!-- EMPTY STATE -->
     <TextView
@@ -208,8 +229,9 @@
         android:gravity="center"
         android:visibility="gone"
         android:drawablePadding="12dp"
+        app:drawableTopCompat="@android:drawable/ic_menu_info_details"
         app:drawableTint="#D0D5DD"
-        app:layout_constraintTop_toBottomOf="@id/layoutSearch"
+        app:layout_constraintTop_toBottomOf="@id/layoutSearchFilter"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
