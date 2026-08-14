@@ -206,37 +206,45 @@ public class MasterTransactionsActivity extends AppCompatActivity {
     private void recalculateFinMateBalance(String userId, String finMateId) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         db.collection("Users").document(userId).collection("Transactions").get().addOnSuccessListener(snap -> {
-            double cardSpend = 0.0, cashSpend = 0.0, cardPaid = 0.0, cashPaid = 0.0, inbound = 0.0, outbound = 0.0;
+            double cardDue = 0.0;
+            double cashDue = 0.0;
+            double advanceCredit = 0.0;
+            double loanCreditTaken = 0.0;
+
             for (DocumentSnapshot doc : snap.getDocuments()) {
                 Transaction t = doc.toObject(Transaction.class);
                 if (t != null && t.getSplits() != null && t.getSplits().containsKey(finMateId)) {
                     Transaction.TransactionSplit split = t.getSplits().get(finMateId);
                     if (split != null) {
-                        double amt = split.getCombinedStealthAmount();
-                        double paid = split.getPaidAmount();
-                        String type = t.getTransactionType();
-                        if ("CARD_SPEND".equals(type)) { cardSpend += amt; cardPaid += paid; }
-                        else if ("CASH_SPEND".equals(type)) { cashSpend += amt; cashPaid += paid; }
-                        else if ("SETTLEMENT".equals(type) || "TAKE_CREDIT".equals(type)) { inbound += amt; }
-                        else if ("PAY_CREDIT".equals(type)) { outbound += amt; }
+                        double remaining = split.getCombinedStealthAmount() - split.getPaidAmount();
+                        if (remaining > 0.01) {
+                            String type = t.getTransactionType();
+                            if ("CARD_SPEND".equals(type)) cardDue += remaining;
+                            else if ("CASH_SPEND".equals(type)) cashDue += remaining;
+                            else if ("SETTLEMENT".equals(type)) advanceCredit += remaining;
+                            else if ("TAKE_CREDIT".equals(type)) loanCreditTaken += remaining;
+                        }
                     }
                 }
             }
 
-            double netBalance = (cardSpend + cashSpend + outbound) - inbound;
-            double finalReceivable = 0.0, finalPayable = 0.0, finalCard = 0.0, finalCash = 0.0;
+            double totalReceivables = cardDue + cashDue;
+            double totalPayables = loanCreditTaken + advanceCredit;
+            double netBalance = totalReceivables - totalPayables;
+
+            double finalReceivable = 0.0;
+            double finalPayable = 0.0;
+            double finalCard = 0.0;
+            double finalCash = 0.0;
+
             if (netBalance > 0.01) {
                 finalReceivable = netBalance;
-                double calcCard = Math.max(0, cardSpend - cardPaid);
-                double calcCash = Math.max(0, cashSpend - cashPaid);
-                if (Math.abs((calcCard + calcCash) - netBalance) < 0.1) {
-                    finalCard = calcCard; finalCash = calcCash;
+                if (totalPayables <= 0.01) {
+                    finalCard = cardDue;
+                    finalCash = cashDue;
                 } else {
-                    double totalSpends = cardSpend + cashSpend;
-                    if (totalSpends > 0) {
-                        finalCard = netBalance * (cardSpend / totalSpends);
-                        finalCash = netBalance * (cashSpend / totalSpends);
-                    }
+                    finalCard = netBalance * (cardDue / totalReceivables);
+                    finalCash = netBalance * (cashDue / totalReceivables);
                 }
             } else if (netBalance < -0.01) {
                 finalPayable = Math.abs(netBalance);

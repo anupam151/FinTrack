@@ -162,13 +162,11 @@ public class FinMateLedgerActivity extends AppCompatActivity {
 
                     masterLedgerList.clear();
 
-                    double cardSpend = 0.0;
-                    double cashSpend = 0.0;
-                    double cardPaid = 0.0;
-                    double cashPaid = 0.0;
-                    double inbound = 0.0;
-                    double outbound = 0.0;
-                    double currentDue = 0.0;
+                    double cardDue = 0.0;
+                    double cashDue = 0.0;
+                    double advanceCredit = 0.0;
+                    double loanCreditTaken = 0.0;
+                    double currentDueUI = 0.0;
 
                     if (snapshot != null) {
                         for (DocumentSnapshot doc : snapshot.getDocuments()) {
@@ -181,31 +179,32 @@ public class FinMateLedgerActivity extends AppCompatActivity {
                                 if (split != null) {
                                     double amt = split.getCombinedStealthAmount();
                                     double paid = split.getPaidAmount();
+                                    double remaining = amt - paid;
                                     String type = tx.getTransactionType();
 
-                                    if ("CARD_SPEND".equals(type)) {
-                                        cardSpend += amt;
-                                        cardPaid += paid;
-                                    } else if ("CASH_SPEND".equals(type)) {
-                                        cashSpend += amt;
-                                        cashPaid += paid;
-                                    } else if ("SETTLEMENT".equals(type) || "TAKE_CREDIT".equals(type)) {
-                                        inbound += amt;
-                                    } else if ("PAY_CREDIT".equals(type)) {
-                                        outbound += amt;
+                                    // Perfect Dashboard Math
+                                    if (remaining > 0.01) {
+                                        if ("CARD_SPEND".equals(type)) cardDue += remaining;
+                                        else if ("CASH_SPEND".equals(type)) cashDue += remaining;
+                                        else if ("SETTLEMENT".equals(type)) advanceCredit += remaining;
+                                        else if ("TAKE_CREDIT".equals(type)) loanCreditTaken += remaining;
                                     }
 
+                                    // Ledger Screen UI Math
                                     if ("SETTLEMENT".equals(type) || "TAKE_CREDIT".equals(type)) {
-                                        currentDue -= amt;
+                                        currentDueUI -= amt;
                                     } else {
-                                        currentDue += amt;
+                                        currentDueUI += amt;
                                     }
                                 }
                             }
                         }
 
-                        // MASTER SELF-HEALING SYNC: Forces the Dashboard to mirror this exact math
-                        double netBalance = (cardSpend + cashSpend + outbound) - inbound;
+                        // THE BULLETPROOF MASTER MATH FIX
+                        double totalReceivables = cardDue + cashDue;
+                        double totalPayables = loanCreditTaken + advanceCredit;
+                        double netBalance = totalReceivables - totalPayables;
+
                         double finalReceivable = 0.0;
                         double finalPayable = 0.0;
                         double finalCard = 0.0;
@@ -213,19 +212,12 @@ public class FinMateLedgerActivity extends AppCompatActivity {
 
                         if (netBalance > 0.01) {
                             finalReceivable = netBalance;
-
-                            double calcCard = Math.max(0, cardSpend - cardPaid);
-                            double calcCash = Math.max(0, cashSpend - cashPaid);
-
-                            if (Math.abs((calcCard + calcCash) - netBalance) < 0.1) {
-                                finalCard = calcCard;
-                                finalCash = calcCash;
+                            if (totalPayables <= 0.01) {
+                                finalCard = cardDue;
+                                finalCash = cashDue;
                             } else {
-                                double totalSpends = cardSpend + cashSpend;
-                                if (totalSpends > 0) {
-                                    finalCard = netBalance * (cardSpend / totalSpends);
-                                    finalCash = netBalance * (cashSpend / totalSpends);
-                                }
+                                finalCard = netBalance * (cardDue / totalReceivables);
+                                finalCash = netBalance * (cashDue / totalReceivables);
                             }
                         } else if (netBalance < -0.01) {
                             finalPayable = Math.abs(netBalance);
@@ -242,7 +234,7 @@ public class FinMateLedgerActivity extends AppCompatActivity {
                     }
 
                     double totalDue = 0.0;
-                    updateTotalPendingUI(totalDue, currentDue);
+                    updateTotalPendingUI(totalDue, currentDueUI);
                     filterTransactions(etSearchLedger.getText() != null ? etSearchLedger.getText().toString() : "");
                 });
     }

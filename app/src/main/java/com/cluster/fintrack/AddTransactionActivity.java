@@ -74,11 +74,11 @@ public class AddTransactionActivity extends AppCompatActivity {
     private NestedScrollView mainScrollView;
 
     // TOGGLES
-    private RadioGroup rgSpendOptions, rgReceiveOptions;
+    private RadioGroup rgSpendOptions, rgReceiveOptions, rgSplitDecision;
 
     // SPEND UI ELEMENTS
-    private MaterialCardView cardPaymentSource, cardSplitEngine, cardPayBackCredit, cardPayBackAdvance;
-    private MaterialAutoCompleteTextView spinPaymentSource, spinPayBackPerson;
+    private MaterialCardView cardPaymentSource, cardSplitEngine, cardPayBackCredit, cardPayBackAdvance, cardSinglePerson;
+    private MaterialAutoCompleteTextView spinPaymentSource, spinPayBackPerson, spinSinglePerson;
     private TextView btnAddSplitFinMate, tvNoCreditTx, tvPayBackAdvanceTitle, tvPayBackAdvanceAmount;
     private ImageView ivPayBackAdvanceIcon;
     private LinearLayout layoutSplitEngineContainer, layoutCreditTransactionsContainer;
@@ -96,21 +96,15 @@ public class AddTransactionActivity extends AppCompatActivity {
     private final Map<String, String> sourceNameToIdMap = new HashMap<>();
     private final Map<String, String> finMateNameToIdMap = new HashMap<>();
 
-    // ID Tracking
     private final Set<String> existingTxIds = new HashSet<>();
 
-    // Spend Variables
     private final Map<String, View> activeSplitRows = new HashMap<>();
     private final Map<String, TextInputEditText> activeSplitInputs = new HashMap<>();
-
-    // Checkboxes for dynamically choosing to utilize credit
     private final Map<String, MaterialCheckBox> creditCheckBoxes = new HashMap<>();
 
-    // Settlement Variables
     private final LinkedHashMap<String, Transaction> selectedUnpaidTransactions = new LinkedHashMap<>();
     private String currentSelectedReceiveFinMateId = null;
 
-    // Pay Back Credit Variables
     private final LinkedHashMap<String, Transaction> selectedCreditTransactions = new LinkedHashMap<>();
     private String currentSelectedPayBackFinMateId = null;
 
@@ -187,13 +181,16 @@ public class AddTransactionActivity extends AppCompatActivity {
 
         rgSpendOptions = findViewById(R.id.rgSpendOptions);
         rgReceiveOptions = findViewById(R.id.rgReceiveOptions);
+        rgSplitDecision = findViewById(R.id.rgSplitDecision);
 
         cardPaymentSource = findViewById(R.id.cardPaymentSource);
         cardSplitEngine = findViewById(R.id.cardSplitEngine);
+        cardSinglePerson = findViewById(R.id.cardSinglePerson);
         cardPayBackCredit = findViewById(R.id.cardPayBackCredit);
         cardPayBackAdvance = findViewById(R.id.cardPayBackAdvance);
         spinPaymentSource = findViewById(R.id.spinPaymentSource);
         spinPayBackPerson = findViewById(R.id.spinPayBackPerson);
+        spinSinglePerson = findViewById(R.id.spinSinglePerson);
         btnAddSplitFinMate = findViewById(R.id.btnAddSplitFinMate);
         tvNoCreditTx = findViewById(R.id.tvNoCreditTx);
         tvPayBackAdvanceTitle = findViewById(R.id.tvPayBackAdvanceTitle);
@@ -214,10 +211,51 @@ public class AddTransactionActivity extends AppCompatActivity {
         layoutUnpaidTransactionsContainer = findViewById(R.id.layoutUnpaidTransactionsContainer);
 
         btnSaveTransaction = findViewById(R.id.btnSaveTransaction);
+
+        // Hide split engine by default based on No radio button
+        if (cardSplitEngine != null) cardSplitEngine.setVisibility(View.GONE);
     }
 
     private void setupListeners() {
         ivBack.setOnClickListener(v -> finish());
+
+        if (rgSplitDecision != null) {
+            rgSplitDecision.setOnCheckedChangeListener((group, checkedId) -> {
+                String selectedSource = spinPaymentSource.getText() != null ? spinPaymentSource.getText().toString() : "";
+                String cardId = sourceNameToIdMap.get(selectedSource);
+
+                if (checkedId == R.id.rbSplitNo) {
+                    if (cardSinglePerson != null) cardSinglePerson.setVisibility(View.VISIBLE);
+                    if (cardSplitEngine != null) cardSplitEngine.setVisibility(View.GONE);
+                } else {
+                    if ("CASH".equals(cardId)) {
+                        Toast.makeText(this, "Cash transactions cannot be split among multiple people.", Toast.LENGTH_SHORT).show();
+                        rgSplitDecision.check(R.id.rbSplitNo); // Force back to No
+                        return;
+                    }
+                    if (cardSinglePerson != null) cardSinglePerson.setVisibility(View.GONE);
+                    if (cardSplitEngine != null) cardSplitEngine.setVisibility(View.VISIBLE);
+                }
+            });
+        }
+
+        spinPaymentSource.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                String cardId = sourceNameToIdMap.get(s.toString());
+                if ("CASH".equals(cardId) && rgSplitDecision != null && rgSplitDecision.getCheckedRadioButtonId() == R.id.rbSplitYes) {
+                    Toast.makeText(AddTransactionActivity.this, "Cash cannot be split. Switching to single person.", Toast.LENGTH_LONG).show();
+                    rgSplitDecision.check(R.id.rbSplitNo);
+                    clearSplitEngine();
+                }
+            }
+        });
 
         etTotalAmount.addTextChangedListener(new TextWatcher() {
             @Override
@@ -298,7 +336,9 @@ public class AddTransactionActivity extends AppCompatActivity {
             rgReceiveOptions.setVisibility(View.VISIBLE);
 
             cardPaymentSource.setVisibility(View.GONE);
-            cardSplitEngine.setVisibility(View.GONE);
+            if (rgSplitDecision != null) rgSplitDecision.setVisibility(View.GONE);
+            if (cardSinglePerson != null) cardSinglePerson.setVisibility(View.GONE);
+            if (cardSplitEngine != null) cardSplitEngine.setVisibility(View.GONE);
             cardPayBackCredit.setVisibility(View.GONE);
             cardPayBackAdvance.setVisibility(View.GONE);
             cardReceivePerson.setVisibility(View.VISIBLE);
@@ -348,12 +388,22 @@ public class AddTransactionActivity extends AppCompatActivity {
     private void updateSpendSubViews() {
         if (rgSpendOptions.getCheckedRadioButtonId() == R.id.rbNormalSpend) {
             btnSaveTransaction.setText("Save Spend");
-            cardSplitEngine.setVisibility(View.VISIBLE);
+            if (rgSplitDecision != null) rgSplitDecision.setVisibility(View.VISIBLE);
+
+            if (rgSplitDecision != null && rgSplitDecision.getCheckedRadioButtonId() == R.id.rbSplitNo) {
+                if (cardSinglePerson != null) cardSinglePerson.setVisibility(View.VISIBLE);
+                if (cardSplitEngine != null) cardSplitEngine.setVisibility(View.GONE);
+            } else {
+                if (cardSinglePerson != null) cardSinglePerson.setVisibility(View.GONE);
+                if (cardSplitEngine != null) cardSplitEngine.setVisibility(View.VISIBLE);
+            }
             cardPayBackCredit.setVisibility(View.GONE);
             cardPayBackAdvance.setVisibility(View.GONE);
         } else {
             btnSaveTransaction.setText("Pay Back Credit");
-            cardSplitEngine.setVisibility(View.GONE);
+            if (rgSplitDecision != null) rgSplitDecision.setVisibility(View.GONE);
+            if (cardSinglePerson != null) cardSinglePerson.setVisibility(View.GONE);
+            if (cardSplitEngine != null) cardSplitEngine.setVisibility(View.GONE);
             cardPayBackCredit.setVisibility(View.VISIBLE);
             calculatePayBackAdvanceOrPartial();
         }
@@ -378,11 +428,7 @@ public class AddTransactionActivity extends AppCompatActivity {
         }
     }
 
-    private void updateDateDisplay() {
-        SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
-        etTransactionDate.setText(sdf.format(new Date(selectedTransactionTimestamp)));
-    }
-
+    // MISSING METHOD RESTORED HERE
     private void setTabActive(MaterialButton button, boolean isActive) {
         if (isActive) {
             button.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#1abcab")));
@@ -394,6 +440,11 @@ public class AddTransactionActivity extends AppCompatActivity {
             button.setStrokeColor(ColorStateList.valueOf(Color.parseColor("#082561")));
             button.setStrokeWidth(2);
         }
+    }
+
+    private void updateDateDisplay() {
+        SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
+        etTransactionDate.setText(sdf.format(new Date(selectedTransactionTimestamp)));
     }
 
     private void fetchFirestoreData() {
@@ -432,13 +483,20 @@ public class AddTransactionActivity extends AppCompatActivity {
                 .addOnSuccessListener(snapshot -> {
                     allFinMatesList.clear();
                     finMateNameToIdMap.clear();
+
                     List<String> finMateNames = new ArrayList<>();
+
+                    // For the Single Person Mode Dropdown, "Self" must be an option
+                    List<String> singlePersonNames = new ArrayList<>();
+                    singlePersonNames.add("Self (You)");
+                    finMateNameToIdMap.put("Self (You)", "self");
 
                     for (DocumentSnapshot doc : snapshot) {
                         FinMate finMate = doc.toObject(FinMate.class);
                         if (finMate != null) {
                             allFinMatesList.add(finMate);
                             finMateNames.add(finMate.getName());
+                            singlePersonNames.add(finMate.getName());
                             finMateNameToIdMap.put(finMate.getName(), finMate.getFinMateId());
                         }
                     }
@@ -446,6 +504,14 @@ public class AddTransactionActivity extends AppCompatActivity {
                     ArrayAdapter<String> receiveAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, finMateNames);
                     spinReceivePerson.setAdapter(receiveAdapter);
                     spinPayBackPerson.setAdapter(receiveAdapter);
+
+                    if (spinSinglePerson != null) {
+                        ArrayAdapter<String> singlePersonAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, singlePersonNames);
+                        spinSinglePerson.setAdapter(singlePersonAdapter);
+                        if (!singlePersonNames.isEmpty()) {
+                            spinSinglePerson.setText(singlePersonNames.get(0), false);
+                        }
+                    }
                 });
 
         db.collection("Users").document(userId).collection("Transactions")
@@ -932,17 +998,10 @@ public class AddTransactionActivity extends AppCompatActivity {
                     double amt = split.getCombinedStealthAmount();
                     double paid = split.getPaidAmount();
                     String type = tx.getTransactionType();
-                    if ("CARD_SPEND".equals(type)) {
-                        cardSpend += amt;
-                        cardPaid += paid;
-                    } else if ("CASH_SPEND".equals(type)) {
-                        cashSpend += amt;
-                        cashPaid += paid;
-                    } else if ("SETTLEMENT".equals(type) || "TAKE_CREDIT".equals(type)) {
-                        inbound += amt;
-                    } else if ("PAY_CREDIT".equals(type)) {
-                        outbound += amt;
-                    }
+                    if ("CARD_SPEND".equals(type)) { cardSpend += amt; cardPaid += paid; }
+                    else if ("CASH_SPEND".equals(type)) { cashSpend += amt; cashPaid += paid; }
+                    else if ("SETTLEMENT".equals(type) || "TAKE_CREDIT".equals(type)) { inbound += amt; }
+                    else if ("PAY_CREDIT".equals(type)) { outbound += amt; }
                 }
             }
         }
@@ -953,17 +1012,10 @@ public class AddTransactionActivity extends AppCompatActivity {
                 double amt = split.getCombinedStealthAmount();
                 double paid = split.getPaidAmount();
                 String type = newTx.getTransactionType();
-                if ("CARD_SPEND".equals(type)) {
-                    cardSpend += amt;
-                    cardPaid += paid;
-                } else if ("CASH_SPEND".equals(type)) {
-                    cashSpend += amt;
-                    cashPaid += paid;
-                } else if ("SETTLEMENT".equals(type) || "TAKE_CREDIT".equals(type)) {
-                    inbound += amt;
-                } else if ("PAY_CREDIT".equals(type)) {
-                    outbound += amt;
-                }
+                if ("CARD_SPEND".equals(type)) { cardSpend += amt; cardPaid += paid; }
+                else if ("CASH_SPEND".equals(type)) { cashSpend += amt; cashPaid += paid; }
+                else if ("SETTLEMENT".equals(type) || "TAKE_CREDIT".equals(type)) { inbound += amt; }
+                else if ("PAY_CREDIT".equals(type)) { outbound += amt; }
             }
         }
 
@@ -1029,24 +1081,37 @@ public class AddTransactionActivity extends AppCompatActivity {
         double totalAmount = Double.parseDouble(totalStr);
         double sumOfSplits = 0.0;
 
-        if (activeSplitInputs.isEmpty()) {
-            Toast.makeText(this, "Please add at least one person to split with!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
         Map<String, Double> validatedSplits = new HashMap<>();
-        for (Map.Entry<String, TextInputEditText> entry : activeSplitInputs.entrySet()) {
-            String personId = entry.getKey();
-            String valStr = entry.getValue().getText() != null ? entry.getValue().getText().toString().trim() : "";
 
-            if (TextUtils.isEmpty(valStr)) {
-                entry.getValue().setError("Required");
+        if (rgSplitDecision != null && rgSplitDecision.getCheckedRadioButtonId() == R.id.rbSplitNo) {
+            String selectedPersonName = spinSinglePerson.getText() != null ? spinSinglePerson.getText().toString() : "";
+            String personId = finMateNameToIdMap.get(selectedPersonName);
+
+            if (personId == null || personId.isEmpty()) {
+                Toast.makeText(this, "Please select a person to assign this transaction to.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            validatedSplits.put(personId, totalAmount);
+            sumOfSplits = totalAmount;
+        } else {
+            if (activeSplitInputs.isEmpty()) {
+                Toast.makeText(this, "Please add at least one person to split with!", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            double amt = Double.parseDouble(valStr);
-            sumOfSplits += amt;
-            validatedSplits.put(personId, amt);
+            for (Map.Entry<String, TextInputEditText> entry : activeSplitInputs.entrySet()) {
+                String personId = entry.getKey();
+                String valStr = entry.getValue().getText() != null ? entry.getValue().getText().toString().trim() : "";
+
+                if (TextUtils.isEmpty(valStr)) {
+                    entry.getValue().setError("Required");
+                    return;
+                }
+
+                double amt = Double.parseDouble(valStr);
+                sumOfSplits += amt;
+                validatedSplits.put(personId, amt);
+            }
         }
 
         if (Math.abs(sumOfSplits - totalAmount) > 0.01) {
