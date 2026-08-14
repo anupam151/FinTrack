@@ -80,15 +80,15 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="10dp"
             android:paddingVertical="16dp"
             tools:ignore="HardcodedText,TooManyViews,SmallSp,ContentDescription,UseCompoundDrawables,TooDeepLayout">
 
             <!-- Left: Avatar / Initials Circle -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/finmateAvatarContainer"
-                android:layout_width="45dp"
-                android:layout_height="45dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 app:cardBackgroundColor="#082561"
                 app:cardCornerRadius="22.5dp"
                 app:cardElevation="0dp"
@@ -113,8 +113,8 @@
                 android:id="@+id/layoutMainBalance"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="8dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="6dp"
                 android:orientation="vertical"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toStartOf="@id/layoutReceivableSubOptions"
@@ -150,6 +150,7 @@
                 android:layout_marginEnd="8dp"
                 android:orientation="vertical"
                 android:visibility="visible"
+                android:gravity="end"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toStartOf="@id/ivWhatsApp"
                 app:layout_constraintHorizontal_weight="1"
@@ -166,7 +167,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="12dp"
-                        android:text="For CC: "
+                        android:text="CC: "
                         android:textColor="#667085"
                         android:textSize="11sp" />
 
@@ -191,7 +192,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="9dp"
-                        android:text="In Cash: "
+                        android:text="Cash: "
                         android:textColor="#667085"
                         android:textSize="11sp" />
 
@@ -210,8 +211,8 @@
             <!-- Far Right: WhatsApp Button -->
             <ImageView
                 android:id="@+id/ivWhatsApp"
-                android:layout_width="38dp"
-                android:layout_height="38dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
                 android:focusable="true"
