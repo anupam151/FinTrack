@@ -276,6 +276,227 @@
                             android:paddingHorizontal="2dp"
                             android:paddingVertical="6dp">
 
+                            <!-- PERSONAL EXPENSES WIDGET -->
+                            <RelativeLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="7dp">
+                                <TextView
+                                    android:id="@+id/tvSectionSelfTitle"
+                                    android:text="Own Summary"
+                                    android:layout_marginStart="12dp"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_centerVertical="true"
+                                    android:textColor="#082561"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold"  />
+
+                                <ImageButton
+                                    android:id="@+id/btnPersonalLedger"
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:layout_alignParentEnd="true"
+                                    android:layout_centerVertical="true"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:contentDescription="More"
+                                    android:padding="4dp"
+                                    android:scaleType="fitCenter"
+                                    android:src="@drawable/more"/>
+                            </RelativeLayout>
+                            <com.google.android.material.card.MaterialCardView
+                                android:id="@+id/cardDashboardPersonal"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginHorizontal="1dp"
+                                android:layout_marginBottom="16dp"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:foreground="?attr/selectableItemBackground"
+                                app:cardBackgroundColor="#FFFFFF"
+                                app:cardCornerRadius="10dp"
+                                app:cardElevation="3dp"
+                                app:strokeWidth="0dp">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical">
+
+                                    <!-- Title Header -->
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal"
+                                        android:gravity="center_vertical"
+                                        android:paddingHorizontal="16dp"
+                                        android:paddingVertical="8dp">
+
+                                        <!-- Person Name -->
+                                        <TextView
+                                            android:id="@+id/tvSelfName"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:layout_marginEnd="8dp"
+                                            android:ellipsize="end"
+                                            android:maxLines="1"
+                                            android:text="Self"
+                                            android:textColor="#082561"
+                                            android:textSize="16sp"
+                                            android:textStyle="bold" />
+
+                                        <!-- Mobile Number -->
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginEnd="6dp"
+                                            android:text="Mob. No.:"
+                                            android:textColor="#667085"
+                                            android:textSize="13sp" />
+
+                                        <!-- Mobile Number -->
+                                        <TextView
+                                            android:id="@+id/tvSelfMobile"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="0123456789"
+                                            android:textColor="#667085"
+                                            android:textSize="13sp" />
+
+                                    </LinearLayout>
+
+                                    <View
+                                        android:layout_width="match_parent"
+                                        android:layout_height="1dp"
+                                        android:layout_marginHorizontal="16dp"
+                                        android:background="#F0F0F0" />
+
+                                    <!-- Content Area -->
+                                    <androidx.constraintlayout.widget.ConstraintLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:paddingHorizontal="10dp"
+                                        android:paddingVertical="16dp">
+
+                                        <!-- 'ME' Avatar -->
+                                        <androidx.cardview.widget.CardView
+                                            android:id="@+id/selfAvatarContainer"
+                                            android:layout_width="32dp"
+                                            android:layout_height="32dp"
+                                            app:cardBackgroundColor="#1abcab"
+                                            app:cardCornerRadius="22.5dp"
+                                            app:cardElevation="0dp"
+                                            app:layout_constraintBottom_toBottomOf="parent"
+                                            app:layout_constraintStart_toStartOf="parent"
+                                            app:layout_constraintTop_toTopOf="parent">
+
+                                            <TextView
+                                                android:layout_width="match_parent"
+                                                android:layout_height="match_parent"
+                                                android:gravity="center"
+                                                android:text="ME"
+                                                android:textColor="#FFFFFF"
+                                                android:textSize="15sp"
+                                                android:textStyle="bold" />
+                                        </androidx.cardview.widget.CardView>
+
+                                        <!-- Total Spent -->
+                                        <LinearLayout
+                                            android:id="@+id/layoutSelfMainBalance"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginStart="10dp"
+                                            android:layout_marginEnd="6dp"
+                                            android:orientation="vertical"
+                                            app:layout_constraintBottom_toBottomOf="parent"
+                                            app:layout_constraintEnd_toStartOf="@+id/layoutSelfSubOptions"
+                                            app:layout_constraintHorizontal_weight="1"
+                                            app:layout_constraintStart_toEndOf="@+id/selfAvatarContainer"
+                                            app:layout_constraintTop_toTopOf="parent">
+
+                                            <TextView
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:text="Total Spent"
+                                                android:textColor="#757575"
+                                                android:textSize="12sp" />
+
+                                            <TextView
+                                                android:id="@+id/tvDashPersonalTotal"
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:layout_marginTop="2dp"
+                                                android:text="₹0.00"
+                                                android:textColor="#082561"
+                                                android:textSize="16sp"
+                                                android:textStyle="bold" />
+                                        </LinearLayout>
+
+                                        <!-- Breakdown (CC vs Cash) -->
+                                        <LinearLayout
+                                            android:id="@+id/layoutSelfSubOptions"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:orientation="vertical"
+                                            android:gravity="end"
+                                            app:layout_constraintBottom_toBottomOf="parent"
+                                            app:layout_constraintEnd_toEndOf="parent"
+                                            app:layout_constraintHorizontal_weight="1"
+                                            app:layout_constraintStart_toEndOf="@+id/layoutSelfMainBalance"
+                                            app:layout_constraintTop_toTopOf="parent">
+
+                                            <LinearLayout
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:orientation="horizontal">
+
+                                                <TextView
+                                                    android:layout_width="wrap_content"
+                                                    android:layout_height="wrap_content"
+                                                    android:layout_marginEnd="12dp"
+                                                    android:text="For CC: "
+                                                    android:textColor="#667085"
+                                                    android:textSize="11sp" />
+
+                                                <TextView
+                                                    android:id="@+id/tvDashPersonalCard"
+                                                    android:layout_width="wrap_content"
+                                                    android:layout_height="wrap_content"
+                                                    android:text="₹0.00"
+                                                    android:textColor="#101828"
+                                                    android:textSize="11sp"
+                                                    android:textStyle="bold" />
+                                            </LinearLayout>
+
+                                            <LinearLayout
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:layout_marginTop="9dp"
+                                                android:orientation="horizontal">
+
+                                                <TextView
+                                                    android:layout_width="wrap_content"
+                                                    android:layout_height="wrap_content"
+                                                    android:layout_marginEnd="9dp"
+                                                    android:text="In Cash: "
+                                                    android:textColor="#667085"
+                                                    android:textSize="11sp" />
+
+                                                <TextView
+                                                    android:id="@+id/tvDashPersonalCash"
+                                                    android:layout_width="wrap_content"
+                                                    android:layout_height="wrap_content"
+                                                    android:text="₹0.00"
+                                                    android:textColor="#101828"
+                                                    android:textSize="11sp"
+                                                    android:textStyle="bold" />
+                                            </LinearLayout>
+                                        </LinearLayout>
+                                    </androidx.constraintlayout.widget.ConstraintLayout>
+                                </LinearLayout>
+                            </com.google.android.material.card.MaterialCardView>
+
                             <!-- SECTION 1: My Credit Cards -->
                             <RelativeLayout
                                 android:layout_width="match_parent"
@@ -418,6 +639,10 @@
                                 android:nestedScrollingEnabled="false"
                                 android:visibility="gone"
                                 tools:listitem="@layout/item_dashboard_finmate" />
+
+
+
+
 
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>

@@ -67,6 +67,12 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- The New Personal Ledger Activity -->
+        <activity
+            android:name=".PersonalLedgerActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
     </application>
 
 </manifest>

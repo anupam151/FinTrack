@@ -27,6 +27,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
@@ -34,8 +35,12 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @SuppressWarnings("deprecation")
 public class MainActivity extends AppCompatActivity {
@@ -45,6 +50,9 @@ public class MainActivity extends AppCompatActivity {
     // UI References for Bottom Sheet so the Contact Picker can update them
     private TextInputEditText currentEtFinMateName;
     private TextInputEditText currentEtWhatsAppNo;
+
+    // Personal Dashboard Variables
+    private TextView tvDashPersonalTotal, tvDashPersonalCard, tvDashPersonalCash;
 
     // Launchers for Permissions and Contact Picker
     private androidx.activity.result.ActivityResultLauncher<String> requestPermissionLauncher;
@@ -101,6 +109,7 @@ public class MainActivity extends AppCompatActivity {
         SwipeRefreshLayout swipeRefresh = findViewById(R.id.swipeRefresh);
         ImageButton btnAddCard = findViewById(R.id.btnAddCard);
         ImageButton btnAddPerson = findViewById(R.id.btnAddPerson);
+        ImageButton btnPersonalLedger = findViewById(R.id.btnPersonalLedger);
 
         LinearLayout navItemCards = findViewById(R.id.navItemCards);
         LinearLayout navItemLedger = findViewById(R.id.navItemLedger);
@@ -109,9 +118,24 @@ public class MainActivity extends AppCompatActivity {
         TextView btnAddCardEmpty = findViewById(R.id.btnAddCardEmpty);
         TextView btnAddFinMateEmpty = findViewById(R.id.btnAddFinMateEmpty);
 
-        // Load live Firestore data for Cards and FinMates
+        // Initialize Personal Dashboard Widgets
+        tvDashPersonalTotal = findViewById(R.id.tvDashPersonalTotal);
+        tvDashPersonalCard = findViewById(R.id.tvDashPersonalCard);
+        tvDashPersonalCash = findViewById(R.id.tvDashPersonalCash);
+
+        MaterialCardView cardDashboardPersonal = findViewById(R.id.cardDashboardPersonal);
+        if (cardDashboardPersonal != null) {
+            cardDashboardPersonal.setOnClickListener(v -> {
+                Intent intent = new Intent(MainActivity.this, PersonalLedgerActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                startActivity(intent);
+            });
+        }
+
+        // Load live Firestore data for Cards, FinMates, and Personal Expenses
         loadCardsFromFirestore();
         loadFinMatesFromFirestore();
+        loadPersonalExpensesFromFirestore();
 
         ivMenuDrawer.setOnClickListener(v -> {
             if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
@@ -128,7 +152,6 @@ public class MainActivity extends AppCompatActivity {
             drawerLayout.closeDrawer(GravityCompat.START);
 
             // 2. Wait for the drawer to finish sliding closed (~250ms) before starting the new Activity.
-            // This prevents the screen from flickering while the drawer is moving.
             drawerLayout.postDelayed(() -> {
                 if (id == R.id.nav_drawer_dashboard) {
                     Toast.makeText(MainActivity.this, "Already on Dashboard", Toast.LENGTH_SHORT).show();
@@ -136,12 +159,12 @@ public class MainActivity extends AppCompatActivity {
                     Intent intent = new Intent(MainActivity.this, CardsActivity.class);
                     intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
                     startActivity(intent);
-                    overridePendingTransition(0, 0); // Kills the Android window flash
+                    overridePendingTransition(0, 0);
                 } else if (id == R.id.nav_drawer_ledger) {
                     Intent intent = new Intent(MainActivity.this, FinMatesActivity.class);
                     intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
                     startActivity(intent);
-                    overridePendingTransition(0, 0); // Kills the Android window flash
+                    overridePendingTransition(0, 0);
                 } else if (id == R.id.nav_drawer_signout) {
                     FirebaseAuth.getInstance().signOut();
                     GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -157,15 +180,20 @@ public class MainActivity extends AppCompatActivity {
                         finish();
                     });
                 }
-            }, 250); // 250 milliseconds delay
+            }, 250);
 
-            // 3. RETURN FALSE: This tells Android NOT to leave the item permanently highlighted (no pink background)
             return false;
         });
 
         swipeRefresh.setOnRefreshListener(() -> {
             Toast.makeText(MainActivity.this, "Refreshing financial ledger...", Toast.LENGTH_SHORT).show();
             swipeRefresh.postDelayed(() -> swipeRefresh.setRefreshing(false), 1500);
+        });
+
+        btnPersonalLedger.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, PersonalLedgerActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+            startActivity(intent);
         });
 
         btnAddCard.setOnClickListener(v -> {
@@ -199,7 +227,7 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
             startActivity(intent);
         });
-        // Find and set up the Header Transaction Button
+
         ImageButton btnAddTransactionHeader = findViewById(R.id.btnAddTransactionHeader);
         if (btnAddTransactionHeader != null) {
             btnAddTransactionHeader.setOnClickListener(v -> {
@@ -538,7 +566,6 @@ public class MainActivity extends AppCompatActivity {
                 "YES Bank"
         );
 
-        // We create a custom adapter to enable "Contains" matching instead of just "Starts With"
         return new android.widget.ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, new java.util.ArrayList<>(bankList)) {
             @androidx.annotation.NonNull
             @Override
@@ -548,13 +575,12 @@ public class MainActivity extends AppCompatActivity {
                     protected FilterResults performFiltering(CharSequence constraint) {
                         FilterResults results = new FilterResults();
                         if (constraint == null || constraint.length() == 0) {
-                            results.values = bankList; // Show all if search is empty
+                            results.values = bankList;
                             results.count = bankList.size();
                         } else {
                             java.util.List<String> filteredList = new java.util.ArrayList<>();
                             String filterPattern = constraint.toString().toLowerCase().trim();
 
-                            // Check if the bank name contains whatever the user typed
                             for (String bank : bankList) {
                                 if (bank.toLowerCase().contains(filterPattern)) {
                                     filteredList.add(bank);
@@ -573,7 +599,7 @@ public class MainActivity extends AppCompatActivity {
                         if (results.values != null) {
                             addAll((java.util.List<String>) results.values);
                         }
-                        notifyDataSetChanged(); // Update the dropdown instantly!
+                        notifyDataSetChanged();
                     }
                 };
             }
@@ -582,7 +608,6 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("SetTextI18n")
     private void showAddFinMateBottomSheet() {
-        // Create dialog and override touch events to close keyboard when clicking out-side of EditTexts
         BottomSheetDialog dialog = new BottomSheetDialog(this) {
             @Override
             public boolean dispatchTouchEvent(android.view.MotionEvent event) {
@@ -618,7 +643,6 @@ public class MainActivity extends AppCompatActivity {
         RadioGroup radioGroupWhatsApp = view.findViewById(R.id.radioGroupWhatsApp);
         MaterialButton btnSave = view.findViewById(R.id.btnSheetSaveFinMate);
 
-        // --- NEW: Auto-focus and open keyboard on FinMate Name ---
         if (dialog.getWindow() != null) {
             dialog.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         }
@@ -631,7 +655,6 @@ public class MainActivity extends AppCompatActivity {
                 imm.showSoftInput(currentEtFinMateName, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
             }
         });
-        // ---------------------------------------------------------
 
         title.setText("Add FinMate");
         btnSave.setText("Save FinMate");
@@ -713,7 +736,6 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView recyclerViewCards = findViewById(R.id.recyclerViewCards);
         recyclerViewCards.setLayoutManager(new LinearLayoutManager(this));
 
-        // --- NEW: Dashboard Summary TextViews ---
         TextView tvValueCards = findViewById(R.id.tvValueCards);
         TextView tvValueLimit = findViewById(R.id.tvValueLimit);
 
@@ -731,7 +753,6 @@ public class MainActivity extends AppCompatActivity {
 
                     cardList.clear();
 
-                    // --- NEW: Variables for calculation ---
                     double totalLimitSum = 0.0;
                     int totalCardsCount = 0;
 
@@ -740,15 +761,12 @@ public class MainActivity extends AppCompatActivity {
                             Card card = doc.toObject(Card.class);
                             if (card != null) {
                                 cardList.add(card);
-
-                                // --- NEW: Accumulate data ---
                                 totalLimitSum += card.getTotalLimit();
                                 totalCardsCount++;
                             }
                         }
                     }
 
-                    // --- NEW: Update Dashboard Summary UI ---
                     if (tvValueCards != null) {
                         tvValueCards.setText(String.valueOf(totalCardsCount));
                     }
@@ -756,7 +774,7 @@ public class MainActivity extends AppCompatActivity {
                     if (tvValueLimit != null) {
                         java.util.Locale indianLocale = new java.util.Locale.Builder().setLanguage("en").setRegion("IN").build();
                         java.text.NumberFormat formatter = java.text.NumberFormat.getCurrencyInstance(indianLocale);
-                        formatter.setMaximumFractionDigits(0); // Removes the .00 decimal
+                        formatter.setMaximumFractionDigits(0);
                         tvValueLimit.setText(formatter.format(totalLimitSum));
                     }
 
@@ -767,17 +785,14 @@ public class MainActivity extends AppCompatActivity {
                         layoutEmptyCards.setVisibility(View.GONE);
                         recyclerViewCards.setVisibility(View.VISIBLE);
 
-                        // --- SORT BY MOST RECENT ACTIVITY (Timestamp High to Low) ---
                         cardList.sort((c1, c2) -> Long.compare(c2.getTimestamp(), c1.getTimestamp()));
 
-                        // --- KEEP ONLY THE TOP 1 MOST RECENT CARD FOR THE DASHBOARD ---
                         if (cardList.size() > 1) {
                             List<Card> topOneCard = new ArrayList<>();
-                            topOneCard.add(cardList.get(0)); // 1st most recent activity
+                            topOneCard.add(cardList.get(0));
                             cardList.clear();
                             cardList.addAll(topOneCard);
                         }
-                        // -------------------------------------------------------------
 
                         adapter.notifyDataSetChanged();
                     }
@@ -798,7 +813,6 @@ public class MainActivity extends AppCompatActivity {
 
         List<FinMate> finMateList = new ArrayList<>();
 
-        // Pass null for the long-click listener since editing/deleting is managed in FinMatesActivity
         FinMateAdapter adapter = new FinMateAdapter(this, finMateList, null);
         recyclerViewFinMates.setAdapter(adapter);
 
@@ -827,20 +841,78 @@ public class MainActivity extends AppCompatActivity {
                         layoutEmptyFinMates.setVisibility(View.GONE);
                         recyclerViewFinMates.setVisibility(View.VISIBLE);
 
-                        // --- SORT BY MOST RECENT ACTIVITY (Timestamp High to Low) ---
                         finMateList.sort((f1, f2) -> Long.compare(f2.getTimestamp(), f1.getTimestamp()));
 
-                        // --- KEEP ONLY THE TOP 1 MOST RECENT FINMATE FOR THE DASHBOARD ---
                         if (finMateList.size() > 1) {
                             List<FinMate> topOneFinMate = new ArrayList<>();
-                            topOneFinMate.add(finMateList.get(0)); // 1st most recent activity
+                            topOneFinMate.add(finMateList.get(0));
                             finMateList.clear();
                             finMateList.addAll(topOneFinMate);
                         }
-                        // ---------------------------------------------------------------
 
                         adapter.notifyDataSetChanged();
                     }
+                });
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void loadPersonalExpensesFromFirestore() {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) return;
+
+        FirebaseFirestore.getInstance()
+                .collection("Users").document(currentUser.getUid()).collection("Transactions")
+                .addSnapshotListener((snapshot, error) -> {
+                    if (error != null || snapshot == null) return;
+
+                    double cumulativeCash = 0.0;
+                    Map<String, Double> cardWiseDue = new HashMap<>();
+
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        Transaction tx = doc.toObject(Transaction.class);
+                        if (tx == null) continue;
+
+                        String type = tx.getTransactionType();
+
+                        // 2. Paybacks
+                        if ("PAY_CREDIT".equals(type) && tx.getSplits() != null) {
+                            double amt = tx.getTotalAmount();
+                            String cId = tx.getCardId() != null ? tx.getCardId() : "CASH";
+                            if ("CASH".equals(cId)) {
+                                cumulativeCash += amt;
+                            } else {
+                                cardWiseDue.merge(cId, amt, Double::sum);
+                            }
+                        }
+
+                        // 3. Normal Spends
+                        if (tx.getSplits() != null && tx.getSplits().containsKey("self")) {
+                            Transaction.TransactionSplit mySplit = tx.getSplits().get("self");
+                            if (mySplit != null) {
+                                double amt = mySplit.getCombinedStealthAmount();
+                                if (amt > 0.01) {
+                                    String cId = tx.getCardId() != null ? tx.getCardId() : "CASH";
+                                    if ("CASH_SPEND".equals(type) || "CASH".equals(cId)) {
+                                        cumulativeCash += amt;
+                                    } else if ("CARD_SPEND".equals(type)) {
+                                        cardWiseDue.merge(cId, amt, Double::sum);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    double totalCardSpends = 0.0;
+                    for (Double val : cardWiseDue.values()) totalCardSpends += val;
+
+                    double currentDue = totalCardSpends + cumulativeCash;
+
+                    Locale indianLocale = new Locale.Builder().setLanguage("en").setRegion("IN").build();
+                    NumberFormat formatter = NumberFormat.getCurrencyInstance(indianLocale);
+
+                    if (tvDashPersonalTotal != null) tvDashPersonalTotal.setText(formatter.format(currentDue));
+                    if (tvDashPersonalCard != null) tvDashPersonalCard.setText(formatter.format(totalCardSpends));
+                    if (tvDashPersonalCash != null) tvDashPersonalCash.setText(formatter.format(cumulativeCash));
                 });
     }
 }
