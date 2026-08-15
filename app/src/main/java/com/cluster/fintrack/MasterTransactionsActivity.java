@@ -40,6 +40,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.SetOptions;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -180,57 +181,131 @@ public class MasterTransactionsActivity extends AppCompatActivity {
         return builder;
     }
 
-    private void deleteTransactionFromFirestore(Transaction tx) {
+    private void deleteTransactionFromFirestore(Transaction deletedTx) {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser == null || tx.getTransactionId() == null) return;
+        if (currentUser == null || deletedTx.getTransactionId() == null) return;
 
         String userId = currentUser.getUid();
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        db.collection("Users").document(userId).collection("Transactions").document(tx.getTransactionId())
+        db.collection("Users").document(userId).collection("Transactions").document(deletedTx.getTransactionId())
                 .delete()
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Transaction deleted successfully", Toast.LENGTH_SHORT).show();
 
-                    if (tx.getSplits() != null) {
-                        for (String fId : tx.getSplits().keySet()) {
-                            if (!fId.equals("self")) {
-                                recalculateFinMateBalance(userId, fId);
-                            }
+                    if (deletedTx.getSplits() != null) {
+                        for (String fId : deletedTx.getSplits().keySet()) {
+                            // Triggers the Self-Healing Ripple Reversal
+                            handleDeletionRippleEffect(userId, fId, deletedTx);
                         }
                     }
                 })
                 .addOnFailureListener(e -> Toast.makeText(this, "Failed to delete: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
+    // =========================================================================
+    // THE SELF-HEALING LIFO REVERSAL ENGINE
+    // =========================================================================
+    private void handleDeletionRippleEffect(String userId, String finMateId, Transaction deletedTx) {
+        Transaction.TransactionSplit deletedSplit = deletedTx.getSplits().get(finMateId);
+        if (deletedSplit == null) return;
+
+        double amountToReverse = deletedSplit.getPaidAmount();
+
+        // If there was no payment attached, just recalculate master balance
+        if (amountToReverse <= 0.01) {
+            if (!finMateId.equals("self")) recalculateFinMateBalance(userId, finMateId);
+            return;
+        }
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.collection("Users").document(userId).collection("Transactions").get().addOnSuccessListener(snap -> {
+            WriteBatch batch = db.batch();
+            String deletedType = deletedTx.getTransactionType();
+
+            List<DocumentSnapshot> docs = new ArrayList<>(snap.getDocuments());
+            // Sort NEWEST first (LIFO reversal) so we reverse the most recent payments
+            docs.sort((d1, d2) -> {
+                Long t1 = d1.getLong("timestamp");
+                Long t2 = d2.getLong("timestamp");
+                if (t1 == null || t2 == null) return 0;
+                return Long.compare(t2, t1);
+            });
+
+            double remainingToReverse = amountToReverse;
+
+            for (DocumentSnapshot doc : docs) {
+                if (remainingToReverse <= 0.01) break;
+                if (doc.getId().equals(deletedTx.getTransactionId())) continue; // Skip the deleted ghost doc
+
+                Transaction tx = doc.toObject(Transaction.class);
+                if (tx == null || tx.getSplits() == null) continue;
+
+                Transaction.TransactionSplit sp = tx.getSplits().get(finMateId);
+                if (sp == null || sp.getPaidAmount() <= 0.01) continue;
+
+                // Surgically remove the paid amount using extracted helper method
+                if (shouldReverseFromTransaction(deletedType, tx.getTransactionType())) {
+                    double deduction = Math.min(remainingToReverse, sp.getPaidAmount());
+                    double newPaid = sp.getPaidAmount() - deduction;
+                    batch.update(doc.getReference(), "splits." + finMateId + ".paidAmount", newPaid);
+                    remainingToReverse -= deduction;
+                }
+            }
+
+            batch.commit().addOnCompleteListener(task -> {
+                if (!finMateId.equals("self")) recalculateFinMateBalance(userId, finMateId);
+            });
+        }).addOnFailureListener(e -> {
+            if (!finMateId.equals("self")) recalculateFinMateBalance(userId, finMateId);
+        });
+    }
+
+    /**
+     * Determines what kind of transactions a deleted transaction provided money to.
+     */
+    private boolean shouldReverseFromTransaction(String deletedType, String targetType) {
+        if ("SETTLEMENT".equals(deletedType)) {
+            return "CASH_SPEND".equals(targetType) || "CARD_SPEND".equals(targetType);
+        } else if ("PAY_CREDIT".equals(deletedType)) {
+            return "TAKE_CREDIT".equals(targetType);
+        } else if ("CASH_SPEND".equals(deletedType) || "CARD_SPEND".equals(deletedType)) {
+            return "SETTLEMENT".equals(targetType) || "TAKE_CREDIT".equals(targetType);
+        } else if ("TAKE_CREDIT".equals(deletedType)) {
+            return "PAY_CREDIT".equals(targetType) || "CASH_SPEND".equals(targetType) || "CARD_SPEND".equals(targetType);
+        }
+        return false;
+    }
+
     private void recalculateFinMateBalance(String userId, String finMateId) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         db.collection("Users").document(userId).collection("Transactions").get().addOnSuccessListener(snap -> {
-            double cardDue = 0.0;
-            double cashDue = 0.0;
-            double advanceCredit = 0.0;
-            double loanCreditTaken = 0.0;
+
+            double cardSpend = 0.0;
+            double cashSpend = 0.0;
+            double cardPaid = 0.0;
+            double cashPaid = 0.0;
+            double inbound = 0.0;
+            double outbound = 0.0;
 
             for (DocumentSnapshot doc : snap.getDocuments()) {
-                Transaction t = doc.toObject(Transaction.class);
-                if (t != null && t.getSplits() != null && t.getSplits().containsKey(finMateId)) {
-                    Transaction.TransactionSplit split = t.getSplits().get(finMateId);
+                Transaction tx = doc.toObject(Transaction.class);
+                if (tx != null && tx.getSplits() != null && tx.getSplits().containsKey(finMateId)) {
+                    Transaction.TransactionSplit split = tx.getSplits().get(finMateId);
                     if (split != null) {
-                        double remaining = split.getCombinedStealthAmount() - split.getPaidAmount();
-                        if (remaining > 0.01) {
-                            String type = t.getTransactionType();
-                            if ("CARD_SPEND".equals(type)) cardDue += remaining;
-                            else if ("CASH_SPEND".equals(type)) cashDue += remaining;
-                            else if ("SETTLEMENT".equals(type)) advanceCredit += remaining;
-                            else if ("TAKE_CREDIT".equals(type)) loanCreditTaken += remaining;
-                        }
+                        double amt = split.getCombinedStealthAmount();
+                        double paid = split.getPaidAmount();
+                        String type = tx.getTransactionType();
+
+                        if ("CARD_SPEND".equals(type)) { cardSpend += amt; cardPaid += paid; }
+                        else if ("CASH_SPEND".equals(type)) { cashSpend += amt; cashPaid += paid; }
+                        else if ("SETTLEMENT".equals(type) || "TAKE_CREDIT".equals(type)) { inbound += amt; }
+                        else if ("PAY_CREDIT".equals(type)) { outbound += amt; }
                     }
                 }
             }
 
-            double totalReceivables = cardDue + cashDue;
-            double totalPayables = loanCreditTaken + advanceCredit;
-            double netBalance = totalReceivables - totalPayables;
+            double netBalance = (cardSpend + cashSpend + outbound) - inbound;
 
             double finalReceivable = 0.0;
             double finalPayable = 0.0;
@@ -239,12 +314,19 @@ public class MasterTransactionsActivity extends AppCompatActivity {
 
             if (netBalance > 0.01) {
                 finalReceivable = netBalance;
-                if (totalPayables <= 0.01) {
-                    finalCard = cardDue;
-                    finalCash = cashDue;
+
+                double calcCard = Math.max(0, cardSpend - cardPaid);
+                double calcCash = Math.max(0, cashSpend - cashPaid);
+
+                if (Math.abs((calcCard + calcCash) - netBalance) < 0.1) {
+                    finalCard = calcCard;
+                    finalCash = calcCash;
                 } else {
-                    finalCard = netBalance * (cardDue / totalReceivables);
-                    finalCash = netBalance * (cashDue / totalReceivables);
+                    double totalSpends = cardSpend + cashSpend;
+                    if (totalSpends > 0) {
+                        finalCard = netBalance * (cardSpend / totalSpends);
+                        finalCash = netBalance * (cashSpend / totalSpends);
+                    }
                 }
             } else if (netBalance < -0.01) {
                 finalPayable = Math.abs(netBalance);
