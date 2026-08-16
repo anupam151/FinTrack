@@ -1,9 +1,11 @@
 package com.cluster.fintrack;
 
 import android.annotation.SuppressLint;
+import android.app.DatePickerDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
@@ -28,17 +30,21 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.checkbox.MaterialCheckBox;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -48,17 +54,16 @@ import java.util.Map;
 @SuppressLint("SetTextI18n")
 public class CardLedgerActivity extends AppCompatActivity {
 
-    private TextView tvAvailableLimit, tvTotalUsed;
+    private TextView tvAvailableLimit, tvTotalUsed, tvBilledDue, tvUnbilled;
     private RecyclerView recyclerViewCardTx;
     private TextView layoutEmptyState;
-    private TextInputEditText etSearchCardTx;
+    private TextInputEditText etSearchCardTx; // FIXED: Restored as a global field so the fetcher can see it!
 
     private CardTransactionAdapter adapter;
     private final List<Transaction> masterList = new ArrayList<>();
     private final List<Transaction> displayList = new ArrayList<>();
 
     private String cardId;
-    private String cardName;
     private double totalLimit = 0.0;
     private final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale.Builder().setLanguage("en").setRegion("IN").build());
 
@@ -76,10 +81,9 @@ public class CardLedgerActivity extends AppCompatActivity {
             return windowInsets;
         });
 
-        // Get Intent Data
         cardId = getIntent().getStringExtra("CARD_ID");
         String bankName = getIntent().getStringExtra("BANK_NAME");
-        cardName = getIntent().getStringExtra("CARD_NAME");
+        String cardName = getIntent().getStringExtra("CARD_NAME");
         String cardType = getIntent().getStringExtra("CARD_TYPE");
         String last4 = getIntent().getStringExtra("LAST4");
         totalLimit = getIntent().getDoubleExtra("TOTAL_LIMIT", 0.0);
@@ -97,24 +101,25 @@ public class CardLedgerActivity extends AppCompatActivity {
     private void initializeViewsAndMockup(String bankName, String cardName, String cardType, String last4, String themeColor) {
         findViewById(R.id.ivBack).setOnClickListener(v -> finish());
 
-        // Local variables for static UI elements
         View viewDynamicHeader = findViewById(R.id.viewDynamicHeader);
         TextView tvBankName = findViewById(R.id.tvBankName);
         TextView tvCardName = findViewById(R.id.tvCardName);
         TextView tvCardType = findViewById(R.id.tvCardType);
         TextView tvCardNumber = findViewById(R.id.tvCardNumber);
         TextView tvTotalLimit = findViewById(R.id.tvTotalLimit);
-        TextView tvBilledDue = findViewById(R.id.tvBilledDue);
-        TextView tvUnbilled = findViewById(R.id.tvUnbilled);
 
-        // Global variables for dynamic UI elements
+        MaterialButton btnAllTransactions = findViewById(R.id.btnAllTransactions);
+        MaterialButton btnGenerateBill = findViewById(R.id.btnGenerateBill);
+
+        tvBilledDue = findViewById(R.id.tvBilledDue);
+        tvUnbilled = findViewById(R.id.tvUnbilled);
         tvAvailableLimit = findViewById(R.id.tvAvailableLimit);
         tvTotalUsed = findViewById(R.id.tvTotalUsed);
+
         recyclerViewCardTx = findViewById(R.id.recyclerViewCardTx);
         layoutEmptyState = findViewById(R.id.layoutEmptyState);
-        etSearchCardTx = findViewById(R.id.etSearchCardTx);
+        etSearchCardTx = findViewById(R.id.etSearchCardTx); // FIXED: Assigned to the global field
 
-        // 1. Setup Card Mockup
         tvBankName.setText(bankName != null ? bankName : "Bank");
         tvCardName.setText(cardName != null ? cardName : "Credit Card");
         tvCardType.setText(cardType != null ? cardType : "Visa");
@@ -126,14 +131,19 @@ public class CardLedgerActivity extends AppCompatActivity {
             } catch (Exception ignored) {}
         }
 
-        // 2. Setup Static Summaries
         tvTotalLimit.setText(currencyFormatter.format(totalLimit));
-        tvBilledDue.setText("---"); // Placeholder for advanced EMI logic later
-        tvUnbilled.setText("---");
 
-        // 3. Setup RecyclerView
+        btnAllTransactions.setOnClickListener(v -> {
+            Intent intent = new Intent(this, CardAllTransactionsActivity.class);
+            intent.putExtra("CARD_ID", cardId);
+            intent.putExtra("CARD_NAME", cardName);
+            startActivity(intent);
+        });
+
+        btnGenerateBill.setOnClickListener(v -> openBillGenerationSheet());
+
         recyclerViewCardTx.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new CardTransactionAdapter(displayList, this.cardName);
+        adapter = new CardTransactionAdapter(displayList, cardName);
         recyclerViewCardTx.setAdapter(adapter);
 
         etSearchCardTx.addTextChangedListener(new TextWatcher() {
@@ -143,36 +153,194 @@ public class CardLedgerActivity extends AppCompatActivity {
         });
     }
 
+    private void openBillGenerationSheet() {
+        List<Transaction> unbilledList = new ArrayList<>();
+        for (Transaction tx : masterList) {
+            if (!tx.isBilled() && ("CARD_SPEND".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType()))) {
+                unbilledList.add(tx);
+            }
+        }
+
+        if (unbilledList.isEmpty()) {
+            Toast.makeText(this, "No unbilled transactions available to bill.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        BottomSheetDialog sheetDialog = new BottomSheetDialog(this);
+        View sheetView = LayoutInflater.from(this).inflate(R.layout.dialog_generate_bill, new android.widget.FrameLayout(this), false);
+        sheetDialog.setContentView(sheetView);
+
+        LinearLayout layoutItemsContainer = sheetView.findViewById(R.id.layoutBillItemsContainer);
+        MaterialButton btnConfirmGenerate = sheetView.findViewById(R.id.btnConfirmGenerate);
+
+        List<Transaction> selectedToBill = new ArrayList<>(unbilledList);
+        SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
+
+        for (Transaction tx : unbilledList) {
+            View rowView = LayoutInflater.from(this).inflate(R.layout.item_bill_generation_row, layoutItemsContainer, false);
+
+            MaterialCheckBox cbIncludeTx = rowView.findViewById(R.id.cbIncludeTx);
+            TextView tvTxTitle = rowView.findViewById(R.id.tvTxTitle);
+            TextView tvTxDate = rowView.findViewById(R.id.tvTxDate);
+            TextView tvTxAmount = rowView.findViewById(R.id.tvTxAmount);
+
+            tvTxTitle.setText(tx.getTitle());
+            tvTxDate.setText(sdf.format(new Date(tx.getTimestamp())));
+            tvTxAmount.setText(currencyFormatter.format(tx.getTotalAmount()));
+
+            cbIncludeTx.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (isChecked) {
+                    selectedToBill.add(tx);
+                } else {
+                    selectedToBill.remove(tx);
+                }
+            });
+
+            rowView.setOnClickListener(v -> cbIncludeTx.setChecked(!cbIncludeTx.isChecked()));
+            layoutItemsContainer.addView(rowView);
+        }
+
+        btnConfirmGenerate.setOnClickListener(v -> {
+            if (selectedToBill.isEmpty()) {
+                Toast.makeText(this, "Please select at least one transaction.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            sheetDialog.dismiss();
+            showBillDateSelectionDialog(selectedToBill);
+        });
+
+        sheetDialog.show();
+    }
+
+    private void showBillDateSelectionDialog(List<Transaction> selectedToBill) {
+        Calendar calendar = Calendar.getInstance();
+        DatePickerDialog datePickerDialog = new DatePickerDialog(this, (view, year, month, dayOfMonth) -> {
+
+            Calendar cal = Calendar.getInstance();
+            cal.set(year, month, dayOfMonth);
+            SimpleDateFormat sdf = new SimpleDateFormat("dd MMMM yyyy", Locale.getDefault());
+            String selectedMonthYear = sdf.format(cal.getTime());
+
+            checkIfBillExistsAndGenerate(selectedToBill, selectedMonthYear);
+
+        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH));
+
+        datePickerDialog.setTitle("Select Statement Date");
+        datePickerDialog.show();
+    }
+
+    private void checkIfBillExistsAndGenerate(List<Transaction> selectedToBill, String selectedMonthYear) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) return;
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        db.collection("Users").document(user.getUid()).collection("Transactions")
+                .whereEqualTo("cardId", cardId)
+                .whereEqualTo("billedMonth", selectedMonthYear)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (!snapshot.isEmpty()) {
+                        new MaterialAlertDialogBuilder(this)
+                                .setTitle("Statement Already Exists")
+                                .setMessage("A bill statement for " + selectedMonthYear + " has already been generated. Do you want to append these transactions to the existing " + selectedMonthYear + " statement?")
+                                .setPositiveButton("Add Anyway", (dialog, which) -> executeGenerateBill(selectedToBill, selectedMonthYear))
+                                .setNegativeButton("Cancel", null)
+                                .show();
+                    } else {
+                        executeGenerateBill(selectedToBill, selectedMonthYear);
+                    }
+                });
+    }
+
+    private void executeGenerateBill(List<Transaction> selectedToBill, String selectedMonthYear) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) return;
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        WriteBatch batch = db.batch();
+
+        for (Transaction tx : selectedToBill) {
+            batch.update(
+                    db.collection("Users").document(user.getUid()).collection("Transactions").document(tx.getTransactionId()),
+                    "billed", true,
+                    "billedMonth", selectedMonthYear
+            );
+        }
+
+        // Auto-Sweep: Move any recent card payments into this statement as well!
+        for (Transaction tx : masterList) {
+            if ("CARD_PAYMENT".equals(tx.getTransactionType()) && (tx.getBilledMonth() == null || tx.getBilledMonth().trim().isEmpty())) {
+                batch.update(
+                        db.collection("Users").document(user.getUid()).collection("Transactions").document(tx.getTransactionId()),
+                        "billedMonth", selectedMonthYear
+                );
+            }
+        }
+
+        batch.commit().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                Toast.makeText(this, "Statement for " + selectedMonthYear + " Generated!", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Failed to generate bill.", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
     private void fetchCardTransactions() {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null) return;
 
         FirebaseFirestore.getInstance().collection("Users").document(currentUser.getUid()).collection("Transactions")
                 .whereEqualTo("cardId", cardId)
-                .orderBy("timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener((snapshot, error) -> {
                     if (error != null || snapshot == null) return;
 
                     masterList.clear();
-                    double totalUsed = 0.0;
+
+                    double billedSpends = 0.0;
+                    double unbilledSpends = 0.0;
+                    double totalPayments = 0.0;
 
                     for (DocumentSnapshot doc : snapshot.getDocuments()) {
                         Transaction tx = doc.toObject(Transaction.class);
                         if (tx != null) {
                             masterList.add(tx);
 
-                            // MATHEMATICS FIX: Accurately add spends and subtract bill payments
                             if ("CARD_SPEND".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType())) {
-                                totalUsed += tx.getTotalAmount();
+                                if (tx.isBilled()) {
+                                    billedSpends += tx.getTotalAmount();
+                                } else {
+                                    unbilledSpends += tx.getTotalAmount();
+                                }
                             } else if ("CARD_PAYMENT".equals(tx.getTransactionType())) {
-                                totalUsed -= tx.getTotalAmount();
+                                totalPayments += tx.getTotalAmount();
                             }
                         }
                     }
 
-                    tvTotalUsed.setText(currencyFormatter.format(totalUsed));
-                    tvAvailableLimit.setText(currencyFormatter.format(Math.max(0, totalLimit - totalUsed)));
+                    masterList.sort((t1, t2) -> Long.compare(t2.getTimestamp(), t1.getTimestamp()));
 
+                    double finalBilledDue = billedSpends - totalPayments;
+                    double finalUnbilledDue = unbilledSpends;
+
+                    if (finalBilledDue < 0) {
+                        finalUnbilledDue += finalBilledDue;
+                        finalBilledDue = 0;
+                    }
+                    if (finalUnbilledDue < 0) {
+                        finalUnbilledDue = 0;
+                    }
+
+                    double finalTotalUsed = finalBilledDue + finalUnbilledDue;
+
+                    tvTotalUsed.setText(currencyFormatter.format(finalTotalUsed));
+                    tvBilledDue.setText(currencyFormatter.format(finalBilledDue));
+                    tvUnbilled.setText(currencyFormatter.format(finalUnbilledDue));
+                    tvAvailableLimit.setText(currencyFormatter.format(Math.max(0, totalLimit - finalTotalUsed)));
+
+                    // FIXED: Successfully reads from the global etSearchCardTx
                     filterTransactions(etSearchCardTx.getText() != null ? etSearchCardTx.getText().toString() : "");
                 });
     }
@@ -181,9 +349,15 @@ public class CardLedgerActivity extends AppCompatActivity {
     private void filterTransactions(String query) {
         displayList.clear();
         String lowerCaseQuery = query.toLowerCase().trim();
+
         for (Transaction tx : masterList) {
             String title = tx.getTitle() != null ? tx.getTitle().toLowerCase() : "";
-            if (title.contains(lowerCaseQuery)) {
+            boolean matchesSearch = title.contains(lowerCaseQuery);
+
+            boolean isUnbilledSpend = !tx.isBilled() && ("CARD_SPEND".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType()));
+            boolean isRecentPayment = "CARD_PAYMENT".equals(tx.getTransactionType()) && (tx.getBilledMonth() == null || tx.getBilledMonth().trim().isEmpty());
+
+            if (matchesSearch && (isUnbilledSpend || isRecentPayment)) {
                 displayList.add(tx);
             }
         }
@@ -230,38 +404,23 @@ public class CardLedgerActivity extends AppCompatActivity {
                     : "UNKNOWN";
             holder.tvTxNumber.setText("Txn: #" + shortId);
 
-            // Hide unused elements for cleaner UI
             holder.tvTxTotalAmount.setVisibility(View.GONE);
             holder.tvTxSource.setVisibility(View.GONE);
 
-            // UI STYLING FIX: Recognize CARD_PAYMENT and style it green
             if ("CARD_PAYMENT".equals(tx.getTransactionType())) {
                 holder.tvTxStatus.setText("Bill Paid");
-                holder.tvTxStatus.setTextColor(Color.parseColor("#388E3C")); // Green Text
-                holder.badgeStatus.setCardBackgroundColor(Color.parseColor("#E8F5E9")); // Light Green Box
-
-                holder.cardIconContainer.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
-                holder.ivTxIcon.setColorFilter(Color.parseColor("#388E3C"));
-
-            } else if ("PAY_CREDIT".equals(tx.getTransactionType())) {
-                holder.tvTxStatus.setText("Paid Credit");
                 holder.tvTxStatus.setTextColor(Color.parseColor("#388E3C"));
                 holder.badgeStatus.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
-
                 holder.cardIconContainer.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
                 holder.ivTxIcon.setColorFilter(Color.parseColor("#388E3C"));
-
             } else {
-                // Normal Spend
-                holder.tvTxStatus.setText("Spend");
-                holder.tvTxStatus.setTextColor(Color.parseColor("#1565C0")); // Blue Text
-                holder.badgeStatus.setCardBackgroundColor(Color.parseColor("#E3F2FD")); // Light Blue Box
-
+                holder.tvTxStatus.setText("Unbilled");
+                holder.tvTxStatus.setTextColor(Color.parseColor("#F57C00"));
+                holder.badgeStatus.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
                 holder.cardIconContainer.setCardBackgroundColor(Color.parseColor("#E3F2FD"));
                 holder.ivTxIcon.setColorFilter(Color.parseColor("#1565C0"));
             }
 
-            // Show Bottom Sheet on Click
             holder.itemView.setOnClickListener(v -> showTransactionDetailsSheet(v.getContext(), tx));
         }
 
@@ -280,9 +439,7 @@ public class CardLedgerActivity extends AppCompatActivity {
             ImageView ivCloseSheet = sheetView.findViewById(R.id.ivCloseSheet);
             ImageView ivCopyTxId = sheetView.findViewById(R.id.ivCopyTxId);
 
-            if (ivCloseSheet != null) {
-                ivCloseSheet.setOnClickListener(v -> sheetDialog.dismiss());
-            }
+            if (ivCloseSheet != null) ivCloseSheet.setOnClickListener(v -> sheetDialog.dismiss());
 
             if (ivCopyTxId != null) {
                 ivCopyTxId.setOnClickListener(v -> {
@@ -334,7 +491,6 @@ public class CardLedgerActivity extends AppCompatActivity {
                                 String personName = mateNames.getOrDefault(mateId, "Unknown Person");
 
                                 View splitRow = LayoutInflater.from(context).inflate(android.R.layout.simple_list_item_2, layoutSplitsContainer, false);
-
                                 splitRow.setMinimumHeight(0);
                                 int verticalPadding = (int) (2 * context.getResources().getDisplayMetrics().density);
                                 splitRow.setPadding(0, verticalPadding, 0, verticalPadding);

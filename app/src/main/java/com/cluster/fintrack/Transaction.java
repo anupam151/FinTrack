@@ -17,6 +17,11 @@ public class Transaction {
     private long timestamp;
     private double totalAmount; // The grand total of the transaction
 
+    private boolean billed;
+
+    // NEW: Tracks which specific monthly statement this belongs to (e.g., "August 2026")
+    private String billedMonth;
+
     // --- THE SPLIT ENGINE ---
     // Key: FinMateId (or "self"). Value: The exact absolute amounts.
     private Map<String, TransactionSplit> splits;
@@ -29,7 +34,7 @@ public class Transaction {
     public Transaction() {
     }
 
-    // 2. Main Constructor
+    // 2. Main Constructor (AddTransactionActivity uses this)
     public Transaction(String transactionId, String transactionType, String cardId, String title,
                        long timestamp, double totalAmount, boolean isEmi) {
         this.transactionId = transactionId;
@@ -39,6 +44,8 @@ public class Transaction {
         this.timestamp = timestamp;
         this.totalAmount = totalAmount;
         this.isEmi = isEmi;
+        this.billed = false;
+        this.billedMonth = null; // Defaults to null until a bill is formally generated!
         this.splits = new HashMap<>();
     }
 
@@ -60,6 +67,12 @@ public class Transaction {
 
     public double getTotalAmount() { return totalAmount; }
     public void setTotalAmount(double totalAmount) { this.totalAmount = totalAmount; }
+
+    public boolean isBilled() { return billed; }
+    public void setBilled(boolean billed) { this.billed = billed; }
+
+    public String getBilledMonth() { return billedMonth; }
+    public void setBilledMonth(String billedMonth) { this.billedMonth = billedMonth; }
 
     public Map<String, TransactionSplit> getSplits() { return splits; }
     public void setSplits(Map<String, TransactionSplit> splits) { this.splits = splits; }
@@ -161,7 +174,7 @@ public class Transaction {
         public void setBankGst(double bankGst) { this.bankGst = bankGst; }
 
         public boolean isBilled() { return isBilled; }
-        public void setBilled(boolean billed) { isBilled = billed; }
+        public void setBilled(boolean billed) { this.isBilled = billed; }
 
         public double getTotalBankDueForMonth() {
             return bankPrincipal + bankInterest + bankGst;

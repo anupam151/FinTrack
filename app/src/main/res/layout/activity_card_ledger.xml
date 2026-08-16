@@ -53,7 +53,7 @@
     <View
         android:id="@+id/viewDynamicHeader"
         android:layout_width="match_parent"
-        android:layout_height="75dp"
+        android:layout_height="140dp"
         android:background="#082561"
         app:layout_constraintTop_toBottomOf="@id/topAppBarContainer" />
 
@@ -62,8 +62,8 @@
         android:id="@+id/cardMockup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginTop="24dp"
         app:cardBackgroundColor="#FFFFFF"
         app:cardCornerRadius="16dp"
         app:cardElevation="8dp"
@@ -74,7 +74,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="14dp">
+            android:padding="20dp">
 
             <RelativeLayout
                 android:layout_width="match_parent"
@@ -109,7 +109,7 @@
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
                     android:text="Visa"
-                    android:textColor="#000000"
+                    android:textColor="#1abcab"
                     android:textSize="16sp"
                     android:textStyle="bold|italic" />
             </RelativeLayout>
@@ -118,7 +118,7 @@
                 android:id="@+id/tvCardNumber"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="24dp"
                 android:text="****  ****  ****  2580"
                 android:textColor="#101828"
                 android:textSize="20sp"
@@ -144,7 +144,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="12dp">
+            android:padding="16dp">
 
             <!-- Row 1: Limit & Available -->
             <LinearLayout
@@ -201,7 +201,7 @@
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:layout_marginVertical="8dp"
+                android:layout_marginVertical="12dp"
                 android:background="#F0F0F0" />
 
             <!-- Row 2: Billed, Unbilled, Total Used -->
@@ -212,7 +212,6 @@
                 android:baselineAligned="false"
                 android:weightSum="3">
 
-                <!-- Billed (Current Due) -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -234,7 +233,6 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
-                <!-- Unbilled -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -257,7 +255,6 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
-                <!-- Total Used -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -289,13 +286,50 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="12dp"
-        android:text="Card Transactions"
+        android:layout_marginTop="20dp"
+        android:text="Unbilled Transactions"
         android:textColor="#082561"
         android:textSize="16sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/cardSummaryData" />
+
+    <!-- ACTION BUTTONS: ALL TRANSACTIONS & GENERATE BILL -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginEnd="12dp"
+        app:layout_constraintBottom_toBottomOf="@id/tvTxTitleLabel"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/tvTxTitleLabel">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnGenerateBill"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Generate"
+            android:textColor="#388E3C"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingHorizontal="4dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAllTransactions"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="All Txns"
+            android:textColor="#1abcab"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingHorizontal="4dp" />
+    </LinearLayout>
 
     <!-- SEARCH BAR -->
     <com.google.android.material.textfield.TextInputLayout
@@ -320,7 +354,7 @@
             android:id="@+id/etSearchCardTx"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Search transactions..."
+            android:hint="Search unbilled..."
             android:inputType="text"
             android:paddingVertical="12dp"
             android:textColor="#101828"
@@ -344,7 +378,7 @@
         android:id="@+id/layoutEmptyState"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="No transactions found for this card."
+        android:text="No unbilled transactions found."
         android:textColor="#667085"
         android:textSize="16sp"
         android:gravity="center"

@@ -8,9 +8,8 @@
     android:background="#FFFFFF"
     android:orientation="vertical"
     android:padding="20dp"
-    tools:ignore="HardcodedText">
+    tools:ignore="HardcodedText, ContentDescription">
 
-    <!-- Handle Bar -->
     <View
         android:layout_width="40dp"
         android:layout_height="4dp"
@@ -18,7 +17,6 @@
         android:layout_marginBottom="16dp"
         android:background="#E0E0E0" />
 
-    <!-- Title & Close -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -40,11 +38,9 @@
             android:layout_alignParentEnd="true"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_menu_close_clear_cancel"
-            app:tint="#667085"
-            android:contentDescription="Close details sheet" />
+            app:tint="#667085" />
     </RelativeLayout>
 
-    <!-- Details Card -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -133,7 +129,6 @@
                     android:textSize="13sp"
                     android:textStyle="bold" />
 
-                <!-- NEW: Copy Button -->
                 <ImageView
                     android:id="@+id/ivCopyTxId"
                     android:layout_width="16dp"
@@ -141,14 +136,14 @@
                     android:layout_marginStart="8dp"
                     android:src="@drawable/copy"
                     app:tint="#545454"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Copy Transaction ID"/>
+                    android:background="?attr/selectableItemBackgroundBorderless"/>
             </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
 
                 <TextView
                     android:layout_width="0dp"
@@ -168,11 +163,9 @@
                     android:textSize="13sp"
                     android:textStyle="bold" />
             </LinearLayout>
-
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Splits Breakdown Title -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -182,12 +175,10 @@
         android:textSize="14sp"
         android:textStyle="bold" />
 
-    <!-- Dynamic container where split rows for each FinMate will be injected -->
     <LinearLayout
         android:id="@+id/layoutSplitsContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:layout_marginBottom="4dp" />
-
 </LinearLayout>
