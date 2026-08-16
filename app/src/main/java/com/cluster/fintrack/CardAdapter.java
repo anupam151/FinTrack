@@ -1,12 +1,12 @@
 package com.cluster.fintrack;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -88,8 +88,18 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
             holder.cardLogoContainer.setCardBackgroundColor(Color.parseColor("#082561"));
         }
 
-        // 7. Standard Click listener
-        holder.itemView.setOnClickListener(v -> Toast.makeText(context, "Clicked: " + card.getCardName(), Toast.LENGTH_SHORT).show());
+        // 7. Standard Click listener -> Launch Card Ledger
+        holder.itemView.setOnClickListener(v -> {
+            Intent intent = new Intent(context, CardLedgerActivity.class);
+            intent.putExtra("CARD_ID", card.getCardId());
+            intent.putExtra("BANK_NAME", card.getBankName());
+            intent.putExtra("CARD_NAME", card.getCardName());
+            intent.putExtra("CARD_TYPE", card.getCardType());
+            intent.putExtra("LAST4", card.getLast4Digits());
+            intent.putExtra("TOTAL_LIMIT", card.getTotalLimit());
+            intent.putExtra("THEME_COLOR", card.getThemeColor());
+            context.startActivity(intent);
+        });
 
         // 8. Long Click listener
         holder.itemView.setOnLongClickListener(v -> {

@@ -8,20 +8,20 @@
     android:layout_height="match_parent"
     android:background="#F5F7FA"
     tools:context=".AddTransactionActivity"
-    tools:ignore="HardcodedText, ContentDescription">
+    tools:ignore="HardcodedText, ContentDescription, TooManyViews">
 
-    <!-- TOP APP BAR -->
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <!-- TOP APP BAR (Optimized from ConstraintLayout to LinearLayout for faster rendering) -->
+    <LinearLayout
         android:id="@+id/topAppBarContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:background="#FFFFFF"
         android:elevation="6dp"
         android:paddingHorizontal="16dp"
         android:paddingTop="12dp"
         android:paddingBottom="12dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
@@ -30,10 +30,7 @@
             android:layout_height="32dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:padding="4dp"
-            android:src="@drawable/back"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:src="@drawable/back" />
 
         <TextView
             android:id="@+id/tvTransactionTitle"
@@ -43,11 +40,8 @@
             android:text="New Transaction"
             android:textColor="#082561"
             android:textSize="20sp"
-            android:textStyle="bold"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@id/ivBack"
-            app:layout_constraintTop_toTopOf="parent" />
-    </androidx.constraintlayout.widget.ConstraintLayout>
+            android:textStyle="bold" />
+    </LinearLayout>
 
     <!-- SCROLLABLE FORM -->
     <androidx.core.widget.NestedScrollView
@@ -70,7 +64,8 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:weightSum="2"
-                android:layout_marginBottom="12dp">
+                android:layout_marginBottom="12dp"
+                android:baselineAligned="false">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnTypeSpend"
@@ -103,7 +98,6 @@
                     app:strokeWidth="1.5dp"
                     app:cornerRadius="10dp"
                     app:elevation="0dp" />
-
             </LinearLayout>
 
             <!-- SPEND SUB-OPTIONS -->
@@ -118,15 +112,25 @@
                     android:id="@+id/rbNormalSpend"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
+                    android:layout_weight="1.2"
                     android:text="Normal Spend"
+                    android:textSize="13sp"
                     android:textColor="#082561" />
                 <RadioButton
                     android:id="@+id/rbPayBackCredit"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Pay Back Credit"
+                    android:layout_weight="1.3"
+                    android:text="Pay FinMate"
+                    android:textSize="13sp"
+                    android:textColor="#082561" />
+                <RadioButton
+                    android:id="@+id/rbPayCardBill"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.2"
+                    android:text="Pay Card Bill"
+                    android:textSize="13sp"
                     android:textColor="#082561" />
             </RadioGroup>
 
@@ -202,7 +206,56 @@
                             android:popupBackground="@drawable/bg_rounded_popup"
                             android:textColor="#101828" />
                     </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
+            <!-- TARGET CARD FOR BILL PAYMENT -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardTargetCreditCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:text="Select Card to Pay (via Cash/Bank)"
+                        android:textColor="#082561"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Choose Credit Card"
+                        app:boxCornerRadiusBottomEnd="8dp"
+                        app:boxCornerRadiusBottomStart="8dp"
+                        app:boxCornerRadiusTopEnd="8dp"
+                        app:boxCornerRadiusTopStart="8dp"
+                        app:boxStrokeColor="#1abcab"
+                        app:hintTextColor="#1abcab">
+
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/spinTargetCreditCard"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:popupBackground="@drawable/bg_rounded_popup"
+                            android:textColor="#101828" />
+                    </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -254,7 +307,6 @@
                             android:popupBackground="@drawable/bg_rounded_popup"
                             android:textColor="#101828" />
                     </com.google.android.material.textfield.TextInputLayout>
-
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -292,7 +344,6 @@
                         app:boxCornerRadiusTopEnd="8dp"
                         app:boxCornerRadiusTopStart="8dp"
                         app:boxStrokeColor="#1abcab"
-                        app:hintTextColor="#1abcab"
                         app:endIconMode="custom"
                         app:endIconDrawable="@drawable/calendar"
                         app:endIconTint="@null">
@@ -309,7 +360,6 @@
                             android:textColor="#101828"
                             android:textSize="16sp" />
                     </com.google.android.material.textfield.TextInputLayout>
-
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -373,7 +423,6 @@
                             android:textSize="18sp"
                             android:textStyle="bold" />
                     </com.google.android.material.textfield.TextInputLayout>
-
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -461,11 +510,10 @@
                             android:popupBackground="@drawable/bg_rounded_popup"
                             android:textColor="#101828" />
                     </com.google.android.material.textfield.TextInputLayout>
-
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- SPEND MODE: THE NORMAL SPLIT ENGINE -->
+            <!-- SPEND MODE: THE NORMAL SPLIT ENGINE (Flattened to ConstraintLayout) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardSplitEngine"
                 android:layout_width="match_parent"
@@ -477,52 +525,50 @@
                 app:cardElevation="2dp"
                 app:strokeWidth="0dp">
 
-                <LinearLayout
+                <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
                     android:paddingHorizontal="16dp"
                     android:paddingTop="16dp"
                     android:paddingBottom="10dp">
 
-                    <RelativeLayout
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:id="@+id/tvSplitHeader"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="6dp">
+                        android:text="Split with FinMates"
+                        android:textColor="#082561"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="@id/btnAddSplitFinMate"/>
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_centerVertical="true"
-                            android:text="Split with FinMates"
-                            android:textColor="#082561"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/btnAddSplitFinMate"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_alignParentEnd="true"
-                            android:layout_centerVertical="true"
-                            android:background="?attr/selectableItemBackground"
-                            android:clickable="true"
-                            android:focusable="true"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="4dp"
-                            android:text="+ Add Person"
-                            android:textColor="#1abcab"
-                            android:textSize="13sp"
-                            android:textStyle="bold" />
-                    </RelativeLayout>
+                    <TextView
+                        android:id="@+id/btnAddSplitFinMate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="?attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="4dp"
+                        android:text="+ Add Person"
+                        android:textColor="#1abcab"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
 
                     <LinearLayout
                         android:id="@+id/layoutSplitEngineContainer"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical" />
+                        android:layout_marginTop="6dp"
+                        android:orientation="vertical"
+                        app:layout_constraintTop_toBottomOf="@id/btnAddSplitFinMate" />
 
-                </LinearLayout>
+                </androidx.constraintlayout.widget.ConstraintLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- SPEND MODE: PAY BACK CREDIT -->
@@ -590,11 +636,10 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:orientation="vertical" />
-
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- SPEND MODE: PAY BACK ADVANCE / SHORTAGE -->
+            <!-- SPEND MODE: PAY BACK ADVANCE / SHORTAGE (Flattened to ConstraintLayout) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardPayBackAdvance"
                 android:layout_width="match_parent"
@@ -607,12 +652,10 @@
                 app:strokeWidth="1dp"
                 app:strokeColor="#388E3C">
 
-                <LinearLayout
+                <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="16dp"
-                    android:gravity="center_vertical">
+                    android:padding="16dp">
 
                     <ImageView
                         android:id="@+id/ivPayBackAdvanceIcon"
@@ -620,32 +663,35 @@
                         android:layout_height="24dp"
                         android:src="@drawable/rupee"
                         app:tint="#388E3C"
-                        tools:ignore="ContentDescription" />
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent" />
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:id="@+id/tvPayBackAdvanceTitle"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginStart="12dp">
+                        android:layout_marginStart="12dp"
+                        android:text="Advance / Credit"
+                        android:textColor="#388E3C"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        app:layout_constraintStart_toEndOf="@id/ivPayBackAdvanceIcon"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent" />
 
-                        <TextView
-                            android:id="@+id/tvPayBackAdvanceTitle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Advance / Credit"
-                            android:textColor="#388E3C"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/tvPayBackAdvanceAmount"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="₹0.00 will be added as advance"
-                            android:textColor="#2E7D32"
-                            android:textSize="13sp" />
-                    </LinearLayout>
-                </LinearLayout>
+                    <TextView
+                        android:id="@+id/tvPayBackAdvanceAmount"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="₹0.00 will be added as advance"
+                        android:textColor="#2E7D32"
+                        android:textSize="13sp"
+                        app:layout_constraintStart_toEndOf="@id/ivPayBackAdvanceIcon"
+                        app:layout_constraintTop_toBottomOf="@id/tvPayBackAdvanceTitle"
+                        app:layout_constraintEnd_toEndOf="parent" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- RECEIVE MODE: DYNAMIC CHECKLIST (Settle Dues) -->
@@ -695,7 +741,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- RECEIVE MODE: ADVANCE / CREDIT INDICATOR -->
+            <!-- RECEIVE MODE: ADVANCE / CREDIT INDICATOR (Flattened to ConstraintLayout) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardReceiveAdvance"
                 android:layout_width="match_parent"
@@ -708,12 +754,10 @@
                 app:strokeWidth="1dp"
                 app:strokeColor="#388E3C">
 
-                <LinearLayout
+                <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="16dp"
-                    android:gravity="center_vertical">
+                    android:padding="16dp">
 
                     <ImageView
                         android:id="@+id/ivAdvanceIcon"
@@ -721,39 +765,42 @@
                         android:layout_height="24dp"
                         android:src="@drawable/rupee"
                         app:tint="#388E3C"
-                        tools:ignore="ContentDescription" />
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent" />
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:id="@+id/tvAdvanceTitle"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginStart="12dp">
+                        android:layout_marginStart="12dp"
+                        android:text="Advance / Credit"
+                        android:textColor="#388E3C"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        app:layout_constraintStart_toEndOf="@id/ivAdvanceIcon"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent" />
 
-                        <TextView
-                            android:id="@+id/tvAdvanceTitle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Advance / Credit"
-                            android:textColor="#388E3C"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/tvAdvanceAmount"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="₹0.00 will be added as advance"
-                            android:textColor="#2E7D32"
-                            android:textSize="13sp" />
-                    </LinearLayout>
-                </LinearLayout>
+                    <TextView
+                        android:id="@+id/tvAdvanceAmount"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="₹0.00 will be added as advance"
+                        android:textColor="#2E7D32"
+                        android:textSize="13sp"
+                        app:layout_constraintStart_toEndOf="@id/ivAdvanceIcon"
+                        app:layout_constraintTop_toBottomOf="@id/tvAdvanceTitle"
+                        app:layout_constraintEnd_toEndOf="parent" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
             </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- FIXED BOTTOM SAVE BUTTON -->
-    <LinearLayout
+    <!-- FIXED BOTTOM SAVE BUTTON (Optimized to FrameLayout) -->
+    <FrameLayout
         android:id="@+id/bottomSaveContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -774,6 +821,6 @@
             android:textStyle="bold"
             app:backgroundTint="#1abcab"
             app:cornerRadius="12dp" />
-    </LinearLayout>
+    </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

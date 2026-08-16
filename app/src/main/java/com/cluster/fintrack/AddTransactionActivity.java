@@ -77,8 +77,8 @@ public class AddTransactionActivity extends AppCompatActivity {
     private RadioGroup rgSpendOptions, rgReceiveOptions, rgSplitDecision;
 
     // SPEND UI ELEMENTS
-    private MaterialCardView cardPaymentSource, cardSplitEngine, cardPayBackCredit, cardPayBackAdvance, cardSinglePerson;
-    private MaterialAutoCompleteTextView spinPaymentSource, spinPayBackPerson, spinSinglePerson;
+    private MaterialCardView cardPaymentSource, cardTargetCreditCard, cardSplitEngine, cardPayBackCredit, cardPayBackAdvance, cardSinglePerson;
+    private MaterialAutoCompleteTextView spinPaymentSource, spinTargetCreditCard, spinPayBackPerson, spinSinglePerson;
     private TextView btnAddSplitFinMate, tvNoCreditTx, tvPayBackAdvanceTitle, tvPayBackAdvanceAmount;
     private ImageView ivPayBackAdvanceIcon;
     private LinearLayout layoutSplitEngineContainer, layoutCreditTransactionsContainer;
@@ -184,11 +184,13 @@ public class AddTransactionActivity extends AppCompatActivity {
         rgSplitDecision = findViewById(R.id.rgSplitDecision);
 
         cardPaymentSource = findViewById(R.id.cardPaymentSource);
+        cardTargetCreditCard = findViewById(R.id.cardTargetCreditCard);
         cardSplitEngine = findViewById(R.id.cardSplitEngine);
         cardSinglePerson = findViewById(R.id.cardSinglePerson);
         cardPayBackCredit = findViewById(R.id.cardPayBackCredit);
         cardPayBackAdvance = findViewById(R.id.cardPayBackAdvance);
         spinPaymentSource = findViewById(R.id.spinPaymentSource);
+        spinTargetCreditCard = findViewById(R.id.spinTargetCreditCard);
         spinPayBackPerson = findViewById(R.id.spinPayBackPerson);
         spinSinglePerson = findViewById(R.id.spinSinglePerson);
         btnAddSplitFinMate = findViewById(R.id.btnAddSplitFinMate);
@@ -212,7 +214,6 @@ public class AddTransactionActivity extends AppCompatActivity {
 
         btnSaveTransaction = findViewById(R.id.btnSaveTransaction);
 
-        // Hide split engine by default based on No radio button
         if (cardSplitEngine != null) cardSplitEngine.setVisibility(View.GONE);
     }
 
@@ -230,7 +231,7 @@ public class AddTransactionActivity extends AppCompatActivity {
                 } else {
                     if ("CASH".equals(cardId)) {
                         Toast.makeText(this, "Cash transactions cannot be split among multiple people.", Toast.LENGTH_SHORT).show();
-                        rgSplitDecision.check(R.id.rbSplitNo); // Force back to No
+                        rgSplitDecision.check(R.id.rbSplitNo);
                         return;
                     }
                     if (cardSinglePerson != null) cardSinglePerson.setVisibility(View.GONE);
@@ -316,7 +317,6 @@ public class AddTransactionActivity extends AppCompatActivity {
             rgSpendOptions.setVisibility(View.VISIBLE);
             rgReceiveOptions.setVisibility(View.GONE);
 
-            cardPaymentSource.setVisibility(View.VISIBLE);
             cardReceivePerson.setVisibility(View.GONE);
             cardReceiveUnpaidList.setVisibility(View.GONE);
             cardReceiveAdvance.setVisibility(View.GONE);
@@ -336,6 +336,7 @@ public class AddTransactionActivity extends AppCompatActivity {
             rgReceiveOptions.setVisibility(View.VISIBLE);
 
             cardPaymentSource.setVisibility(View.GONE);
+            if (cardTargetCreditCard != null) cardTargetCreditCard.setVisibility(View.GONE);
             if (rgSplitDecision != null) rgSplitDecision.setVisibility(View.GONE);
             if (cardSinglePerson != null) cardSinglePerson.setVisibility(View.GONE);
             if (cardSplitEngine != null) cardSplitEngine.setVisibility(View.GONE);
@@ -388,6 +389,8 @@ public class AddTransactionActivity extends AppCompatActivity {
     private void updateSpendSubViews() {
         if (rgSpendOptions.getCheckedRadioButtonId() == R.id.rbNormalSpend) {
             btnSaveTransaction.setText("Save Spend");
+            cardPaymentSource.setVisibility(View.VISIBLE);
+            if (cardTargetCreditCard != null) cardTargetCreditCard.setVisibility(View.GONE);
             if (rgSplitDecision != null) rgSplitDecision.setVisibility(View.VISIBLE);
 
             if (rgSplitDecision != null && rgSplitDecision.getCheckedRadioButtonId() == R.id.rbSplitNo) {
@@ -399,8 +402,23 @@ public class AddTransactionActivity extends AppCompatActivity {
             }
             cardPayBackCredit.setVisibility(View.GONE);
             cardPayBackAdvance.setVisibility(View.GONE);
+
+        } else if (rgSpendOptions.getCheckedRadioButtonId() == R.id.rbPayCardBill) {
+            btnSaveTransaction.setText("Log Bill Payment");
+            cardPaymentSource.setVisibility(View.GONE);
+            if (cardTargetCreditCard != null) cardTargetCreditCard.setVisibility(View.VISIBLE);
+
+            if (rgSplitDecision != null) rgSplitDecision.setVisibility(View.GONE);
+            if (cardSinglePerson != null) cardSinglePerson.setVisibility(View.GONE);
+            if (cardSplitEngine != null) cardSplitEngine.setVisibility(View.GONE);
+            cardPayBackCredit.setVisibility(View.GONE);
+            cardPayBackAdvance.setVisibility(View.GONE);
+
         } else {
-            btnSaveTransaction.setText("Pay Back Credit");
+            btnSaveTransaction.setText("Pay Back FinMate");
+            cardPaymentSource.setVisibility(View.VISIBLE);
+            if (cardTargetCreditCard != null) cardTargetCreditCard.setVisibility(View.GONE);
+
             if (rgSplitDecision != null) rgSplitDecision.setVisibility(View.GONE);
             if (cardSinglePerson != null) cardSinglePerson.setVisibility(View.GONE);
             if (cardSplitEngine != null) cardSplitEngine.setVisibility(View.GONE);
@@ -428,7 +446,6 @@ public class AddTransactionActivity extends AppCompatActivity {
         }
     }
 
-    // MISSING METHOD RESTORED HERE
     private void setTabActive(MaterialButton button, boolean isActive) {
         if (isActive) {
             button.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#1abcab")));
@@ -458,6 +475,8 @@ public class AddTransactionActivity extends AppCompatActivity {
                 .addOnSuccessListener(snapshot -> {
                     sourceNameToIdMap.clear();
                     List<String> sourceNames = new ArrayList<>();
+                    List<String> strictlyCardsOnly = new ArrayList<>();
+
                     sourceNames.add("Cash (Personal Liquidity)");
                     sourceNameToIdMap.put("Cash (Personal Liquidity)", "CASH");
 
@@ -467,6 +486,7 @@ public class AddTransactionActivity extends AppCompatActivity {
                             String shortBankName = getBankInitials(card.getBankName());
                             String displayName = card.getCardName() + " - " + shortBankName + " (" + card.getLast4Digits() + ")";
                             sourceNames.add(displayName);
+                            strictlyCardsOnly.add(displayName);
                             sourceNameToIdMap.put(displayName, card.getCardId());
                         }
                     }
@@ -475,6 +495,14 @@ public class AddTransactionActivity extends AppCompatActivity {
                     spinPaymentSource.setAdapter(adapter);
                     if (!sourceNames.isEmpty()) {
                         spinPaymentSource.setText(sourceNames.get(0), false);
+                    }
+
+                    if (spinTargetCreditCard != null) {
+                        ArrayAdapter<String> targetCardAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, strictlyCardsOnly);
+                        spinTargetCreditCard.setAdapter(targetCardAdapter);
+                        if (!strictlyCardsOnly.isEmpty()) {
+                            spinTargetCreditCard.setText(strictlyCardsOnly.get(0), false);
+                        }
                     }
                 });
 
@@ -485,9 +513,8 @@ public class AddTransactionActivity extends AppCompatActivity {
                     finMateNameToIdMap.clear();
 
                     List<String> finMateNames = new ArrayList<>();
-
-                    // For the Single Person Mode Dropdown, "Self" must be an option
                     List<String> singlePersonNames = new ArrayList<>();
+
                     singlePersonNames.add("Self (You)");
                     finMateNameToIdMap.put("Self (You)", "self");
 
@@ -965,6 +992,8 @@ public class AddTransactionActivity extends AppCompatActivity {
         if (isSpendMode) {
             if (rgSpendOptions.getCheckedRadioButtonId() == R.id.rbNormalSpend) {
                 saveSpendTransaction();
+            } else if (rgSpendOptions.getCheckedRadioButtonId() == R.id.rbPayCardBill) {
+                saveCardBillPayment();
             } else {
                 savePayBackCreditTransaction();
             }
@@ -977,9 +1006,6 @@ public class AddTransactionActivity extends AppCompatActivity {
         }
     }
 
-    // ==========================================
-    // THE MASTER MATHEMATICAL "SELF-HEALING" DASHBOARD LOGIC
-    // ==========================================
     private void updateFinMateBalancesInBatch(WriteBatch batch, String userId, String finMateId, List<DocumentSnapshot> allTxDocs, Transaction newTx) {
         if (finMateId == null || finMateId.equals("self")) return;
 
@@ -1057,8 +1083,75 @@ public class AddTransactionActivity extends AppCompatActivity {
     }
 
     // ==========================================
-    // SAVE LOGIC: NORMAL SPEND
+    // SAVE LOGIC: CARD BILL PAYMENT (NEW)
     // ==========================================
+    private void saveCardBillPayment() {
+        String title = String.valueOf(etTransactionTitle.getText()).trim();
+        String totalStr = String.valueOf(etTotalAmount.getText()).trim();
+
+        if (TextUtils.isEmpty(title)) {
+            etTransactionTitle.setError("Required");
+            return;
+        }
+        if (TextUtils.isEmpty(totalStr)) {
+            etTotalAmount.setError("Required");
+            return;
+        }
+        if (selectedTransactionTimestamp == 0) {
+            etTransactionDate.setError("Please select a date");
+            Toast.makeText(this, "Please select a transaction date", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String selectedTargetCardText = spinTargetCreditCard.getText() != null ? spinTargetCreditCard.getText().toString() : "";
+        String cardIdToPay = sourceNameToIdMap.get(selectedTargetCardText);
+
+        if (cardIdToPay == null || cardIdToPay.equals("CASH") || cardIdToPay.isEmpty()) {
+            Toast.makeText(this, "Please select a valid Credit Card to pay", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) return;
+        String userId = currentUser.getUid();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        double paymentAmount = Double.parseDouble(totalStr);
+        String txId = generateUniqueTransactionId();
+
+        Transaction cardPaymentTx = new Transaction(
+                txId,
+                "CARD_PAYMENT",
+                cardIdToPay,
+                title,
+                selectedTransactionTimestamp,
+                paymentAmount,
+                false
+        );
+
+        Map<String, Transaction.TransactionSplit> splitsMap = new HashMap<>();
+        // It's technically a cash spend (outflow from bank) used to pay the card
+        splitsMap.put("self", new Transaction.TransactionSplit(0.0, paymentAmount, 0.0));
+        cardPaymentTx.setSplits(splitsMap);
+
+        btnSaveTransaction.setEnabled(false);
+        btnSaveTransaction.setText("Logging Payment...");
+
+        db.collection("Users").document(userId).collection("Transactions").document(txId)
+                .set(cardPaymentTx)
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Toast.makeText(this, "Card Bill Logged Successfully!", Toast.LENGTH_SHORT).show();
+                        finish();
+                    } else {
+                        String err = task.getException() != null ? task.getException().getMessage() : "Unknown error";
+                        Toast.makeText(this, "Failed to save: " + err, Toast.LENGTH_SHORT).show();
+                        btnSaveTransaction.setEnabled(true);
+                        btnSaveTransaction.setText("Log Card Payment");
+                    }
+                });
+    }
+
     private void saveSpendTransaction() {
         String title = String.valueOf(etTransactionTitle.getText()).trim();
         String totalStr = String.valueOf(etTotalAmount.getText()).trim();
@@ -1293,9 +1386,6 @@ public class AddTransactionActivity extends AppCompatActivity {
         });
     }
 
-    // ==========================================
-    // SAVE LOGIC: PAY BACK CREDIT
-    // ==========================================
     private void savePayBackCreditTransaction() {
         String title = String.valueOf(etTransactionTitle.getText()).trim();
         String totalStr = String.valueOf(etTotalAmount.getText()).trim();
@@ -1392,9 +1482,6 @@ public class AddTransactionActivity extends AppCompatActivity {
         });
     }
 
-    // ==========================================
-    // SAVE LOGIC: SETTLE DUES
-    // ==========================================
     private void saveSettleTransaction() {
         String title = String.valueOf(etTransactionTitle.getText()).trim();
         String totalStr = String.valueOf(etTotalAmount.getText()).trim();
@@ -1483,9 +1570,6 @@ public class AddTransactionActivity extends AppCompatActivity {
         });
     }
 
-    // ==========================================
-    // SAVE LOGIC: TAKE CREDIT
-    // ==========================================
     private void saveTakeCreditTransaction() {
         String title = String.valueOf(etTransactionTitle.getText()).trim();
         String totalStr = String.valueOf(etTotalAmount.getText()).trim();
