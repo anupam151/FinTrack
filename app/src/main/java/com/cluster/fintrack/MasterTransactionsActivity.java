@@ -11,15 +11,17 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.PopupMenu;
 import androidx.cardview.widget.CardView;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -47,9 +49,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 public class MasterTransactionsActivity extends AppCompatActivity {
 
@@ -67,6 +71,21 @@ public class MasterTransactionsActivity extends AppCompatActivity {
     private String currentSortOption = "DATE_DESC";
     private String currentFilterSourceId = "ALL";
 
+    // --- MULTI-SELECT VARIABLES ---
+    private boolean isSelectionMode = false;
+    private final Set<Transaction> selectedTransactions = new HashSet<>();
+    private LinearLayout bottomSelectionBar;
+    private TextView tvSelectionCount;
+    private ImageView ivEditSelection;
+
+    // Modern Back Button Handler
+    private final OnBackPressedCallback selectionBackCallback = new OnBackPressedCallback(false) {
+        @Override
+        public void handleOnBackPressed() {
+            clearSelection();
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -81,9 +100,11 @@ public class MasterTransactionsActivity extends AppCompatActivity {
             return windowInsets;
         });
 
+        // Register the back button callback to the Activity
+        getOnBackPressedDispatcher().addCallback(this, selectionBackCallback);
+
         initializeViews();
         setupListeners();
-
         fetchUserCards();
     }
 
@@ -99,122 +120,243 @@ public class MasterTransactionsActivity extends AppCompatActivity {
 
         recyclerViewMaster.setLayoutManager(new LinearLayoutManager(this));
 
-        adapter = new MasterAdapter(filteredList, userCardsMap, this::showTransactionOptions);
+        adapter = new MasterAdapter(filteredList, userCardsMap, selectedTransactions, new TransactionSelectionListener() {
+            @Override
+            public void onTransactionClick(Transaction tx, View anchor) {
+                if (isSelectionMode) {
+                    toggleSelection(tx);
+                } else {
+                    showTransactionDetailsSheet(tx);
+                }
+            }
+
+            @Override
+            public void onTransactionLongClick(Transaction tx, View anchor) {
+                toggleSelection(tx);
+            }
+        });
         recyclerViewMaster.setAdapter(adapter);
     }
 
     private void setupListeners() {
         etSearchTransactions.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 currentSearchQuery = s.toString();
                 applyFiltersAndSort();
             }
-
-            @Override
-            public void afterTextChanged(Editable s) {}
+            @Override public void afterTextChanged(Editable s) {}
         });
 
         btnSort.setOnClickListener(v -> showSortBottomSheet());
         btnFilter.setOnClickListener(v -> showFilterBottomSheet());
     }
 
-    private void showTransactionOptions(Transaction tx, View anchor) {
-        androidx.appcompat.view.ContextThemeWrapper wrapper =
-                new androidx.appcompat.view.ContextThemeWrapper(this, R.style.CleanPopupMenuTheme);
+    // =========================================================================
+    // NATIVE IN-LAYOUT BOTTOM SELECTION BAR (Fixes Touch Blocking)
+    // =========================================================================
+    @SuppressLint("SetTextI18n")
+    private void showBottomSelectionBar() {
+        if (bottomSelectionBar == null) {
+            // Build the view dynamically and inject it safely into the root frame
+            bottomSelectionBar = new LinearLayout(this);
+            bottomSelectionBar.setOrientation(LinearLayout.HORIZONTAL);
 
-        PopupMenu popup = new PopupMenu(wrapper, anchor, android.view.Gravity.END);
+            android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
+            gd.setColor(Color.parseColor("#082561")); // App Theme Dark Blue
+            gd.setCornerRadius(100f); // Make it a beautiful floating pill
+            bottomSelectionBar.setBackground(gd);
+            bottomSelectionBar.setPadding(60, 40, 60, 40);
+            bottomSelectionBar.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            bottomSelectionBar.setElevation(20f); // Material shadow
 
-        popup.getMenu().add(0, 0, 0, "Edit Transaction");
-        popup.getMenu().add(0, 1, 0, "Delete Transaction");
+            int iconSize = (int) (24 * getResources().getDisplayMetrics().density);
+            LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(iconSize, iconSize);
 
-        popup.setForceShowIcon(true);
+            ImageView ivClose = new ImageView(this);
+            ivClose.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
+            ivClose.setColorFilter(Color.WHITE);
+            ivClose.setLayoutParams(iconParams);
+            ivClose.setOnClickListener(v -> clearSelection());
 
-        popup.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == 0) {
+            tvSelectionCount = new TextView(this);
+            tvSelectionCount.setTextColor(Color.WHITE);
+            tvSelectionCount.setTextSize(16f);
+            tvSelectionCount.setTypeface(null, android.graphics.Typeface.BOLD);
+            LinearLayout.LayoutParams tvParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            tvParams.setMargins(40, 0, 0, 0);
+            tvSelectionCount.setLayoutParams(tvParams);
+
+            ivEditSelection = new ImageView(this);
+            ivEditSelection.setImageResource(android.R.drawable.ic_menu_edit);
+            ivEditSelection.setColorFilter(Color.WHITE);
+            LinearLayout.LayoutParams editParams = new LinearLayout.LayoutParams(iconSize, iconSize);
+            editParams.setMargins(0, 0, 60, 0);
+            ivEditSelection.setLayoutParams(editParams);
+            ivEditSelection.setOnClickListener(v -> {
                 Toast.makeText(this, "Edit feature coming soon!", Toast.LENGTH_SHORT).show();
-            } else if (item.getItemId() == 1) {
-                confirmDeleteTransaction(tx);
-            }
-            return true;
-        });
+                clearSelection();
+            });
 
-        popup.show();
+            ImageView ivDelete = new ImageView(this);
+            ivDelete.setImageResource(android.R.drawable.ic_menu_delete);
+            ivDelete.setColorFilter(Color.parseColor("#FF5252"));
+            ivDelete.setLayoutParams(iconParams);
+            ivDelete.setOnClickListener(v -> confirmBulkDelete());
+
+            bottomSelectionBar.addView(ivClose);
+            bottomSelectionBar.addView(tvSelectionCount);
+            bottomSelectionBar.addView(ivEditSelection);
+            bottomSelectionBar.addView(ivDelete);
+
+            // Inject it into the Android root content frame
+            FrameLayout contentFrame = findViewById(android.R.id.content);
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            params.gravity = android.view.Gravity.BOTTOM;
+
+            int horizontalMargin = (int) (16 * getResources().getDisplayMetrics().density);
+            int bottomMargin = (int) (32 * getResources().getDisplayMetrics().density); // Lift it up slightly
+            params.setMargins(horizontalMargin, 0, horizontalMargin, bottomMargin);
+
+            contentFrame.addView(bottomSelectionBar, params);
+        }
+
+        bottomSelectionBar.setVisibility(View.VISIBLE);
     }
 
-    private void confirmDeleteTransaction(Transaction tx) {
-        androidx.appcompat.app.AlertDialog dialog = createDeleteDialogBuilder(tx).create();
+    private void clearSelection() {
+        isSelectionMode = false;
+        selectionBackCallback.setEnabled(false); // Give back button to Android
 
-        dialog.setOnShowListener(d -> {
-            android.widget.Button positiveButton = dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE);
-            if (positiveButton != null) {
-                positiveButton.setTextColor(Color.parseColor("#D32F2F"));
-            }
+        List<Transaction> previousSelection = new ArrayList<>(selectedTransactions);
+        selectedTransactions.clear();
 
-            android.widget.Button negativeButton = dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE);
-            if (negativeButton != null) {
-                negativeButton.setTextColor(Color.parseColor("#667085"));
-            }
-        });
+        if (bottomSelectionBar != null) {
+            bottomSelectionBar.setVisibility(View.GONE);
+        }
 
-        dialog.show();
+        for (Transaction tx : previousSelection) {
+            int index = filteredList.indexOf(tx);
+            if (index != -1) adapter.notifyItemChanged(index);
+        }
     }
 
-    @NonNull
-    private MaterialAlertDialogBuilder createDeleteDialogBuilder(Transaction tx) {
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+    @SuppressLint("SetTextI18n")
+    public void toggleSelection(Transaction tx) {
+        if (selectedTransactions.contains(tx)) {
+            selectedTransactions.remove(tx);
+        } else {
+            selectedTransactions.add(tx);
+        }
 
-        builder.setTitle("Delete Transaction");
-        builder.setMessage("Are you sure you want to permanently delete this transaction? This action cannot be undone.");
+        if (selectedTransactions.isEmpty()) {
+            clearSelection();
+        } else {
+            if (!isSelectionMode) {
+                isSelectionMode = true;
+                selectionBackCallback.setEnabled(true); // Capture back button
+                showBottomSelectionBar();
+            }
+            if (tvSelectionCount != null) {
+                tvSelectionCount.setText(selectedTransactions.size() + " Selected");
+            }
+            if (ivEditSelection != null) {
+                ivEditSelection.setVisibility(selectedTransactions.size() == 1 ? View.VISIBLE : View.GONE);
+            }
+        }
 
-        android.graphics.drawable.GradientDrawable dialogBackground = new android.graphics.drawable.GradientDrawable();
-        dialogBackground.setColor(Color.WHITE);
-        dialogBackground.setCornerRadius(48f);
-        builder.setBackground(dialogBackground);
-
-        builder.setPositiveButton("Delete", (dialog, which) -> deleteTransactionFromFirestore(tx));
-        builder.setNegativeButton("Cancel", null);
-
-        return builder;
+        int index = filteredList.indexOf(tx);
+        if (index != -1) {
+            adapter.notifyItemChanged(index);
+        }
     }
 
-    private void deleteTransactionFromFirestore(Transaction deletedTx) {
+    // =========================================================================
+    // SEQUENTIAL BULK DELETION ENGINE
+    // =========================================================================
+    private void confirmBulkDelete() {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Delete " + selectedTransactions.size() + " Transactions")
+                .setMessage("Are you sure you want to permanently delete the selected transactions? This action cannot be undone.")
+                .setPositiveButton("Delete", (dialog, which) -> executeBulkDelete())
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void executeBulkDelete() {
+        List<Transaction> listToDelete = new ArrayList<>(selectedTransactions);
+        clearSelection();
+
+        ProgressBar progressBar = new ProgressBar(this);
+        progressBar.setPadding(0, 50, 0, 50);
+
+        androidx.appcompat.app.AlertDialog progressDialog = new MaterialAlertDialogBuilder(this)
+                .setTitle("Deleting Transactions...")
+                .setView(progressBar)
+                .setCancelable(false)
+                .create();
+
+        progressDialog.show();
+
+        deleteTransactionSequentially(listToDelete, 0, progressDialog);
+    }
+
+    private void deleteTransactionSequentially(List<Transaction> list, int index, androidx.appcompat.app.AlertDialog dialog) {
+        if (index >= list.size()) {
+            dialog.dismiss();
+            Toast.makeText(this, "Successfully deleted " + list.size() + " transactions.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Transaction tx = list.get(index);
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser == null || deletedTx.getTransactionId() == null) return;
+        if (currentUser == null || tx.getTransactionId() == null) {
+            dialog.dismiss();
+            return;
+        }
 
         String userId = currentUser.getUid();
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-
-        db.collection("Users").document(userId).collection("Transactions").document(deletedTx.getTransactionId())
+        FirebaseFirestore.getInstance().collection("Users").document(userId)
+                .collection("Transactions").document(tx.getTransactionId())
                 .delete()
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this, "Transaction deleted successfully", Toast.LENGTH_SHORT).show();
-
-                    if (deletedTx.getSplits() != null) {
-                        for (String fId : deletedTx.getSplits().keySet()) {
-                            // Triggers the Self-Healing Ripple Reversal
-                            handleDeletionRippleEffect(userId, fId, deletedTx);
-                        }
+                    if (tx.getSplits() != null && !tx.getSplits().isEmpty()) {
+                        List<String> finMates = new ArrayList<>(tx.getSplits().keySet());
+                        processRipplesSequentially(userId, tx, finMates, 0, () -> deleteTransactionSequentially(list, index + 1, dialog));
+                    } else {
+                        deleteTransactionSequentially(list, index + 1, dialog);
                     }
                 })
-                .addOnFailureListener(e -> Toast.makeText(this, "Failed to delete: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> deleteTransactionSequentially(list, index + 1, dialog));
     }
 
-    // =========================================================================
-    // THE SELF-HEALING LIFO REVERSAL ENGINE
-    // =========================================================================
-    private void handleDeletionRippleEffect(String userId, String finMateId, Transaction deletedTx) {
+    private void processRipplesSequentially(String userId, Transaction deletedTx, List<String> finMates, int index, Runnable onComplete) {
+        if (index >= finMates.size()) {
+            onComplete.run();
+            return;
+        }
+        String finMateId = finMates.get(index);
+        handleDeletionRippleEffect(userId, finMateId, deletedTx, () -> processRipplesSequentially(userId, deletedTx, finMates, index + 1, onComplete));
+    }
+
+    private void handleDeletionRippleEffect(String userId, String finMateId, Transaction deletedTx, Runnable onComplete) {
         Transaction.TransactionSplit deletedSplit = deletedTx.getSplits().get(finMateId);
-        if (deletedSplit == null) return;
+        if (deletedSplit == null) {
+            onComplete.run();
+            return;
+        }
 
         double amountToReverse = deletedSplit.getPaidAmount();
 
-        // If there was no payment attached, just recalculate master balance
         if (amountToReverse <= 0.01) {
-            if (!finMateId.equals("self")) recalculateFinMateBalance(userId, finMateId);
+            if (!finMateId.equals("self")) {
+                recalculateFinMateBalance(userId, finMateId, onComplete);
+            } else {
+                onComplete.run();
+            }
             return;
         }
 
@@ -224,19 +366,18 @@ public class MasterTransactionsActivity extends AppCompatActivity {
             String deletedType = deletedTx.getTransactionType();
 
             List<DocumentSnapshot> docs = new ArrayList<>(snap.getDocuments());
-            // Sort NEWEST first (LIFO reversal) so we reverse the most recent payments
             docs.sort((d1, d2) -> {
                 Long t1 = d1.getLong("timestamp");
                 Long t2 = d2.getLong("timestamp");
                 if (t1 == null || t2 == null) return 0;
-                return Long.compare(t2, t1);
+                return Long.compare(t2, t1); // Newest first
             });
 
             double remainingToReverse = amountToReverse;
 
             for (DocumentSnapshot doc : docs) {
                 if (remainingToReverse <= 0.01) break;
-                if (doc.getId().equals(deletedTx.getTransactionId())) continue; // Skip the deleted ghost doc
+                if (doc.getId().equals(deletedTx.getTransactionId())) continue;
 
                 Transaction tx = doc.toObject(Transaction.class);
                 if (tx == null || tx.getSplits() == null) continue;
@@ -244,7 +385,6 @@ public class MasterTransactionsActivity extends AppCompatActivity {
                 Transaction.TransactionSplit sp = tx.getSplits().get(finMateId);
                 if (sp == null || sp.getPaidAmount() <= 0.01) continue;
 
-                // Surgically remove the paid amount using extracted helper method
                 if (shouldReverseFromTransaction(deletedType, tx.getTransactionType())) {
                     double deduction = Math.min(remainingToReverse, sp.getPaidAmount());
                     double newPaid = sp.getPaidAmount() - deduction;
@@ -254,16 +394,15 @@ public class MasterTransactionsActivity extends AppCompatActivity {
             }
 
             batch.commit().addOnCompleteListener(task -> {
-                if (!finMateId.equals("self")) recalculateFinMateBalance(userId, finMateId);
+                if (!finMateId.equals("self")) {
+                    recalculateFinMateBalance(userId, finMateId, onComplete);
+                } else {
+                    onComplete.run();
+                }
             });
-        }).addOnFailureListener(e -> {
-            if (!finMateId.equals("self")) recalculateFinMateBalance(userId, finMateId);
-        });
+        }).addOnFailureListener(e -> onComplete.run());
     }
 
-    /**
-     * Determines what kind of transactions a deleted transaction provided money to.
-     */
     private boolean shouldReverseFromTransaction(String deletedType, String targetType) {
         if ("SETTLEMENT".equals(deletedType)) {
             return "CASH_SPEND".equals(targetType) || "CARD_SPEND".equals(targetType);
@@ -277,7 +416,7 @@ public class MasterTransactionsActivity extends AppCompatActivity {
         return false;
     }
 
-    private void recalculateFinMateBalance(String userId, String finMateId) {
+    private void recalculateFinMateBalance(String userId, String finMateId, Runnable onComplete) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         db.collection("Users").document(userId).collection("Transactions").get().addOnSuccessListener(snap -> {
 
@@ -314,7 +453,6 @@ public class MasterTransactionsActivity extends AppCompatActivity {
 
             if (netBalance > 0.01) {
                 finalReceivable = netBalance;
-
                 double calcCard = Math.max(0, cardSpend - cardPaid);
                 double calcCash = Math.max(0, cashSpend - cashPaid);
 
@@ -339,10 +477,14 @@ public class MasterTransactionsActivity extends AppCompatActivity {
             data.put("receivableCashAmount", finalCash);
 
             db.collection("Users").document(userId).collection("FinMates").document(finMateId)
-                    .set(data, SetOptions.merge());
-        });
+                    .set(data, SetOptions.merge())
+                    .addOnCompleteListener(t -> onComplete.run());
+        }).addOnFailureListener(e -> onComplete.run());
     }
 
+    // =========================================================================
+    // STANDARD DATA FETCHING
+    // =========================================================================
     @SuppressLint("NotifyDataSetChanged")
     private void fetchUserCards() {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
@@ -600,23 +742,28 @@ public class MasterTransactionsActivity extends AppCompatActivity {
         }
     }
 
-    public interface OnTransactionLongClickListener {
+    // =========================================================================
+    // MULTI-SELECT ADAPTER
+    // =========================================================================
+    public interface TransactionSelectionListener {
+        void onTransactionClick(Transaction tx, View anchor);
         void onTransactionLongClick(Transaction tx, View anchor);
     }
 
     public static class MasterAdapter extends RecyclerView.Adapter<MasterAdapter.ViewHolder> {
         private final List<Transaction> transactions;
         private final Map<String, String> userCardsMap;
-        private final OnTransactionLongClickListener longClickListener;
+        private final Set<Transaction> selectedTransactions;
+        private final TransactionSelectionListener selectionListener;
 
-        private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault());
-        private final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault());
+        private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
         private final NumberFormat currencyFormatter;
 
-        public MasterAdapter(List<Transaction> transactions, Map<String, String> userCardsMap, OnTransactionLongClickListener longClickListener) {
+        public MasterAdapter(List<Transaction> transactions, Map<String, String> userCardsMap, Set<Transaction> selectedTransactions, TransactionSelectionListener selectionListener) {
             this.transactions = transactions;
             this.userCardsMap = userCardsMap;
-            this.longClickListener = longClickListener;
+            this.selectedTransactions = selectedTransactions;
+            this.selectionListener = selectionListener;
             Locale indianLocale = new Locale.Builder().setLanguage("en").setRegion("IN").build();
             currencyFormatter = NumberFormat.getCurrencyInstance(indianLocale);
         }
@@ -680,108 +827,21 @@ public class MasterTransactionsActivity extends AppCompatActivity {
                 holder.tvTxType.setTextColor(Color.parseColor("#1565C0"));
             }
 
-            holder.itemView.setOnClickListener(v -> showTransactionDetailsSheet(v.getContext(), tx));
+            // VISUAL SELECTION UI
+            if (selectedTransactions.contains(tx)) {
+                holder.itemView.setBackgroundColor(Color.parseColor("#D0E3F5")); // Light Blue Tint
+                holder.itemView.setAlpha(0.8f);
+            } else {
+                holder.itemView.setBackgroundColor(Color.TRANSPARENT);
+                holder.itemView.setAlpha(1.0f);
+            }
 
+            // CLICK LISTENERS
+            holder.itemView.setOnClickListener(v -> selectionListener.onTransactionClick(tx, v));
             holder.itemView.setOnLongClickListener(v -> {
-                longClickListener.onTransactionLongClick(tx, v);
+                selectionListener.onTransactionLongClick(tx, v);
                 return true;
             });
-        }
-
-        @SuppressLint({"SetTextI18n", "InflateParams"})
-        private void showTransactionDetailsSheet(Context context, Transaction tx) {
-            BottomSheetDialog sheetDialog = new BottomSheetDialog(context);
-            View sheetView = LayoutInflater.from(context).inflate(R.layout.dialog_transaction_details, new android.widget.FrameLayout(context), false);
-            sheetDialog.setContentView(sheetView);
-
-            TextView tvSheetTxTitle = sheetView.findViewById(R.id.tvSheetTxTitle);
-            TextView tvSheetTxDate = sheetView.findViewById(R.id.tvSheetTxDate);
-            TextView tvSheetTxId = sheetView.findViewById(R.id.tvSheetTxId);
-            TextView tvSheetSource = sheetView.findViewById(R.id.tvSheetSource);
-            TextView tvSheetTotalAmount = sheetView.findViewById(R.id.tvSheetTotalAmount);
-            LinearLayout layoutSplitsContainer = sheetView.findViewById(R.id.layoutSplitsContainer);
-            ImageView ivCloseSheet = sheetView.findViewById(R.id.ivCloseSheet);
-            ImageView ivCopyTxId = sheetView.findViewById(R.id.ivCopyTxId);
-
-            ivCloseSheet.setOnClickListener(v -> sheetDialog.dismiss());
-
-            ivCopyTxId.setOnClickListener(v -> {
-                ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                ClipData clip = ClipData.newPlainText("Transaction ID", tx.getTransactionId());
-                if (clipboard != null) {
-                    clipboard.setPrimaryClip(clip);
-                    Toast.makeText(context, "Transaction ID copied", Toast.LENGTH_SHORT).show();
-                }
-            });
-
-            tvSheetTxTitle.setText(tx.getTitle());
-            tvSheetTxDate.setText(dateTimeFormat.format(new Date(tx.getTimestamp())));
-
-            String shortId = tx.getTransactionId() != null && tx.getTransactionId().length() >= 6
-                    ? tx.getTransactionId().substring(0, 6).toUpperCase()
-                    : "UNKNOWN";
-            tvSheetTxId.setText("#" + shortId);
-
-            if ("SETTLEMENT".equals(tx.getTransactionType())) {
-                tvSheetSource.setText("Settlement Payment");
-            } else if ("TAKE_CREDIT".equals(tx.getTransactionType())) {
-                tvSheetSource.setText("Credit Received");
-            } else if ("PAY_CREDIT".equals(tx.getTransactionType())) {
-                tvSheetSource.setText("Credit Paid Back");
-            } else if (tx.getCardId() == null || "CASH".equals(tx.getCardId())) {
-                tvSheetSource.setText("Cash");
-            } else {
-                String cName = userCardsMap.get(tx.getCardId());
-                tvSheetSource.setText(cName != null ? cName : "Card");
-            }
-
-            double totalAmt = tx.getTotalAmount() > 0 ? tx.getTotalAmount() : getSplitTotalForSettlement(tx);
-            tvSheetTotalAmount.setText(currencyFormatter.format(totalAmt));
-
-            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-            if (user != null && tx.getSplits() != null) {
-                FirebaseFirestore.getInstance().collection("Users").document(user.getUid()).collection("FinMates")
-                        .get()
-                        .addOnSuccessListener(snapshot -> {
-                            Map<String, String> mateNames = new HashMap<>();
-                            mateNames.put("self", "Self (You)");
-                            for (DocumentSnapshot doc : snapshot) {
-                                FinMate fm = doc.toObject(FinMate.class);
-                                if (fm != null) {
-                                    mateNames.put(fm.getFinMateId(), fm.getName());
-                                }
-                            }
-
-                            layoutSplitsContainer.removeAllViews();
-                            for (Map.Entry<String, Transaction.TransactionSplit> entry : tx.getSplits().entrySet()) {
-                                String mateId = entry.getKey();
-                                Transaction.TransactionSplit sp = entry.getValue();
-                                if (sp == null) continue;
-
-                                String personName = mateNames.getOrDefault(mateId, "Unknown Person");
-
-                                View splitRow = LayoutInflater.from(context).inflate(android.R.layout.simple_list_item_2, layoutSplitsContainer, false);
-
-                                splitRow.setMinimumHeight(0);
-                                int verticalPadding = (int) (2 * context.getResources().getDisplayMetrics().density);
-                                splitRow.setPadding(0, verticalPadding, 0, verticalPadding);
-
-                                TextView text1 = splitRow.findViewById(android.R.id.text1);
-                                TextView text2 = splitRow.findViewById(android.R.id.text2);
-
-                                text1.setText(personName);
-                                text1.setTextColor(Color.parseColor("#082561"));
-                                text1.setTextSize(14f);
-
-                                text2.setText("Share: " + currencyFormatter.format(sp.getCombinedStealthAmount()) + " | Paid: " + currencyFormatter.format(sp.getPaidAmount()));
-                                text2.setTextColor(Color.parseColor("#667085"));
-                                text2.setTextSize(12f);
-
-                                layoutSplitsContainer.addView(splitRow);
-                            }
-                        });
-            }
-            sheetDialog.show();
         }
 
         private double getSplitTotalForSettlement(Transaction tx) {
@@ -818,5 +878,103 @@ public class MasterTransactionsActivity extends AppCompatActivity {
                 ivTxIcon = itemView.findViewById(R.id.ivTxIcon);
             }
         }
+    }
+
+    @SuppressLint({"SetTextI18n", "InflateParams"})
+    private void showTransactionDetailsSheet(Transaction tx) {
+        BottomSheetDialog sheetDialog = new BottomSheetDialog(this);
+        View sheetView = LayoutInflater.from(this).inflate(R.layout.dialog_transaction_details, new android.widget.FrameLayout(this), false);
+        sheetDialog.setContentView(sheetView);
+
+        TextView tvSheetTxTitle = sheetView.findViewById(R.id.tvSheetTxTitle);
+        TextView tvSheetTxDate = sheetView.findViewById(R.id.tvSheetTxDate);
+        TextView tvSheetTxId = sheetView.findViewById(R.id.tvSheetTxId);
+        TextView tvSheetSource = sheetView.findViewById(R.id.tvSheetSource);
+        TextView tvSheetTotalAmount = sheetView.findViewById(R.id.tvSheetTotalAmount);
+        LinearLayout layoutSplitsContainer = sheetView.findViewById(R.id.layoutSplitsContainer);
+        ImageView ivCloseSheet = sheetView.findViewById(R.id.ivCloseSheet);
+        ImageView ivCopyTxId = sheetView.findViewById(R.id.ivCopyTxId);
+
+        ivCloseSheet.setOnClickListener(v -> sheetDialog.dismiss());
+
+        ivCopyTxId.setOnClickListener(v -> {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipData clip = ClipData.newPlainText("Transaction ID", tx.getTransactionId());
+            if (clipboard != null) {
+                clipboard.setPrimaryClip(clip);
+                Toast.makeText(this, "Transaction ID copied", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        SimpleDateFormat dateTimeFormat = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
+        tvSheetTxTitle.setText(tx.getTitle());
+        tvSheetTxDate.setText(dateTimeFormat.format(new Date(tx.getTimestamp())));
+
+        String shortId = tx.getTransactionId() != null && tx.getTransactionId().length() >= 6
+                ? tx.getTransactionId().substring(0, 6).toUpperCase()
+                : "UNKNOWN";
+        tvSheetTxId.setText("#" + shortId);
+
+        if ("SETTLEMENT".equals(tx.getTransactionType())) {
+            tvSheetSource.setText("Settlement Payment");
+        } else if ("TAKE_CREDIT".equals(tx.getTransactionType())) {
+            tvSheetSource.setText("Credit Received");
+        } else if ("PAY_CREDIT".equals(tx.getTransactionType())) {
+            tvSheetSource.setText("Credit Paid Back");
+        } else if (tx.getCardId() == null || "CASH".equals(tx.getCardId())) {
+            tvSheetSource.setText("Cash");
+        } else {
+            String cName = userCardsMap.get(tx.getCardId());
+            tvSheetSource.setText(cName != null ? cName : "Card");
+        }
+
+        double totalAmt = tx.getTotalAmount() > 0 ? tx.getTotalAmount() : 0.0;
+        Locale indianLocale = new Locale.Builder().setLanguage("en").setRegion("IN").build();
+        NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(indianLocale);
+        tvSheetTotalAmount.setText(currencyFormatter.format(totalAmt));
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null && tx.getSplits() != null) {
+            FirebaseFirestore.getInstance().collection("Users").document(user.getUid()).collection("FinMates")
+                    .get()
+                    .addOnSuccessListener(snapshot -> {
+                        Map<String, String> mateNames = new HashMap<>();
+                        mateNames.put("self", "Self (You)");
+                        for (DocumentSnapshot doc : snapshot) {
+                            FinMate fm = doc.toObject(FinMate.class);
+                            if (fm != null) {
+                                mateNames.put(fm.getFinMateId(), fm.getName());
+                            }
+                        }
+
+                        layoutSplitsContainer.removeAllViews();
+                        for (Map.Entry<String, Transaction.TransactionSplit> entry : tx.getSplits().entrySet()) {
+                            String mateId = entry.getKey();
+                            Transaction.TransactionSplit sp = entry.getValue();
+                            if (sp == null) continue;
+
+                            String personName = mateNames.getOrDefault(mateId, "Unknown Person");
+
+                            View splitRow = LayoutInflater.from(this).inflate(android.R.layout.simple_list_item_2, layoutSplitsContainer, false);
+                            splitRow.setMinimumHeight(0);
+                            int verticalPadding = (int) (2 * getResources().getDisplayMetrics().density);
+                            splitRow.setPadding(0, verticalPadding, 0, verticalPadding);
+
+                            TextView text1 = splitRow.findViewById(android.R.id.text1);
+                            TextView text2 = splitRow.findViewById(android.R.id.text2);
+
+                            text1.setText(personName);
+                            text1.setTextColor(Color.parseColor("#082561"));
+                            text1.setTextSize(14f);
+
+                            text2.setText("Share: " + currencyFormatter.format(sp.getCombinedStealthAmount()) + " | Paid: " + currencyFormatter.format(sp.getPaidAmount()));
+                            text2.setTextColor(Color.parseColor("#667085"));
+                            text2.setTextSize(12f);
+
+                            layoutSplitsContainer.addView(splitRow);
+                        }
+                    });
+        }
+        sheetDialog.show();
     }
 }

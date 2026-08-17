@@ -1,7 +1,6 @@
 package com.cluster.fintrack;
 
 import android.annotation.SuppressLint;
-import android.app.DatePickerDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -15,6 +14,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.NumberPicker;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -156,7 +156,6 @@ public class CardLedgerActivity extends AppCompatActivity {
     private void openBillGenerationSheet() {
         List<Transaction> unbilledList = new ArrayList<>();
 
-        // THE FIX: Exact same logic as filterTransactions so the Checklist matches the screen 1-to-1!
         for (Transaction tx : masterList) {
             boolean isUnbilledSpend = !tx.isBilled() && ("CARD_SPEND".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType()));
             boolean isRecentPayment = "CARD_PAYMENT".equals(tx.getTransactionType()) && (tx.getBilledMonth() == null || tx.getBilledMonth().trim().isEmpty());
@@ -192,7 +191,6 @@ public class CardLedgerActivity extends AppCompatActivity {
             tvTxTitle.setText(tx.getTitle());
             tvTxDate.setText(sdf.format(new Date(tx.getTimestamp())));
 
-            // UI Polish: Make Payments Green in the Checklist!
             if ("CARD_PAYMENT".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType())) {
                 tvTxAmount.setText("+" + currencyFormatter.format(tx.getTotalAmount()));
                 tvTxAmount.setTextColor(Color.parseColor("#388E3C")); // Green
@@ -226,20 +224,33 @@ public class CardLedgerActivity extends AppCompatActivity {
     }
 
     private void showBillDateSelectionDialog(List<Transaction> selectedToBill) {
-        Calendar calendar = Calendar.getInstance();
-        DatePickerDialog datePickerDialog = new DatePickerDialog(this, (view, year, month, dayOfMonth) -> {
+        // Inflate our new Custom Month/Year Picker
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_month_year_picker, null);
+        NumberPicker pickerMonth = dialogView.findViewById(R.id.pickerMonth);
+        NumberPicker pickerYear = dialogView.findViewById(R.id.pickerYear);
 
-            Calendar cal = Calendar.getInstance();
-            cal.set(year, month, dayOfMonth);
-            SimpleDateFormat sdf = new SimpleDateFormat("dd MMMM yyyy", Locale.getDefault());
-            String selectedMonthYear = sdf.format(cal.getTime());
+        String[] months = new String[]{"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
+        pickerMonth.setMinValue(0);
+        pickerMonth.setMaxValue(11);
+        pickerMonth.setDisplayedValues(months);
 
-            checkIfBillExistsAndGenerate(selectedToBill, selectedMonthYear);
+        Calendar cal = Calendar.getInstance();
+        int currentYear = cal.get(Calendar.YEAR);
+        pickerYear.setMinValue(currentYear - 2); // Allow past 2 years
+        pickerYear.setMaxValue(currentYear + 5); // Allow future 5 years
+        pickerYear.setValue(currentYear);
 
-        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH));
+        pickerMonth.setValue(cal.get(Calendar.MONTH));
 
-        datePickerDialog.setTitle("Select Statement Date");
-        datePickerDialog.show();
+        new MaterialAlertDialogBuilder(this)
+                .setView(dialogView)
+                .setPositiveButton("Verify & Generate", (dialog, which) -> {
+                    // Create exactly "August 2026"
+                    String selectedMonthYear = months[pickerMonth.getValue()] + " " + pickerYear.getValue();
+                    checkIfBillExistsAndGenerate(selectedToBill, selectedMonthYear);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void checkIfBillExistsAndGenerate(List<Transaction> selectedToBill, String selectedMonthYear) {
@@ -248,6 +259,7 @@ public class CardLedgerActivity extends AppCompatActivity {
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
+        // STRICT VALIDATION ENGINE
         db.collection("Users").document(user.getUid()).collection("Transactions")
                 .whereEqualTo("cardId", cardId)
                 .whereEqualTo("billedMonth", selectedMonthYear)
@@ -255,13 +267,15 @@ public class CardLedgerActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     if (!snapshot.isEmpty()) {
+                        // BLOCKED: A statement for this month already exists!
                         new MaterialAlertDialogBuilder(this)
-                                .setTitle("Statement Already Exists")
-                                .setMessage("A bill statement for " + selectedMonthYear + " has already been generated. Do you want to append these transactions to the existing " + selectedMonthYear + " statement?")
-                                .setPositiveButton("Add Anyway", (dialog, which) -> executeGenerateBill(selectedToBill, selectedMonthYear))
-                                .setNegativeButton("Cancel", null)
+                                .setTitle("Generation Failed")
+                                .setMessage("A statement for " + selectedMonthYear + " has already been generated. You cannot generate multiple statements for the same month.")
+                                .setPositiveButton("OK", null)
+                                .setCancelable(false)
                                 .show();
                     } else {
+                        // SAFE: Proceed to generate
                         executeGenerateBill(selectedToBill, selectedMonthYear);
                     }
                 });
@@ -281,9 +295,6 @@ public class CardLedgerActivity extends AppCompatActivity {
                     "billedMonth", selectedMonthYear
             );
         }
-
-        // THE FIX: Removed the invisible Auto-Sweep logic!
-        // Payments will only be added to a statement if YOU explicitly leave them checked in the popup.
 
         batch.commit().addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
@@ -381,7 +392,6 @@ public class CardLedgerActivity extends AppCompatActivity {
         private final List<Transaction> transactions;
         private final String currentCardName;
         private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
-        private final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
         private final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale.Builder().setLanguage("en").setRegion("IN").build());
 
         public CardTransactionAdapter(List<Transaction> transactions, String currentCardName) {
@@ -458,7 +468,7 @@ public class CardLedgerActivity extends AppCompatActivity {
             }
 
             tvSheetTxTitle.setText(tx.getTitle());
-            tvSheetTxDate.setText(dateTimeFormat.format(new Date(tx.getTimestamp())));
+            tvSheetTxDate.setText(dateFormat.format(new Date(tx.getTimestamp())));
 
             String shortId = tx.getTransactionId() != null && tx.getTransactionId().length() >= 6
                     ? tx.getTransactionId().substring(0, 6).toUpperCase()
