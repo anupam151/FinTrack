@@ -57,7 +57,7 @@ public class CardLedgerActivity extends AppCompatActivity {
     private TextView tvAvailableLimit, tvTotalUsed, tvBilledDue, tvUnbilled;
     private RecyclerView recyclerViewCardTx;
     private TextView layoutEmptyState;
-    private TextInputEditText etSearchCardTx; // FIXED: Restored as a global field so the fetcher can see it!
+    private TextInputEditText etSearchCardTx;
 
     private CardTransactionAdapter adapter;
     private final List<Transaction> masterList = new ArrayList<>();
@@ -118,7 +118,7 @@ public class CardLedgerActivity extends AppCompatActivity {
 
         recyclerViewCardTx = findViewById(R.id.recyclerViewCardTx);
         layoutEmptyState = findViewById(R.id.layoutEmptyState);
-        etSearchCardTx = findViewById(R.id.etSearchCardTx); // FIXED: Assigned to the global field
+        etSearchCardTx = findViewById(R.id.etSearchCardTx);
 
         tvBankName.setText(bankName != null ? bankName : "Bank");
         tvCardName.setText(cardName != null ? cardName : "Credit Card");
@@ -155,8 +155,13 @@ public class CardLedgerActivity extends AppCompatActivity {
 
     private void openBillGenerationSheet() {
         List<Transaction> unbilledList = new ArrayList<>();
+
+        // THE FIX: Exact same logic as filterTransactions so the Checklist matches the screen 1-to-1!
         for (Transaction tx : masterList) {
-            if (!tx.isBilled() && ("CARD_SPEND".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType()))) {
+            boolean isUnbilledSpend = !tx.isBilled() && ("CARD_SPEND".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType()));
+            boolean isRecentPayment = "CARD_PAYMENT".equals(tx.getTransactionType()) && (tx.getBilledMonth() == null || tx.getBilledMonth().trim().isEmpty());
+
+            if (isUnbilledSpend || isRecentPayment) {
                 unbilledList.add(tx);
             }
         }
@@ -186,7 +191,15 @@ public class CardLedgerActivity extends AppCompatActivity {
 
             tvTxTitle.setText(tx.getTitle());
             tvTxDate.setText(sdf.format(new Date(tx.getTimestamp())));
-            tvTxAmount.setText(currencyFormatter.format(tx.getTotalAmount()));
+
+            // UI Polish: Make Payments Green in the Checklist!
+            if ("CARD_PAYMENT".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType())) {
+                tvTxAmount.setText("+" + currencyFormatter.format(tx.getTotalAmount()));
+                tvTxAmount.setTextColor(Color.parseColor("#388E3C")); // Green
+            } else {
+                tvTxAmount.setText(currencyFormatter.format(tx.getTotalAmount()));
+                tvTxAmount.setTextColor(Color.parseColor("#101828")); // Standard Dark
+            }
 
             cbIncludeTx.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isChecked) {
@@ -269,15 +282,8 @@ public class CardLedgerActivity extends AppCompatActivity {
             );
         }
 
-        // Auto-Sweep: Move any recent card payments into this statement as well!
-        for (Transaction tx : masterList) {
-            if ("CARD_PAYMENT".equals(tx.getTransactionType()) && (tx.getBilledMonth() == null || tx.getBilledMonth().trim().isEmpty())) {
-                batch.update(
-                        db.collection("Users").document(user.getUid()).collection("Transactions").document(tx.getTransactionId()),
-                        "billedMonth", selectedMonthYear
-                );
-            }
-        }
+        // THE FIX: Removed the invisible Auto-Sweep logic!
+        // Payments will only be added to a statement if YOU explicitly leave them checked in the popup.
 
         batch.commit().addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
@@ -340,7 +346,6 @@ public class CardLedgerActivity extends AppCompatActivity {
                     tvUnbilled.setText(currencyFormatter.format(finalUnbilledDue));
                     tvAvailableLimit.setText(currencyFormatter.format(Math.max(0, totalLimit - finalTotalUsed)));
 
-                    // FIXED: Successfully reads from the global etSearchCardTx
                     filterTransactions(etSearchCardTx.getText() != null ? etSearchCardTx.getText().toString() : "");
                 });
     }
@@ -375,8 +380,8 @@ public class CardLedgerActivity extends AppCompatActivity {
     public static class CardTransactionAdapter extends RecyclerView.Adapter<CardTransactionAdapter.ViewHolder> {
         private final List<Transaction> transactions;
         private final String currentCardName;
-        private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault());
-        private final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault());
+        private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
+        private final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
         private final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale.Builder().setLanguage("en").setRegion("IN").build());
 
         public CardTransactionAdapter(List<Transaction> transactions, String currentCardName) {

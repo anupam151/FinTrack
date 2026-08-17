@@ -54,6 +54,7 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
     private final List<Transaction> allTxList = new ArrayList<>();
     private GroupedTransactionAdapter adapter;
 
+    // Track which statement headers are currently expanded
     private final Set<String> expandedGroups = new HashSet<>();
 
     @Override
@@ -78,7 +79,7 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
             return;
         }
 
-        expandedGroups.add("Current Unbilled Cycle");
+        // We leave expandedGroups empty on start so ALL cards start perfectly collapsed
 
         findViewById(R.id.ivBack).setOnClickListener(v -> finish());
         recyclerViewAllTx = findViewById(R.id.recyclerViewAllTx);
@@ -123,8 +124,6 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
         StatementMonth unbilledMonth = new StatementMonth("Current Unbilled Cycle");
 
         for (Transaction tx : allTxList) {
-
-            // 1. If it has a specific generated Statement Month, lock it into that group.
             if (tx.getBilledMonth() != null && !tx.getBilledMonth().trim().isEmpty()) {
                 String groupName = tx.getBilledMonth();
                 StatementMonth sm = monthMap.get(groupName);
@@ -134,7 +133,6 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
                 }
                 sm.addTransaction(tx);
             }
-            // 2. BACKWARD COMPATIBILITY: If it's an old billed spend before we added billedMonth.
             else if (tx.isBilled() && !"CARD_PAYMENT".equals(tx.getTransactionType())) {
                 String groupName = backupFormat.format(new Date(tx.getTimestamp()));
                 StatementMonth sm = monthMap.get(groupName);
@@ -144,8 +142,6 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
                 }
                 sm.addTransaction(tx);
             }
-            // 3. THE FIX: If it is an unbilled spend OR a CARD_PAYMENT without a statement month,
-            // it belongs to the Current Unbilled active cycle. It cannot enter past statements.
             else {
                 unbilledMonth.addTransaction(tx);
             }
@@ -179,24 +175,22 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
 
         public void addTransaction(Transaction tx) {
             transactions.add(tx);
-            // Only add actual card spends to the "Total Billed" amount for that month
             if ("CARD_SPEND".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType())) {
                 totalBilledAmount += tx.getTotalAmount();
             }
         }
     }
 
-    public static class GroupedTransactionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
-        private static final int TYPE_HEADER = 0;
-        private static final int TYPE_ITEM = 1;
+    // =========================================================================
+    // DYNAMIC ACCORDION ADAPTER
+    // =========================================================================
+    public static class GroupedTransactionAdapter extends RecyclerView.Adapter<GroupedTransactionAdapter.AccordionViewHolder> {
 
         private final String currentCardName;
         private final Set<String> expandedGroups;
+        private final List<StatementMonth> groups = new ArrayList<>();
 
-        private final List<StatementMonth> rawGroups = new ArrayList<>();
-        private final List<Object> visibleItems = new ArrayList<>();
-
-        private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault());
+        private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
         private final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale.Builder().setLanguage("en").setRegion("IN").build());
 
         public GroupedTransactionAdapter(String currentCardName, Set<String> expandedGroups) {
@@ -206,117 +200,124 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
 
         @SuppressLint("NotifyDataSetChanged")
         public void updateData(List<StatementMonth> newGroups) {
-            this.rawGroups.clear();
-            this.rawGroups.addAll(newGroups);
-            flattenList();
-        }
-
-        @SuppressLint("NotifyDataSetChanged")
-        private void flattenList() {
-            visibleItems.clear();
-            for (StatementMonth sm : rawGroups) {
-                visibleItems.add(sm); // The Header
-
-                if (expandedGroups.contains(sm.monthYear)) {
-                    visibleItems.addAll(sm.transactions);
-                }
-            }
+            this.groups.clear();
+            this.groups.addAll(newGroups);
             notifyDataSetChanged();
         }
 
         @Override
-        public int getItemViewType(int position) {
-            return visibleItems.get(position) instanceof StatementMonth ? TYPE_HEADER : TYPE_ITEM;
+        public int getItemCount() {
+            return groups.size();
         }
 
         @NonNull
         @Override
-        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            if (viewType == TYPE_HEADER) {
-                View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_month_header, parent, false);
-                return new HeaderViewHolder(view);
-            } else {
-                View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_card_transaction, parent, false);
-                return new TransactionViewHolder(view);
-            }
+        public AccordionViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_month_header, parent, false);
+            return new AccordionViewHolder(view);
         }
 
         @Override
-        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-            if (getItemViewType(position) == TYPE_HEADER) {
-                StatementMonth sm = (StatementMonth) visibleItems.get(position);
-                HeaderViewHolder headerHolder = (HeaderViewHolder) holder;
+        public void onBindViewHolder(@NonNull AccordionViewHolder holder, int position) {
+            StatementMonth sm = groups.get(position);
+            Context context = holder.itemView.getContext();
 
-                headerHolder.tvMonthHeader.setText(sm.monthYear);
-                headerHolder.tvTotalBillAmount.setText(currencyFormatter.format(sm.totalBilledAmount));
+            holder.tvMonthHeader.setText(sm.monthYear);
+            holder.tvTotalBillAmount.setText(currencyFormatter.format(sm.totalBilledAmount));
 
-                if (sm.monthYear.equals("Current Unbilled Cycle")) {
-                    headerHolder.tvMonthHeader.setTextColor(Color.parseColor("#F57C00"));
-                } else {
-                    headerHolder.tvMonthHeader.setTextColor(Color.parseColor("#082561"));
-                }
-
-                boolean isExpanded = expandedGroups.contains(sm.monthYear);
-                headerHolder.ivExpandToggle.setRotation(isExpanded ? 180f : 0f);
-
-                headerHolder.layoutHeaderClickable.setOnClickListener(v -> {
-                    if (isExpanded) {
-                        expandedGroups.remove(sm.monthYear);
-                    } else {
-                        expandedGroups.add(sm.monthYear);
-                    }
-                    flattenList();
-                });
-
+            // DYNAMIC COLOR CHANGE FOR UNBILLED CYCLE
+            if (sm.monthYear.equals("Current Unbilled Cycle")) {
+                holder.tvMonthHeader.setTextColor(Color.parseColor("#F57C00")); // Orange Text
+                ((MaterialCardView) holder.itemView).setCardBackgroundColor(Color.parseColor("#FFF8E1")); // Soft Orange BG
             } else {
-                Transaction tx = (Transaction) visibleItems.get(position);
-                TransactionViewHolder itemHolder = (TransactionViewHolder) holder;
-
-                itemHolder.tvTxTitle.setText(tx.getTitle());
-                itemHolder.tvTxDate.setText(dateFormat.format(new Date(tx.getTimestamp())));
-                itemHolder.tvTxAmount.setText(currencyFormatter.format(tx.getTotalAmount()));
-
-                String shortId = tx.getTransactionId() != null && tx.getTransactionId().length() >= 6
-                        ? tx.getTransactionId().substring(0, 6).toUpperCase()
-                        : "UNKNOWN";
-                itemHolder.tvTxNumber.setText("Txn: #" + shortId);
-
-                itemHolder.tvTxTotalAmount.setVisibility(View.GONE);
-                itemHolder.tvTxSource.setVisibility(View.GONE);
-
-                if ("CARD_PAYMENT".equals(tx.getTransactionType())) {
-                    itemHolder.tvTxStatus.setText("Bill Paid");
-                    itemHolder.tvTxStatus.setTextColor(Color.parseColor("#388E3C"));
-                    itemHolder.badgeStatus.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
-                    itemHolder.cardIconContainer.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
-                    itemHolder.ivTxIcon.setColorFilter(Color.parseColor("#388E3C"));
-                } else if ("PAY_CREDIT".equals(tx.getTransactionType())) {
-                    itemHolder.tvTxStatus.setText("Paid Credit");
-                    itemHolder.tvTxStatus.setTextColor(Color.parseColor("#388E3C"));
-                    itemHolder.badgeStatus.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
-                    itemHolder.cardIconContainer.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
-                    itemHolder.ivTxIcon.setColorFilter(Color.parseColor("#388E3C"));
-                } else {
-                    if (tx.isBilled()) {
-                        itemHolder.tvTxStatus.setText("Billed");
-                        itemHolder.tvTxStatus.setTextColor(Color.parseColor("#D32F2F"));
-                        itemHolder.badgeStatus.setCardBackgroundColor(Color.parseColor("#FFEBEE"));
-                    } else {
-                        itemHolder.tvTxStatus.setText("Unbilled");
-                        itemHolder.tvTxStatus.setTextColor(Color.parseColor("#F57C00"));
-                        itemHolder.badgeStatus.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
-                    }
-                    itemHolder.cardIconContainer.setCardBackgroundColor(Color.parseColor("#E3F2FD"));
-                    itemHolder.ivTxIcon.setColorFilter(Color.parseColor("#1565C0"));
-                }
-
-                itemHolder.itemView.setOnClickListener(v -> showTransactionDetailsSheet(v.getContext(), tx));
+                holder.tvMonthHeader.setTextColor(Color.parseColor("#082561")); // Blue Text
+                ((MaterialCardView) holder.itemView).setCardBackgroundColor(Color.parseColor("#FFFFFF")); // White BG
             }
-        }
 
-        @Override
-        public int getItemCount() {
-            return visibleItems.size();
+            boolean isExpanded = expandedGroups.contains(sm.monthYear);
+            holder.ivExpandToggle.setRotation(isExpanded ? 180f : 0f);
+
+            // THE FIX: Toggle the custom ScrollView instead of just the layout!
+            holder.viewDivider.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
+            holder.scrollTransactionsContainer.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
+
+            // Toggle Expand/Collapse
+            holder.layoutHeaderClickable.setOnClickListener(v -> {
+                if (isExpanded) {
+                    expandedGroups.remove(sm.monthYear);
+                } else {
+                    expandedGroups.add(sm.monthYear);
+                }
+                notifyItemChanged(position);
+            });
+
+            // INJECT TRANSACTIONS
+            holder.layoutTransactionsContainer.removeAllViews();
+            if (isExpanded) {
+                // Breathing room margins so they don't overlap inside the parent card
+                int horizontalMargin = (int) (10 * context.getResources().getDisplayMetrics().density);
+                int verticalMargin = (int) (6 * context.getResources().getDisplayMetrics().density);
+
+                for (Transaction tx : sm.transactions) {
+                    View itemHolder = LayoutInflater.from(context).inflate(R.layout.item_card_transaction, holder.layoutTransactionsContainer, false);
+
+                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    params.setMargins(horizontalMargin, verticalMargin, horizontalMargin, verticalMargin);
+                    itemHolder.setLayoutParams(params);
+
+                    TextView tvTxTitle = itemHolder.findViewById(R.id.tvTxTitle);
+                    TextView tvTxDate = itemHolder.findViewById(R.id.tvTxDate);
+                    TextView tvTxNumber = itemHolder.findViewById(R.id.tvTxNumber);
+                    TextView tvTxSource = itemHolder.findViewById(R.id.tvTxSource);
+                    TextView tvTxAmount = itemHolder.findViewById(R.id.tvTxAmount);
+                    TextView tvTxStatus = itemHolder.findViewById(R.id.tvTxStatus);
+                    TextView tvTxTotalAmount = itemHolder.findViewById(R.id.tvTxTotalAmount);
+                    MaterialCardView badgeStatus = itemHolder.findViewById(R.id.badgeStatus);
+                    CardView cardIconContainer = itemHolder.findViewById(R.id.cardIconContainer);
+                    ImageView ivTxIcon = itemHolder.findViewById(R.id.ivTxIcon);
+
+                    tvTxTitle.setText(tx.getTitle());
+                    tvTxDate.setText(dateFormat.format(new Date(tx.getTimestamp())));
+                    tvTxAmount.setText(currencyFormatter.format(tx.getTotalAmount()));
+
+                    String shortId = tx.getTransactionId() != null && tx.getTransactionId().length() >= 6
+                            ? tx.getTransactionId().substring(0, 6).toUpperCase()
+                            : "UNKNOWN";
+                    tvTxNumber.setText("Txn: #" + shortId);
+
+                    tvTxTotalAmount.setVisibility(View.GONE);
+                    tvTxSource.setVisibility(View.GONE);
+
+                    if ("CARD_PAYMENT".equals(tx.getTransactionType())) {
+                        tvTxStatus.setText("Bill Paid");
+                        tvTxStatus.setTextColor(Color.parseColor("#388E3C"));
+                        badgeStatus.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
+                        cardIconContainer.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
+                        ivTxIcon.setColorFilter(Color.parseColor("#388E3C"));
+                    } else if ("PAY_CREDIT".equals(tx.getTransactionType())) {
+                        tvTxStatus.setText("Paid Credit");
+                        tvTxStatus.setTextColor(Color.parseColor("#388E3C"));
+                        badgeStatus.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
+                        cardIconContainer.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
+                        ivTxIcon.setColorFilter(Color.parseColor("#388E3C"));
+                    } else {
+                        if (tx.isBilled()) {
+                            tvTxStatus.setText("Billed");
+                            tvTxStatus.setTextColor(Color.parseColor("#D32F2F"));
+                            badgeStatus.setCardBackgroundColor(Color.parseColor("#FFEBEE"));
+                        } else {
+                            tvTxStatus.setText("Unbilled");
+                            tvTxStatus.setTextColor(Color.parseColor("#F57C00"));
+                            badgeStatus.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
+                        }
+                        cardIconContainer.setCardBackgroundColor(Color.parseColor("#E3F2FD"));
+                        ivTxIcon.setColorFilter(Color.parseColor("#1565C0"));
+                    }
+
+                    itemHolder.setOnClickListener(v -> showTransactionDetailsSheet(context, tx));
+                    holder.layoutTransactionsContainer.addView(itemHolder);
+                }
+            }
         }
 
         @SuppressLint({"SetTextI18n", "InflateParams"})
@@ -408,39 +409,23 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
             sheetDialog.show();
         }
 
-        public static class HeaderViewHolder extends RecyclerView.ViewHolder {
-            LinearLayout layoutHeaderClickable;
+        public static class AccordionViewHolder extends RecyclerView.ViewHolder {
+            LinearLayout layoutHeaderClickable, layoutTransactionsContainer;
+            View viewDivider;
+            com.cluster.fintrack.MaxHeightScrollView scrollTransactionsContainer; // THE NEW CUSTOM SCROLLVIEW
             TextView tvMonthHeader, tvTotalBillAmount, tvCashbackAmount;
             ImageView ivExpandToggle;
 
-            public HeaderViewHolder(@NonNull View itemView) {
+            public AccordionViewHolder(@NonNull View itemView) {
                 super(itemView);
                 layoutHeaderClickable = itemView.findViewById(R.id.layoutHeaderClickable);
+                layoutTransactionsContainer = itemView.findViewById(R.id.layoutTransactionsContainer);
+                viewDivider = itemView.findViewById(R.id.viewDivider);
+                scrollTransactionsContainer = itemView.findViewById(R.id.scrollTransactionsContainer); // INITIALIZED HERE
                 tvMonthHeader = itemView.findViewById(R.id.tvMonthHeader);
                 tvTotalBillAmount = itemView.findViewById(R.id.tvTotalBillAmount);
                 tvCashbackAmount = itemView.findViewById(R.id.tvCashbackAmount);
                 ivExpandToggle = itemView.findViewById(R.id.ivExpandToggle);
-            }
-        }
-
-        public static class TransactionViewHolder extends RecyclerView.ViewHolder {
-            TextView tvTxTitle, tvTxDate, tvTxNumber, tvTxSource, tvTxAmount, tvTxStatus, tvTxTotalAmount;
-            MaterialCardView badgeStatus;
-            CardView cardIconContainer;
-            ImageView ivTxIcon;
-
-            public TransactionViewHolder(@NonNull View itemView) {
-                super(itemView);
-                tvTxTitle = itemView.findViewById(R.id.tvTxTitle);
-                tvTxDate = itemView.findViewById(R.id.tvTxDate);
-                tvTxNumber = itemView.findViewById(R.id.tvTxNumber);
-                tvTxSource = itemView.findViewById(R.id.tvTxSource);
-                tvTxAmount = itemView.findViewById(R.id.tvTxAmount);
-                tvTxStatus = itemView.findViewById(R.id.tvTxStatus);
-                tvTxTotalAmount = itemView.findViewById(R.id.tvTxTotalAmount);
-                badgeStatus = itemView.findViewById(R.id.badgeStatus);
-                cardIconContainer = itemView.findViewById(R.id.cardIconContainer);
-                ivTxIcon = itemView.findViewById(R.id.ivTxIcon);
             }
         }
     }

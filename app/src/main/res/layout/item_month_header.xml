@@ -1,109 +1,137 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_marginHorizontal="16dp"
-    android:layout_marginTop="16dp"
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginTop="12dp"
     android:layout_marginBottom="4dp"
     app:cardBackgroundColor="#FFFFFF"
     app:cardCornerRadius="12dp"
     app:cardElevation="2dp"
-    app:strokeWidth="0dp">
+    app:strokeWidth="1dp"
+    app:strokeColor="#E2E8F0"
+    tools:ignore="HardcodedText, ContentDescription">
 
     <LinearLayout
-        android:id="@+id/layoutHeaderClickable"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true"
-        tools:ignore="HardcodedText, ContentDescription">
+        android:orientation="vertical">
 
-        <!-- Top Row: Date & Arrow -->
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <TextView
-                android:id="@+id/tvMonthHeader"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="16 August 2026"
-                android:textColor="#082561"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_centerVertical="true" />
-
-            <ImageView
-                android:id="@+id/ivExpandToggle"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:src="@android:drawable/arrow_down_float"
-                app:tint="#667085" />
-        </RelativeLayout>
-
-        <!-- Bottom Row: Totals -->
+        <!-- HEADER SECTION (Clickable) -->
         <LinearLayout
+            android:id="@+id/layoutHeaderClickable"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="12dp"
-            android:baselineAligned="false"
-            android:weightSum="2">
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true">
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/tvMonthHeader"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="August 2026"
+                    android:textColor="#082561"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_centerVertical="true" />
+
+                <ImageView
+                    android:id="@+id/ivExpandToggle"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/down_arrow"/>
+            </RelativeLayout>
 
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                android:orientation="horizontal"
+                android:layout_marginTop="12dp"
+                android:baselineAligned="false"
+                android:weightSum="2">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="Total Billed"
-                    android:textColor="#667085"
-                    android:textSize="12sp" />
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Total Billed"
+                        android:textColor="#667085"
+                        android:textSize="12sp" />
+                    <TextView
+                        android:id="@+id/tvTotalBillAmount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="₹0.00"
+                        android:textColor="#D32F2F"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
-                <TextView
-                    android:id="@+id/tvTotalBillAmount"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="₹0.00"
-                    android:textColor="#D32F2F"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="end">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Cashback"
+                        android:textColor="#667085"
+                        android:textSize="12sp" />
+                    <TextView
+                        android:id="@+id/tvCashbackAmount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="₹0.00"
+                        android:textColor="#388E3C"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
             </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="end">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Cashback"
-                    android:textColor="#667085"
-                    android:textSize="12sp" />
-
-                <TextView
-                    android:id="@+id/tvCashbackAmount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="₹0.00"
-                    android:textColor="#388E3C"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
         </LinearLayout>
+
+        <!-- SUBTLE DIVIDER -->
+        <View
+            android:id="@+id/viewDivider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#E2E8F0"
+            android:visibility="gone" />
+
+        <!-- THE FIX: A CUSTOM SCROLL VIEW WITH A MAX HEIGHT -->
+        <com.cluster.fintrack.MaxHeightScrollView
+            android:id="@+id/scrollTransactionsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone">
+
+            <!-- NESTED TRANSACTIONS CONTAINER -->
+            <LinearLayout
+                android:id="@+id/layoutTransactionsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#F8FAFC"
+                android:paddingTop="8dp"
+                android:paddingBottom="12dp" />
+
+        </com.cluster.fintrack.MaxHeightScrollView>
+
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
