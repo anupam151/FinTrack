@@ -166,7 +166,7 @@ public class MasterTransactionsActivity extends AppCompatActivity {
             gd.setColor(Color.parseColor("#082561")); // App Theme Dark Blue
             gd.setCornerRadius(100f); // Make it a beautiful floating pill
             bottomSelectionBar.setBackground(gd);
-            bottomSelectionBar.setPadding(60, 40, 60, 40);
+            bottomSelectionBar.setPadding(80, 40, 80, 40);
             bottomSelectionBar.setGravity(android.view.Gravity.CENTER_VERTICAL);
             bottomSelectionBar.setElevation(20f); // Material shadow
 
@@ -174,7 +174,7 @@ public class MasterTransactionsActivity extends AppCompatActivity {
             LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(iconSize, iconSize);
 
             ImageView ivClose = new ImageView(this);
-            ivClose.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
+            ivClose.setImageResource(R.drawable.cross_wh);
             ivClose.setColorFilter(Color.WHITE);
             ivClose.setLayoutParams(iconParams);
             ivClose.setOnClickListener(v -> clearSelection());
@@ -188,10 +188,10 @@ public class MasterTransactionsActivity extends AppCompatActivity {
             tvSelectionCount.setLayoutParams(tvParams);
 
             ivEditSelection = new ImageView(this);
-            ivEditSelection.setImageResource(android.R.drawable.ic_menu_edit);
+            ivEditSelection.setImageResource(R.drawable.edit);
             ivEditSelection.setColorFilter(Color.WHITE);
             LinearLayout.LayoutParams editParams = new LinearLayout.LayoutParams(iconSize, iconSize);
-            editParams.setMargins(0, 0, 60, 0);
+            editParams.setMargins(20, 0, 60, 0);
             ivEditSelection.setLayoutParams(editParams);
             ivEditSelection.setOnClickListener(v -> {
                 Toast.makeText(this, "Edit feature coming soon!", Toast.LENGTH_SHORT).show();
@@ -199,8 +199,8 @@ public class MasterTransactionsActivity extends AppCompatActivity {
             });
 
             ImageView ivDelete = new ImageView(this);
-            ivDelete.setImageResource(android.R.drawable.ic_menu_delete);
-            ivDelete.setColorFilter(Color.parseColor("#FF5252"));
+            ivDelete.setImageResource(R.drawable.delete_wh);
+            ivDelete.setColorFilter(Color.parseColor("#1abcab"));
             ivDelete.setLayoutParams(iconParams);
             ivDelete.setOnClickListener(v -> confirmBulkDelete());
 
