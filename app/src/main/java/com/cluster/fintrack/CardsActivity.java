@@ -259,7 +259,18 @@ public class CardsActivity extends AppCompatActivity {
                 intent.putExtra("TOTAL_LIMIT", card.getTotalLimit());
                 intent.putExtra("BILLING_DAY", card.getBillingDay());
                 intent.putExtra("THEME_COLOR", card.getThemeColor());
-                intent.putExtra("IS_CASHBACK", card.isCashbackCard()); // Passing the new boolean
+                intent.putExtra("IS_CASHBACK", card.isCashbackCard());
+
+                // --- NEW LOGIC: Extract the cashback rates and pass them as a double array ---
+                List<Double> ratesList = card.getCashbackRates();
+                if (ratesList != null && !ratesList.isEmpty()) {
+                    double[] ratesArray = new double[ratesList.size()];
+                    for (int i = 0; i < ratesList.size(); i++) {
+                        ratesArray[i] = ratesList.get(i);
+                    }
+                    intent.putExtra("CASHBACK_RATES", ratesArray);
+                }
+
                 startActivity(intent);
             } else if (item.getItemId() == 1) {
                 showDeleteConfirmationDialog(card);
@@ -446,24 +457,21 @@ public class CardsActivity extends AppCompatActivity {
     }
 
     // --- THIS IS FOR THE MAIN ACTIVITY SEARCH BOX ONLY ---
-    // Place this at the bottom of CardsActivity.java (outside any other method)
     @Override
     public boolean dispatchTouchEvent(android.view.MotionEvent event) {
         if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
             View v = getCurrentFocus();
 
-            // Check if the currently focused view is the SEARCH BOX
             if (v != null && v.getId() == R.id.etSearchCard) {
                 android.graphics.Rect outRect = new android.graphics.Rect();
                 v.getGlobalVisibleRect(outRect);
 
-                // If you clicked OUTSIDE the search box
                 if (!outRect.contains((int) event.getRawX(), (int) event.getRawY())) {
-                    v.clearFocus(); // Remove the cursor from the search box
+                    v.clearFocus();
 
                     if (getWindow() != null) {
                         WindowInsetsControllerCompat controller = new WindowInsetsControllerCompat(getWindow(), v);
-                        controller.hide(WindowInsetsCompat.Type.ime()); // Hide the keyboard
+                        controller.hide(WindowInsetsCompat.Type.ime());
                     }
                 }
             }

@@ -1,6 +1,9 @@
 package com.cluster.fintrack;
 
-@SuppressWarnings("unused") // Tells Android Studio to ignore "never used" warnings for Firebase models
+import java.util.ArrayList;
+import java.util.List;
+
+@SuppressWarnings("unused") // Tells Android Studio to ignore "never used" warnings for Firebase
 public class Card {
     private String cardId;
     private String bankName;
@@ -11,14 +14,16 @@ public class Card {
     private int billingDay;
     private String themeColor;
     private long timestamp;
-    private boolean isCashbackCard; // NEW CASHBACK TRACKER
+    private boolean isCashbackCard;
+    private List<Double> cashbackRates; // DYNAMIC CASHBACK TIERS
 
     public Card() {
         // Required empty constructor for Firebase
     }
 
     public Card(String cardId, String bankName, String cardName, String cardType, String last4Digits,
-                double totalLimit, int billingDay, String themeColor, long timestamp, boolean isCashbackCard) {
+                double totalLimit, int billingDay, String themeColor, long timestamp,
+                boolean isCashbackCard, List<Double> cashbackRates) {
         this.cardId = cardId;
         this.bankName = bankName;
         this.cardName = cardName;
@@ -29,6 +34,7 @@ public class Card {
         this.themeColor = themeColor;
         this.timestamp = timestamp;
         this.isCashbackCard = isCashbackCard;
+        this.cashbackRates = (cashbackRates != null) ? cashbackRates : new ArrayList<>();
     }
 
     public String getCardId() { return cardId; }
@@ -60,4 +66,7 @@ public class Card {
 
     public boolean isCashbackCard() { return isCashbackCard; }
     public void setCashbackCard(boolean cashbackCard) { this.isCashbackCard = cashbackCard; }
+
+    public List<Double> getCashbackRates() { return cashbackRates; }
+    public void setCashbackRates(List<Double> cashbackRates) { this.cashbackRates = cashbackRates; }
 }

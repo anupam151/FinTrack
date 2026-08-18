@@ -34,20 +34,21 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
-@SuppressLint("SetTextI18n") // Suppresses the "String literal can not be translated" warnings
+@SuppressLint("SetTextI18n")
 public class AddCardActivity extends AppCompatActivity {
 
-    private TextInputEditText etCardName, etLast4Digits, etTotalLimit, etBillingDay;
+    private TextInputEditText etCardName, etLast4Digits, etTotalLimit, etBillingDay, etCashbackRates;
     private MaterialAutoCompleteTextView spinBankName, spinCardType;
-    private TextInputLayout tilBankName, tilCardType;
+    private TextInputLayout tilBankName, tilCardType, tilCashbackRates;
     private MaterialCardView cardColorPreview;
     private MaterialSwitch switchCashback;
     private MaterialButton btnSaveCard;
     private TextView tvActivityTitle;
 
-    // FIXED: Made the array final
     private final int[] currentColor = {Color.parseColor("#082561")};
     private final int defaultColor = Color.parseColor("#082561");
 
@@ -63,10 +64,8 @@ public class AddCardActivity extends AppCompatActivity {
         controller.setAppearanceLightStatusBars(true);
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.mainAddCard), (v, windowInsets) -> {
-            // THE FIX: Added Type.ime() to detect the keyboard and perfectly resize the screen!
             Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.ime());
             v.setPadding(0, insets.top, 0, insets.bottom);
-            // Consuming the insets forces the layout to shrink when the keyboard appears
             return WindowInsetsCompat.CONSUMED;
         });
 
@@ -83,6 +82,9 @@ public class AddCardActivity extends AppCompatActivity {
         etTotalLimit = findViewById(R.id.etTotalLimit);
         etBillingDay = findViewById(R.id.etBillingDay);
 
+        etCashbackRates = findViewById(R.id.etCashbackRates);
+        tilCashbackRates = findViewById(R.id.tilCashbackRates);
+
         spinBankName = findViewById(R.id.spinBankName);
         tilBankName = findViewById(R.id.tilBankName);
 
@@ -93,9 +95,16 @@ public class AddCardActivity extends AppCompatActivity {
         switchCashback = findViewById(R.id.switchCashback);
         btnSaveCard = findViewById(R.id.btnSaveCard);
 
-        // Hide clear button on BOTH dropdowns to destroy Material's click-to-open behavior
         tilBankName.setEndIconMode(TextInputLayout.END_ICON_NONE);
         tilCardType.setEndIconMode(TextInputLayout.END_ICON_NONE);
+
+        switchCashback.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            tilCashbackRates.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            // Only autofill if the text box is empty to prevent overwriting user edits
+            if (isChecked && TextUtils.isEmpty(etCashbackRates.getText())) {
+                etCashbackRates.setText("1, 2, 5");
+            }
+        });
     }
 
     private void checkForEditMode() {
@@ -121,7 +130,24 @@ public class AddCardActivity extends AppCompatActivity {
             int bDay = getIntent().getIntExtra("BILLING_DAY", 1);
             etBillingDay.setText(String.valueOf(bDay));
 
-            switchCashback.setChecked(getIntent().getBooleanExtra("IS_CASHBACK", false));
+            // Load the numbers into the text box before flipping the switch
+            double[] ratesArray = getIntent().getDoubleArrayExtra("CASHBACK_RATES");
+            if (ratesArray != null && ratesArray.length > 0) {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < ratesArray.length; i++) {
+                    if (ratesArray[i] == (long) ratesArray[i]) {
+                        sb.append(String.format(Locale.getDefault(), "%d", (long) ratesArray[i]));
+                    } else {
+                        sb.append(ratesArray[i]);
+                    }
+                    if (i < ratesArray.length - 1) sb.append(", ");
+                }
+                etCashbackRates.setText(sb.toString());
+            }
+
+            boolean isCb = getIntent().getBooleanExtra("IS_CASHBACK", false);
+            switchCashback.setChecked(isCb);
+            tilCashbackRates.setVisibility(isCb ? View.VISIBLE : View.GONE);
 
             try {
                 String themeColor = getIntent().getStringExtra("THEME_COLOR");
@@ -129,11 +155,8 @@ public class AddCardActivity extends AppCompatActivity {
                     currentColor[0] = Color.parseColor(themeColor);
                     cardColorPreview.setCardBackgroundColor(currentColor[0]);
                 }
-            } catch (Exception e) {
-                android.util.Log.e("AddCardActivity", "Failed to parse theme color", e);
-            }
+            } catch (Exception ignored) {}
         } else {
-            // Add Mode Defaults
             etCardName.requestFocus();
             WindowInsetsControllerCompat controller = new WindowInsetsControllerCompat(getWindow(), etCardName);
             controller.show(WindowInsetsCompat.Type.ime());
@@ -141,17 +164,13 @@ public class AddCardActivity extends AppCompatActivity {
     }
 
     private void setupDropdowns() {
-        // THE FIX: Create a rounded white background programmatically
         GradientDrawable roundedDropdownBackground = new GradientDrawable();
         roundedDropdownBackground.setColor(Color.WHITE);
-        // 12dp rounded corners to match the Input layout perfectly
         float cornerRadius = 12 * getResources().getDisplayMetrics().density;
         roundedDropdownBackground.setCornerRadius(cornerRadius);
 
         spinBankName.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
         spinBankName.setAdapter(getBankArrayAdapter());
-
-        // Apply the beautiful rounded corners
         spinBankName.setDropDownBackgroundDrawable(roundedDropdownBackground);
 
         spinBankName.addTextChangedListener(new TextWatcher() {
@@ -166,8 +185,6 @@ public class AddCardActivity extends AppCompatActivity {
         String[] cardTypes = new String[]{"RuPay", "Visa", "MasterCard", "Amex", "Discover", "Other"};
         ArrayAdapter<String> cardTypeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, cardTypes);
         spinCardType.setAdapter(cardTypeAdapter);
-
-        // Apply the beautiful rounded corners
         spinCardType.setDropDownBackgroundDrawable(roundedDropdownBackground);
 
         spinCardType.addTextChangedListener(new TextWatcher() {
@@ -181,7 +198,6 @@ public class AddCardActivity extends AppCompatActivity {
 
     private void setupClickListeners() {
         findViewById(R.id.ivBack).setOnClickListener(v -> finish());
-
         findViewById(R.id.btnClearAllFields).setOnClickListener(v -> clearAllFields());
 
         findViewById(R.id.btnResetColor).setOnClickListener(v -> {
@@ -210,7 +226,9 @@ public class AddCardActivity extends AppCompatActivity {
         etLast4Digits.setText("");
         etTotalLimit.setText("");
         etBillingDay.setText("");
+        etCashbackRates.setText("");
         switchCashback.setChecked(false);
+        tilCashbackRates.setVisibility(View.GONE);
 
         currentColor[0] = defaultColor;
         cardColorPreview.setCardBackgroundColor(defaultColor);
@@ -221,6 +239,7 @@ public class AddCardActivity extends AppCompatActivity {
         etLast4Digits.setError(null);
         etTotalLimit.setError(null);
         etBillingDay.setError(null);
+        etCashbackRates.setError(null);
 
         etCardName.requestFocus();
     }
@@ -233,6 +252,7 @@ public class AddCardActivity extends AppCompatActivity {
         String limitStr = String.valueOf(etTotalLimit.getText()).trim();
         String billingDayStr = String.valueOf(etBillingDay.getText()).trim();
         boolean isCashback = switchCashback.isChecked();
+        String ratesStr = String.valueOf(etCashbackRates.getText()).trim();
 
         if (TextUtils.isEmpty(cardName)) { etCardName.setError("Required"); return; }
         if (TextUtils.isEmpty(bankName)) { spinBankName.setError("Required"); return; }
@@ -299,6 +319,48 @@ public class AddCardActivity extends AppCompatActivity {
             return;
         }
 
+        // --- STRICT DUPLICATE CHECK & SORTING ENGINE ---
+        List<Double> ratesList = new ArrayList<>();
+        if (isCashback) {
+            if (TextUtils.isEmpty(ratesStr)) {
+                etCashbackRates.setError("Enter at least one percentage");
+                etCashbackRates.requestFocus();
+                return;
+            }
+
+            String[] parts = ratesStr.split(",");
+            boolean hasDuplicate = false;
+
+            for (String part : parts) {
+                try {
+                    double val = Double.parseDouble(part.replace("%", "").trim());
+                    if (val > 0) {
+                        if (ratesList.contains(val)) {
+                            hasDuplicate = true;
+                            break; // Stop parsing, duplicate found!
+                        } else {
+                            ratesList.add(val);
+                        }
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+
+            if (hasDuplicate) {
+                etCashbackRates.setError("Duplicate percentages are not allowed");
+                etCashbackRates.requestFocus();
+                return;
+            }
+
+            if (ratesList.isEmpty()) {
+                etCashbackRates.setError("Enter valid numbers (e.g., 1, 2, 5)");
+                etCashbackRates.requestFocus();
+                return;
+            }
+
+            // Cleanly sort the array from lowest to highest percentage!
+            Collections.sort(ratesList);
+        }
+
         String themeColorHex = String.format("#%06X", (0xFFFFFF & currentColor[0]));
 
         if (FirebaseAuth.getInstance().getCurrentUser() == null) {
@@ -312,7 +374,7 @@ public class AddCardActivity extends AppCompatActivity {
         String cardIdToSave = editCardId != null ? editCardId : db.collection("Users").document(userId).collection("Cards").document().getId();
         long timestamp = System.currentTimeMillis();
 
-        Card savedCard = new Card(cardIdToSave, bankName, cardName, cardType, last4, totalLimit, billingDay, themeColorHex, timestamp, isCashback);
+        Card savedCard = new Card(cardIdToSave, bankName, cardName, cardType, last4, totalLimit, billingDay, themeColorHex, timestamp, isCashback, ratesList);
 
         btnSaveCard.setEnabled(false);
         btnSaveCard.setText(editCardId != null ? "Updating..." : "Saving...");
@@ -390,7 +452,6 @@ public class AddCardActivity extends AppCompatActivity {
         };
     }
 
-    // Bulletproof Keyboard Dispatch
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
@@ -402,7 +463,7 @@ public class AddCardActivity extends AppCompatActivity {
                     boolean clickedAnotherEditText = false;
                     int[] editIds = {
                             R.id.etCardName, R.id.spinBankName, R.id.spinCardType,
-                            R.id.etLast4Digits, R.id.etTotalLimit, R.id.etBillingDay
+                            R.id.etLast4Digits, R.id.etTotalLimit, R.id.etBillingDay, R.id.etCashbackRates
                     };
                     Rect rect = new Rect();
                     for (int id : editIds) {

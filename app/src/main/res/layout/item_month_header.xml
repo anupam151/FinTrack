@@ -65,7 +65,7 @@
                     android:layout_toStartOf="@id/ivExpandToggle"
                     android:layout_centerVertical="true"
                     android:layout_marginEnd="16dp"
-                    android:src="@android:drawable/ic_menu_revert"
+                    android:src="@drawable/undo"
                     app:tint="#D32F2F"
                     android:visibility="gone" />
 

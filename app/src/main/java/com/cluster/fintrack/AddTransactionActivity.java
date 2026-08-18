@@ -19,6 +19,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -74,10 +75,10 @@ public class AddTransactionActivity extends AppCompatActivity {
     private NestedScrollView mainScrollView;
 
     // TOGGLES
-    private RadioGroup rgSpendOptions, rgReceiveOptions, rgSplitDecision;
+    private RadioGroup rgSpendOptions, rgReceiveOptions, rgSplitDecision, rgCashbackPercentage;
 
     // SPEND UI ELEMENTS
-    private MaterialCardView cardPaymentSource, cardTargetCreditCard, cardSplitEngine, cardPayBackCredit, cardPayBackAdvance, cardSinglePerson;
+    private MaterialCardView cardPaymentSource, cardTargetCreditCard, cardSplitEngine, cardPayBackCredit, cardPayBackAdvance, cardSinglePerson, cardCashback;
     private MaterialAutoCompleteTextView spinPaymentSource, spinTargetCreditCard, spinPayBackPerson, spinSinglePerson;
     private TextView btnAddSplitFinMate, tvNoCreditTx, tvPayBackAdvanceTitle, tvPayBackAdvanceAmount;
     private ImageView ivPayBackAdvanceIcon;
@@ -95,6 +96,10 @@ public class AddTransactionActivity extends AppCompatActivity {
     private final List<FinMate> allFinMatesList = new ArrayList<>();
     private final Map<String, String> sourceNameToIdMap = new HashMap<>();
     private final Map<String, String> finMateNameToIdMap = new HashMap<>();
+
+    // CASHBACK TRACKERS
+    private final Map<String, Boolean> cardCashbackMap = new HashMap<>();
+    private final Map<String, List<Double>> cardCashbackRatesMap = new HashMap<>();
 
     private final Set<String> existingTxIds = new HashSet<>();
 
@@ -124,7 +129,7 @@ public class AddTransactionActivity extends AppCompatActivity {
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.mainAddTransaction), (v, windowInsets) -> {
             Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.ime());
             v.setPadding(0, insets.top, 0, insets.bottom);
-            return windowInsets;
+            return WindowInsetsCompat.CONSUMED;
         });
 
         initializeViews();
@@ -189,6 +194,9 @@ public class AddTransactionActivity extends AppCompatActivity {
         cardSinglePerson = findViewById(R.id.cardSinglePerson);
         cardPayBackCredit = findViewById(R.id.cardPayBackCredit);
         cardPayBackAdvance = findViewById(R.id.cardPayBackAdvance);
+        cardCashback = findViewById(R.id.cardCashback);
+        rgCashbackPercentage = findViewById(R.id.rgCashbackPercentage);
+
         spinPaymentSource = findViewById(R.id.spinPaymentSource);
         spinTargetCreditCard = findViewById(R.id.spinTargetCreditCard);
         spinPayBackPerson = findViewById(R.id.spinPayBackPerson);
@@ -255,6 +263,7 @@ public class AddTransactionActivity extends AppCompatActivity {
                     rgSplitDecision.check(R.id.rbSplitNo);
                     clearSplitEngine();
                 }
+                updateCashbackVisibility();
             }
         });
 
@@ -345,7 +354,6 @@ public class AddTransactionActivity extends AppCompatActivity {
             cardReceivePerson.setVisibility(View.VISIBLE);
 
             clearSplitEngine();
-
             updateReceiveSubViews();
             etTotalAmount.setText("");
         });
@@ -384,6 +392,50 @@ public class AddTransactionActivity extends AppCompatActivity {
         activeSplitRows.clear();
         activeSplitInputs.clear();
         creditCheckBoxes.clear();
+    }
+
+    // THE FIX: Dynamically creates radio buttons based on the Card's configured percentages!
+    private void updateCashbackVisibility() {
+        if (isSpendMode && rgSpendOptions.getCheckedRadioButtonId() == R.id.rbNormalSpend) {
+            String selectedSource = spinPaymentSource.getText() != null ? spinPaymentSource.getText().toString() : "";
+            String cardId = sourceNameToIdMap.get(selectedSource);
+
+            if (cardId != null && Boolean.TRUE.equals(cardCashbackMap.get(cardId))) {
+                List<Double> rates = cardCashbackRatesMap.get(cardId);
+
+                if (rates != null && !rates.isEmpty()) {
+                    rgCashbackPercentage.removeAllViews();
+
+                    for (int i = 0; i < rates.size(); i++) {
+                        Double rate = rates.get(i);
+                        RadioButton rb = new RadioButton(this);
+
+                        // ID must be generated so RadioGroup logic works seamlessly
+                        rb.setId(View.generateViewId());
+
+                        String label = (rate == Math.floor(rate))
+                                ? String.format(Locale.getDefault(), "%d%%", rate.longValue())
+                                : String.format(Locale.getDefault(), "%.1f%%", rate);
+
+                        rb.setText(label);
+                        rb.setTag(rate); // Save percentage to the view tag for easy lookup!
+                        rb.setTextColor(Color.parseColor("#082561"));
+                        rb.setButtonTintList(ColorStateList.valueOf(Color.parseColor("#1abcab")));
+
+                        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                        params.setMarginEnd((int) (12 * getResources().getDisplayMetrics().density));
+                        rb.setLayoutParams(params);
+
+                        rgCashbackPercentage.addView(rb);
+                    }
+                    cardCashback.setVisibility(View.VISIBLE);
+                    return;
+                }
+            }
+        }
+        cardCashback.setVisibility(View.GONE);
+        rgCashbackPercentage.removeAllViews();
     }
 
     private void updateSpendSubViews() {
@@ -425,6 +477,7 @@ public class AddTransactionActivity extends AppCompatActivity {
             cardPayBackCredit.setVisibility(View.VISIBLE);
             calculatePayBackAdvanceOrPartial();
         }
+        updateCashbackVisibility();
     }
 
     private void updateReceiveSubViews() {
@@ -444,6 +497,7 @@ public class AddTransactionActivity extends AppCompatActivity {
             cardReceiveAdvance.setVisibility(View.GONE);
             selectedUnpaidTransactions.clear();
         }
+        updateCashbackVisibility();
     }
 
     private void setTabActive(MaterialButton button, boolean isActive) {
@@ -474,11 +528,15 @@ public class AddTransactionActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     sourceNameToIdMap.clear();
+                    cardCashbackMap.clear();
+                    cardCashbackRatesMap.clear();
+
                     List<String> sourceNames = new ArrayList<>();
                     List<String> strictlyCardsOnly = new ArrayList<>();
 
                     sourceNames.add("Cash (Personal Liquidity)");
                     sourceNameToIdMap.put("Cash (Personal Liquidity)", "CASH");
+                    cardCashbackMap.put("CASH", false); // Cash doesn't earn cashback
 
                     for (DocumentSnapshot doc : snapshot) {
                         Card card = doc.toObject(Card.class);
@@ -488,6 +546,10 @@ public class AddTransactionActivity extends AppCompatActivity {
                             sourceNames.add(displayName);
                             strictlyCardsOnly.add(displayName);
                             sourceNameToIdMap.put(displayName, card.getCardId());
+
+                            // Log the dynamic cashback percentages
+                            cardCashbackMap.put(card.getCardId(), card.isCashbackCard());
+                            cardCashbackRatesMap.put(card.getCardId(), card.getCashbackRates());
                         }
                     }
 
@@ -1082,9 +1144,6 @@ public class AddTransactionActivity extends AppCompatActivity {
         batch.set(fmRef, data, SetOptions.merge());
     }
 
-    // ==========================================
-    // SAVE LOGIC: CARD BILL PAYMENT (NEW)
-    // ==========================================
     private void saveCardBillPayment() {
         String title = String.valueOf(etTransactionTitle.getText()).trim();
         String totalStr = String.valueOf(etTotalAmount.getText()).trim();
@@ -1130,7 +1189,6 @@ public class AddTransactionActivity extends AppCompatActivity {
         );
 
         Map<String, Transaction.TransactionSplit> splitsMap = new HashMap<>();
-        // It's technically a cash spend (outflow from bank) used to pay the card
         splitsMap.put("self", new Transaction.TransactionSplit(0.0, paymentAmount, 0.0));
         cardPaymentTx.setSplits(splitsMap);
 
@@ -1150,6 +1208,19 @@ public class AddTransactionActivity extends AppCompatActivity {
                         btnSaveTransaction.setText("Log Card Payment");
                     }
                 });
+    }
+
+    // THE FIX: Extracted dynamically fetching the checked percentage
+    private double getSelectedCashbackPercentage() {
+        if (rgCashbackPercentage == null) return 0.0;
+        int checkedId = rgCashbackPercentage.getCheckedRadioButtonId();
+        if (checkedId != -1) {
+            View checkedView = rgCashbackPercentage.findViewById(checkedId);
+            if (checkedView != null && checkedView.getTag() instanceof Double) {
+                return (Double) checkedView.getTag();
+            }
+        }
+        return 0.0;
     }
 
     private void saveSpendTransaction() {
@@ -1291,6 +1362,15 @@ public class AddTransactionActivity extends AppCompatActivity {
                     totalAmount,
                     false
             );
+
+            // --- CASHBACK CALCULATION LOGIC ---
+            if (cardCashback != null && cardCashback.getVisibility() == View.VISIBLE) {
+                double percent = getSelectedCashbackPercentage();
+                if (percent > 0.0) {
+                    double cbEarned = Math.floor((totalAmount * percent) / 100.0);
+                    transaction.setCashbackEarned(cbEarned);
+                }
+            }
 
             Map<String, Transaction.TransactionSplit> splitsMap = new HashMap<>();
 
