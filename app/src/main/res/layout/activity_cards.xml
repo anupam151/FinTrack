@@ -54,12 +54,12 @@
 
             <!-- Right-Aligned Header Add Transaction Button -->
             <ImageButton
-                android:id="@+id/btnAddTransactionHeader"
+                android:id="@+id/fabAddCard"
                 android:layout_width="55dp"
                 android:layout_height="32dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="4dp"
-                android:src="@drawable/addtxn"
+                android:padding="2dp"
+                android:src="@drawable/add_card"
                 android:scaleType="fitCenter"
                 app:tint="#082561"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -167,13 +167,13 @@
 
         <!-- FLOATING ACTION BUTTON (+) -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/fabAddCard"
+            android:id="@+id/btnAddTransactionHeader"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="24dp"
             android:clickable="true"
             android:focusable="true"
-            android:src="@drawable/add"
+            android:src="@drawable/rupee"
             app:backgroundTint="#1abcab"
             app:tint="#FFFFFF"
             app:layout_constraintBottom_toTopOf="@+id/bottomNavigationWrapper"
