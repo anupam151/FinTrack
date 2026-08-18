@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mainAddFinMate"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F8FAFC"
+    android:orientation="vertical"
+    tools:ignore="HardcodedText, ContentDescription">
+
+    <!-- Header Toolbar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
+        android:background="#FFFFFF"
+        android:elevation="4dp">
+
+        <ImageView
+            android:id="@+id/ivBack"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/back"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"/>
+
+        <TextView
+            android:id="@+id/tvActivityTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="16dp"
+            android:text="Add FinMate"
+            android:textColor="#101828"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <!-- Import from Contacts -->
+        <TextView
+            android:id="@+id/btnImportContact"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="+ Contact"
+            android:textColor="#1abcab"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:paddingVertical="6dp"
+            android:paddingHorizontal="12dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"/>
+    </LinearLayout>
+
+    <!-- Scrollable Form Inputs -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="24dp"
+            android:paddingTop="20dp"
+            android:paddingBottom="24dp">
+
+            <!-- 1. Name -->
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:hint="Full Name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxStrokeColor="#1abcab"
+                app:hintTextColor="#1abcab">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etSheetFinMateName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPersonName|textCapWords"
+                    android:paddingTop="13dp"
+                    android:paddingBottom="13dp"
+                    android:textColor="#101828"
+                    android:textSize="16sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- 2. Contact Number -->
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:hint="Contact Number"
+                app:prefixText="+91 "
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                app:prefixTextColor="#667085"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxStrokeColor="#1abcab"
+                app:hintTextColor="#1abcab">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etSheetContactNo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="phone"
+                    android:maxLength="10"
+                    android:paddingTop="13dp"
+                    android:paddingBottom="13dp"
+                    android:textColor="#101828"
+                    android:textSize="16sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- 2.5 WhatsApp Availability Question & Radio Group -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Is this number on WhatsApp?"
+                    android:textColor="#344054"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <RadioGroup
+                    android:id="@+id/radioGroupWhatsApp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <RadioButton
+                        android:id="@+id/radioYes"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Yes"
+                        android:textColor="#344054"
+                        android:textSize="14sp"
+                        android:buttonTint="#1abcab"
+                        android:layout_marginEnd="20dp" />
+
+                    <RadioButton
+                        android:id="@+id/radioNo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="No"
+                        android:textColor="#344054"
+                        android:textSize="14sp"
+                        android:buttonTint="#1abcab" />
+                </RadioGroup>
+            </LinearLayout>
+
+            <!-- 3. Email ID -->
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:hint="Email ID (Optional)"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxStrokeColor="#1abcab"
+                app:hintTextColor="#1abcab">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etSheetEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textEmailAddress"
+                    android:paddingTop="13dp"
+                    android:paddingBottom="13dp"
+                    android:textColor="#101828"
+                    android:textSize="16sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- 4. Address -->
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:hint="Address (Optional)"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxStrokeColor="#1abcab"
+                app:hintTextColor="#1abcab">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etSheetAddress"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textMultiLine|textCapSentences"
+                    android:minLines="2"
+                    android:gravity="top|start"
+                    android:paddingTop="13dp"
+                    android:paddingBottom="13dp"
+                    android:textColor="#101828"
+                    android:textSize="16sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Pinned Bottom Button -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFFFFF"
+        android:elevation="8dp"
+        android:padding="16dp">
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSaveFinMate"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="Save FinMate"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:letterSpacing="0.02"
+            android:textStyle="bold"
+            app:backgroundTint="#1abcab"
+            app:cornerRadius="28dp" />
+    </LinearLayout>
+</LinearLayout>
