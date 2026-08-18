@@ -19,8 +19,11 @@ public class Transaction {
 
     private boolean billed;
 
-    // NEW: Tracks which specific monthly statement this belongs to (e.g., "August 2026")
+    // Tracks which specific monthly statement this belongs to (e.g., "August 2026")
     private String billedMonth;
+
+    // NEW: Tracks the exact millisecond the statement was generated for the 72-hour undo window
+    private long statementGeneratedAt = 0;
 
     // --- THE SPLIT ENGINE ---
     // Key: FinMateId (or "self"). Value: The exact absolute amounts.
@@ -46,6 +49,7 @@ public class Transaction {
         this.isEmi = isEmi;
         this.billed = false;
         this.billedMonth = null; // Defaults to null until a bill is formally generated!
+        this.statementGeneratedAt = 0;
         this.splits = new HashMap<>();
     }
 
@@ -73,6 +77,9 @@ public class Transaction {
 
     public String getBilledMonth() { return billedMonth; }
     public void setBilledMonth(String billedMonth) { this.billedMonth = billedMonth; }
+
+    public long getStatementGeneratedAt() { return statementGeneratedAt; }
+    public void setStatementGeneratedAt(long statementGeneratedAt) { this.statementGeneratedAt = statementGeneratedAt; }
 
     public Map<String, TransactionSplit> getSplits() { return splits; }
     public void setSplits(Map<String, TransactionSplit> splits) { this.splits = splits; }

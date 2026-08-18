@@ -224,7 +224,6 @@ public class CardLedgerActivity extends AppCompatActivity {
     }
 
     private void showBillDateSelectionDialog(List<Transaction> selectedToBill) {
-        // Inflate our new Custom Month/Year Picker
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_month_year_picker, null);
         NumberPicker pickerMonth = dialogView.findViewById(R.id.pickerMonth);
         NumberPicker pickerYear = dialogView.findViewById(R.id.pickerYear);
@@ -236,8 +235,8 @@ public class CardLedgerActivity extends AppCompatActivity {
 
         Calendar cal = Calendar.getInstance();
         int currentYear = cal.get(Calendar.YEAR);
-        pickerYear.setMinValue(currentYear - 2); // Allow past 2 years
-        pickerYear.setMaxValue(currentYear + 5); // Allow future 5 years
+        pickerYear.setMinValue(currentYear - 2);
+        pickerYear.setMaxValue(currentYear + 5);
         pickerYear.setValue(currentYear);
 
         pickerMonth.setValue(cal.get(Calendar.MONTH));
@@ -245,7 +244,6 @@ public class CardLedgerActivity extends AppCompatActivity {
         new MaterialAlertDialogBuilder(this)
                 .setView(dialogView)
                 .setPositiveButton("Verify & Generate", (dialog, which) -> {
-                    // Create exactly "August 2026"
                     String selectedMonthYear = months[pickerMonth.getValue()] + " " + pickerYear.getValue();
                     checkIfBillExistsAndGenerate(selectedToBill, selectedMonthYear);
                 })
@@ -259,7 +257,6 @@ public class CardLedgerActivity extends AppCompatActivity {
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // STRICT VALIDATION ENGINE
         db.collection("Users").document(user.getUid()).collection("Transactions")
                 .whereEqualTo("cardId", cardId)
                 .whereEqualTo("billedMonth", selectedMonthYear)
@@ -267,7 +264,6 @@ public class CardLedgerActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     if (!snapshot.isEmpty()) {
-                        // BLOCKED: A statement for this month already exists!
                         new MaterialAlertDialogBuilder(this)
                                 .setTitle("Generation Failed")
                                 .setMessage("A statement for " + selectedMonthYear + " has already been generated. You cannot generate multiple statements for the same month.")
@@ -275,7 +271,6 @@ public class CardLedgerActivity extends AppCompatActivity {
                                 .setCancelable(false)
                                 .show();
                     } else {
-                        // SAFE: Proceed to generate
                         executeGenerateBill(selectedToBill, selectedMonthYear);
                     }
                 });
@@ -288,11 +283,14 @@ public class CardLedgerActivity extends AppCompatActivity {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         WriteBatch batch = db.batch();
 
+        long generatedAt = System.currentTimeMillis(); // Track generation time for the 72-hour window
+
         for (Transaction tx : selectedToBill) {
             batch.update(
                     db.collection("Users").document(user.getUid()).collection("Transactions").document(tx.getTransactionId()),
                     "billed", true,
-                    "billedMonth", selectedMonthYear
+                    "billedMonth", selectedMonthYear,
+                    "statementGeneratedAt", generatedAt
             );
         }
 

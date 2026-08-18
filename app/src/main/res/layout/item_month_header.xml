@@ -44,6 +44,31 @@
                     android:textStyle="bold"
                     android:layout_centerVertical="true" />
 
+                <!-- TEMPORARY UNDO TIMER -->
+                <TextView
+                    android:id="@+id/tvUndoTimer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_toStartOf="@id/ivUndoStatement"
+                    android:layout_centerVertical="true"
+                    android:layout_marginEnd="8dp"
+                    android:textColor="#D32F2F"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:text="71:59:59" />
+
+                <ImageView
+                    android:id="@+id/ivUndoStatement"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_toStartOf="@id/ivExpandToggle"
+                    android:layout_centerVertical="true"
+                    android:layout_marginEnd="16dp"
+                    android:src="@android:drawable/ic_menu_revert"
+                    app:tint="#D32F2F"
+                    android:visibility="gone" />
+
                 <ImageView
                     android:id="@+id/ivExpandToggle"
                     android:layout_width="24dp"
@@ -114,7 +139,7 @@
             android:background="#E2E8F0"
             android:visibility="gone" />
 
-        <!-- THE FIX: A CUSTOM SCROLL VIEW WITH A MAX HEIGHT -->
+        <!-- CUSTOM SCROLL VIEW WITH MAX HEIGHT -->
         <com.cluster.fintrack.MaxHeightScrollView
             android:id="@+id/scrollTransactionsContainer"
             android:layout_width="match_parent"

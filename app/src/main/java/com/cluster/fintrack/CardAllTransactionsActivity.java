@@ -6,6 +6,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,10 +28,12 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -78,8 +81,6 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
             finish();
             return;
         }
-
-        // We leave expandedGroups empty on start so ALL cards start perfectly collapsed
 
         findViewById(R.id.ivBack).setOnClickListener(v -> finish());
         recyclerViewAllTx = findViewById(R.id.recyclerViewAllTx);
@@ -147,6 +148,25 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
             }
         }
 
+        // --- THE 72-HOUR STRICT VALIDATION ENGINE ---
+        long highestTimestamp = 0;
+        StatementMonth latestStatement = null;
+
+        for (StatementMonth sm : monthMap.values()) {
+            if (sm.generatedAt > highestTimestamp) {
+                highestTimestamp = sm.generatedAt;
+                latestStatement = sm;
+            }
+        }
+
+        long seventyTwoHoursInMillis = 259200000L;
+        if (latestStatement != null) {
+            long timeSinceGeneration = System.currentTimeMillis() - highestTimestamp;
+            if (timeSinceGeneration <= seventyTwoHoursInMillis) {
+                latestStatement.isUndoable = true;
+            }
+        }
+
         List<StatementMonth> finalGroups = new ArrayList<>();
         if (!unbilledMonth.transactions.isEmpty()) {
             finalGroups.add(unbilledMonth);
@@ -169,6 +189,9 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
         public List<Transaction> transactions = new ArrayList<>();
         public double totalBilledAmount = 0.0;
 
+        public long generatedAt = 0;
+        public boolean isUndoable = false;
+
         public StatementMonth(String monthYear) {
             this.monthYear = monthYear;
         }
@@ -177,6 +200,9 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
             transactions.add(tx);
             if ("CARD_SPEND".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType())) {
                 totalBilledAmount += tx.getTotalAmount();
+            }
+            if (tx.getStatementGeneratedAt() > generatedAt) {
+                generatedAt = tx.getStatementGeneratedAt();
             }
         }
     }
@@ -225,36 +251,100 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
             holder.tvMonthHeader.setText(sm.monthYear);
             holder.tvTotalBillAmount.setText(currencyFormatter.format(sm.totalBilledAmount));
 
-            // DYNAMIC COLOR CHANGE FOR UNBILLED CYCLE
             if (sm.monthYear.equals("Current Unbilled Cycle")) {
-                holder.tvMonthHeader.setTextColor(Color.parseColor("#F57C00")); // Orange Text
-                ((MaterialCardView) holder.itemView).setCardBackgroundColor(Color.parseColor("#FFF8E1")); // Soft Orange BG
+                holder.tvMonthHeader.setTextColor(Color.parseColor("#F57C00"));
+                ((MaterialCardView) holder.itemView).setCardBackgroundColor(Color.parseColor("#FFF8E1"));
             } else {
-                holder.tvMonthHeader.setTextColor(Color.parseColor("#082561")); // Blue Text
-                ((MaterialCardView) holder.itemView).setCardBackgroundColor(Color.parseColor("#FFFFFF")); // White BG
+                holder.tvMonthHeader.setTextColor(Color.parseColor("#082561"));
+                ((MaterialCardView) holder.itemView).setCardBackgroundColor(Color.parseColor("#FFFFFF"));
             }
 
             boolean isExpanded = expandedGroups.contains(sm.monthYear);
             holder.ivExpandToggle.setRotation(isExpanded ? 180f : 0f);
 
-            // THE FIX: Toggle the custom ScrollView instead of just the layout!
+            // Clean up any recycled timers
+            holder.cancelTimer();
+
+            // --- UNDO BUTTON & TIMER LOGIC ---
+            if (sm.isUndoable) {
+                holder.ivUndoStatement.setVisibility(View.VISIBLE);
+                holder.tvUndoTimer.setVisibility(View.VISIBLE);
+
+                long seventyTwoHoursInMillis = 259200000L;
+                long timeSinceGeneration = System.currentTimeMillis() - sm.generatedAt;
+                long timeLeft = seventyTwoHoursInMillis - timeSinceGeneration;
+
+                if (timeLeft > 0) {
+                    holder.countDownTimer = new CountDownTimer(timeLeft, 1000) {
+                        @Override
+                        public void onTick(long millisUntilFinished) {
+                            long hours = millisUntilFinished / 3600000;
+                            long minutes = (millisUntilFinished % 3600000) / 60000;
+                            long seconds = (millisUntilFinished % 60000) / 1000;
+                            holder.tvUndoTimer.setText(String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds));
+                        }
+
+                        @Override
+                        public void onFinish() {
+                            holder.ivUndoStatement.setVisibility(View.GONE);
+                            holder.tvUndoTimer.setVisibility(View.GONE);
+                            sm.isUndoable = false;
+                        }
+                    }.start();
+                } else {
+                    holder.ivUndoStatement.setVisibility(View.GONE);
+                    holder.tvUndoTimer.setVisibility(View.GONE);
+                    sm.isUndoable = false;
+                }
+
+                holder.ivUndoStatement.setOnClickListener(v ->
+                        new MaterialAlertDialogBuilder(context)
+                                .setTitle("Undo Statement")
+                                .setMessage("Are you sure you want to undo the " + sm.monthYear + " statement? These transactions will be moved back to the Unbilled cycle.")
+                                .setPositiveButton("Undo", (dialog, which) -> {
+                                    FirebaseFirestore db = FirebaseFirestore.getInstance();
+                                    FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                                    if (user != null) {
+                                        WriteBatch batch = db.batch();
+                                        for (Transaction tx : sm.transactions) {
+                                            batch.update(
+                                                    db.collection("Users").document(user.getUid()).collection("Transactions").document(tx.getTransactionId()),
+                                                    "billed", false,
+                                                    "billedMonth", "",
+                                                    "statementGeneratedAt", 0L
+                                            );
+                                        }
+                                        batch.commit().addOnSuccessListener(task ->
+                                                Toast.makeText(context, "Statement Undone!", Toast.LENGTH_SHORT).show()
+                                        );
+                                    }
+                                })
+                                .setNegativeButton("Cancel", null)
+                                .show()
+                );
+            } else {
+                holder.ivUndoStatement.setVisibility(View.GONE);
+                holder.tvUndoTimer.setVisibility(View.GONE);
+            }
+
             holder.viewDivider.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
             holder.scrollTransactionsContainer.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
 
-            // Toggle Expand/Collapse
+            // THE FIX: Changed getAdapterPosition() to getBindingAdapterPosition()
             holder.layoutHeaderClickable.setOnClickListener(v -> {
-                if (isExpanded) {
-                    expandedGroups.remove(sm.monthYear);
-                } else {
-                    expandedGroups.add(sm.monthYear);
+                int currentPosition = holder.getBindingAdapterPosition();
+                if (currentPosition != RecyclerView.NO_POSITION) {
+                    if (isExpanded) {
+                        expandedGroups.remove(sm.monthYear);
+                    } else {
+                        expandedGroups.add(sm.monthYear);
+                    }
+                    notifyItemChanged(currentPosition);
                 }
-                notifyItemChanged(position);
             });
 
-            // INJECT TRANSACTIONS
             holder.layoutTransactionsContainer.removeAllViews();
             if (isExpanded) {
-                // Breathing room margins so they don't overlap inside the parent card
                 int horizontalMargin = (int) (10 * context.getResources().getDisplayMetrics().density);
                 int verticalMargin = (int) (6 * context.getResources().getDisplayMetrics().density);
 
@@ -318,6 +408,13 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
                     holder.layoutTransactionsContainer.addView(itemHolder);
                 }
             }
+        }
+
+        // Extremely important to prevent memory leaks from running timers inside a scrollable list
+        @Override
+        public void onViewRecycled(@NonNull AccordionViewHolder holder) {
+            super.onViewRecycled(holder);
+            holder.cancelTimer();
         }
 
         @SuppressLint({"SetTextI18n", "InflateParams"})
@@ -412,20 +509,30 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
         public static class AccordionViewHolder extends RecyclerView.ViewHolder {
             LinearLayout layoutHeaderClickable, layoutTransactionsContainer;
             View viewDivider;
-            com.cluster.fintrack.MaxHeightScrollView scrollTransactionsContainer; // THE NEW CUSTOM SCROLLVIEW
-            TextView tvMonthHeader, tvTotalBillAmount, tvCashbackAmount;
-            ImageView ivExpandToggle;
+            com.cluster.fintrack.MaxHeightScrollView scrollTransactionsContainer;
+            TextView tvMonthHeader, tvTotalBillAmount, tvCashbackAmount, tvUndoTimer;
+            ImageView ivExpandToggle, ivUndoStatement;
+            CountDownTimer countDownTimer;
 
             public AccordionViewHolder(@NonNull View itemView) {
                 super(itemView);
                 layoutHeaderClickable = itemView.findViewById(R.id.layoutHeaderClickable);
                 layoutTransactionsContainer = itemView.findViewById(R.id.layoutTransactionsContainer);
                 viewDivider = itemView.findViewById(R.id.viewDivider);
-                scrollTransactionsContainer = itemView.findViewById(R.id.scrollTransactionsContainer); // INITIALIZED HERE
+                scrollTransactionsContainer = itemView.findViewById(R.id.scrollTransactionsContainer);
                 tvMonthHeader = itemView.findViewById(R.id.tvMonthHeader);
                 tvTotalBillAmount = itemView.findViewById(R.id.tvTotalBillAmount);
                 tvCashbackAmount = itemView.findViewById(R.id.tvCashbackAmount);
                 ivExpandToggle = itemView.findViewById(R.id.ivExpandToggle);
+                ivUndoStatement = itemView.findViewById(R.id.ivUndoStatement);
+                tvUndoTimer = itemView.findViewById(R.id.tvUndoTimer);
+            }
+
+            public void cancelTimer() {
+                if (countDownTimer != null) {
+                    countDownTimer.cancel();
+                    countDownTimer = null;
+                }
             }
         }
     }
