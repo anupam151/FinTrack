@@ -278,7 +278,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- THE FIX: DYNAMIC ROW 3 FOR CASHBACK -->
+            <!-- DYNAMIC ROW 3 FOR CASHBACK -->
             <LinearLayout
                 android:id="@+id/layoutCashbackSummary"
                 android:layout_width="match_parent"
@@ -435,7 +435,7 @@
         android:layout_marginTop="8dp"
         android:clipToPadding="false"
         android:paddingHorizontal="14dp"
-        android:paddingBottom="20dp"
+        android:paddingBottom="88dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/layoutSearchFilter" />
 
@@ -455,6 +455,20 @@
         app:layout_constraintTop_toBottomOf="@id/layoutSearchFilter"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- FLOATING ACTION BUTTON (+) -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btnAddTransactionHeader"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="24dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:src="@drawable/rupee"
+        app:backgroundTint="#1abcab"
+        app:tint="#FFFFFF"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

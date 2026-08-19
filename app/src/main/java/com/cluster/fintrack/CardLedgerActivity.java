@@ -12,6 +12,7 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
@@ -102,6 +103,15 @@ public class CardLedgerActivity extends AppCompatActivity {
         initializeViewsAndMockup(bankName, cardName, cardType, last4, themeColor);
         verifyCashbackEligibility();
         fetchCardTransactions();
+
+        // Find and set up the Header Transaction Button
+        ImageButton btnAddTransactionHeader = findViewById(R.id.btnAddTransactionHeader);
+        if (btnAddTransactionHeader != null) {
+            btnAddTransactionHeader.setOnClickListener(v -> {
+                Intent intent = new Intent(CardLedgerActivity.this, AddTransactionActivity.class);
+                startActivity(intent);
+            });
+        }
     }
 
     private void initializeViewsAndMockup(String bankName, String cardName, String cardType, String last4, String themeColor) {
