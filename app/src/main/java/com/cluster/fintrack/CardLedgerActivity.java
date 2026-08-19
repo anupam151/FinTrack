@@ -87,6 +87,15 @@ public class CardLedgerActivity extends AppCompatActivity {
             return windowInsets;
         });
 
+        // Find and set up the Header Transaction Button
+        ImageButton btnAddTransactionHeader = findViewById(R.id.btnAddTransactionHeader);
+        if (btnAddTransactionHeader != null) {
+            btnAddTransactionHeader.setOnClickListener(v -> {
+                Intent intent = new Intent(CardLedgerActivity.this, AddTransactionActivity.class);
+                startActivity(intent);
+            });
+        }
+
         cardId = getIntent().getStringExtra("CARD_ID");
         String bankName = getIntent().getStringExtra("BANK_NAME");
         String cardName = getIntent().getStringExtra("CARD_NAME");
@@ -104,14 +113,7 @@ public class CardLedgerActivity extends AppCompatActivity {
         verifyCashbackEligibility();
         fetchCardTransactions();
 
-        // Find and set up the Header Transaction Button
-        ImageButton btnAddTransactionHeader = findViewById(R.id.btnAddTransactionHeader);
-        if (btnAddTransactionHeader != null) {
-            btnAddTransactionHeader.setOnClickListener(v -> {
-                Intent intent = new Intent(CardLedgerActivity.this, AddTransactionActivity.class);
-                startActivity(intent);
-            });
-        }
+
     }
 
     private void initializeViewsAndMockup(String bankName, String cardName, String cardType, String last4, String themeColor) {

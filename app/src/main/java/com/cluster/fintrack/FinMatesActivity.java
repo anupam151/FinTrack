@@ -164,8 +164,6 @@ public class FinMatesActivity extends AppCompatActivity {
 
         findViewById(R.id.navSetings).setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
 
-        // THE FIX: Launch Intent instead of BottomSheet
-        findViewById(R.id.fabAddFinMate).setOnClickListener(v -> startActivity(new Intent(this, AddFinMateActivity.class)));
 
         fetchFinMatesFromFirestore();
     }

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
@@ -11,6 +12,7 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -83,6 +85,11 @@ public class FinMateLedgerActivity extends AppCompatActivity {
             v.setPadding(0, insets.top, 0, insets.bottom);
             return windowInsets;
         });
+
+        ImageButton btnAddTransactionHeader = findViewById(R.id.btnAddTransactionHeader);
+        if (btnAddTransactionHeader != null) {
+            btnAddTransactionHeader.setOnClickListener(v -> startActivity(new Intent(FinMateLedgerActivity.this, AddTransactionActivity.class)));
+        }
 
         finMateId = getIntent().getStringExtra("FINMATE_ID");
         finMateName = getIntent().getStringExtra("FINMATE_NAME");

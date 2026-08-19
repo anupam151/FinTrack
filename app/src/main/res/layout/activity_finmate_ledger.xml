@@ -236,17 +236,32 @@
     </LinearLayout>
 
     <!-- RECYCLER VIEW -->
+    <!-- THE FIX: Increased paddingBottom to 88dp so the FAB doesn't cover the last item -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewLedger"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:paddingHorizontal="14dp"
         android:paddingTop="8dp"
-        android:paddingBottom="20dp"
+        android:paddingBottom="88dp"
         android:clipToPadding="false"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/layoutSearchFilter"
         app:layout_constraintBottom_toBottomOf="parent" />
+
+    <!-- FLOATING ACTION BUTTON (+) -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btnAddTransactionHeader"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="24dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:src="@drawable/rupee"
+        app:backgroundTint="#1abcab"
+        app:tint="#FFFFFF"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
