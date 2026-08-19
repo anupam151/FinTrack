@@ -55,6 +55,11 @@ import java.util.Map;
 public class CardLedgerActivity extends AppCompatActivity {
 
     private TextView tvAvailableLimit, tvTotalUsed, tvBilledDue, tvUnbilled;
+
+    // NEW: Cashback Summary UI
+    private LinearLayout layoutCashbackSummary;
+    private TextView tvLifetimeCashback, tvUnbilledCashback;
+
     private RecyclerView recyclerViewCardTx;
     private TextView layoutEmptyState;
     private TextInputEditText etSearchCardTx;
@@ -95,6 +100,7 @@ public class CardLedgerActivity extends AppCompatActivity {
         }
 
         initializeViewsAndMockup(bankName, cardName, cardType, last4, themeColor);
+        verifyCashbackEligibility();
         fetchCardTransactions();
     }
 
@@ -115,6 +121,11 @@ public class CardLedgerActivity extends AppCompatActivity {
         tvUnbilled = findViewById(R.id.tvUnbilled);
         tvAvailableLimit = findViewById(R.id.tvAvailableLimit);
         tvTotalUsed = findViewById(R.id.tvTotalUsed);
+
+        // Link the new Cashback Summary views
+        layoutCashbackSummary = findViewById(R.id.layoutCashbackSummary);
+        tvLifetimeCashback = findViewById(R.id.tvLifetimeCashback);
+        tvUnbilledCashback = findViewById(R.id.tvUnbilledCashback);
 
         recyclerViewCardTx = findViewById(R.id.recyclerViewCardTx);
         layoutEmptyState = findViewById(R.id.layoutEmptyState);
@@ -151,6 +162,23 @@ public class CardLedgerActivity extends AppCompatActivity {
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { filterTransactions(s.toString()); }
             @Override public void afterTextChanged(Editable s) {}
         });
+    }
+
+    // Checks if the card has the Cashback Tracker toggled on
+    private void verifyCashbackEligibility() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            FirebaseFirestore.getInstance().collection("Users").document(user.getUid())
+                    .collection("Cards").document(cardId).get()
+                    .addOnSuccessListener(doc -> {
+                        if (doc.exists()) {
+                            Card c = doc.toObject(Card.class);
+                            if (c != null && c.isCashbackCard()) {
+                                layoutCashbackSummary.setVisibility(View.VISIBLE);
+                            }
+                        }
+                    });
+        }
     }
 
     private void openBillGenerationSheet() {
@@ -283,7 +311,7 @@ public class CardLedgerActivity extends AppCompatActivity {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         WriteBatch batch = db.batch();
 
-        long generatedAt = System.currentTimeMillis(); // Track generation time for the 72-hour window
+        long generatedAt = System.currentTimeMillis();
 
         for (Transaction tx : selectedToBill) {
             batch.update(
@@ -318,16 +346,25 @@ public class CardLedgerActivity extends AppCompatActivity {
                     double unbilledSpends = 0.0;
                     double totalPayments = 0.0;
 
+                    // CASHBACK TRACKING VARIABLES
+                    double lifetimeCashback = 0.0;
+                    double unbilledCashback = 0.0;
+
                     for (DocumentSnapshot doc : snapshot.getDocuments()) {
                         Transaction tx = doc.toObject(Transaction.class);
                         if (tx != null) {
                             masterList.add(tx);
+
+                            // Track Grand Total Cashback
+                            lifetimeCashback += tx.getCashbackEarned();
 
                             if ("CARD_SPEND".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType())) {
                                 if (tx.isBilled()) {
                                     billedSpends += tx.getTotalAmount();
                                 } else {
                                     unbilledSpends += tx.getTotalAmount();
+                                    // Track Unbilled Cashback
+                                    unbilledCashback += tx.getCashbackEarned();
                                 }
                             } else if ("CARD_PAYMENT".equals(tx.getTransactionType())) {
                                 totalPayments += tx.getTotalAmount();
@@ -354,6 +391,10 @@ public class CardLedgerActivity extends AppCompatActivity {
                     tvBilledDue.setText(currencyFormatter.format(finalBilledDue));
                     tvUnbilled.setText(currencyFormatter.format(finalUnbilledDue));
                     tvAvailableLimit.setText(currencyFormatter.format(Math.max(0, totalLimit - finalTotalUsed)));
+
+                    // Set Cashback Text
+                    tvLifetimeCashback.setText(currencyFormatter.format(lifetimeCashback));
+                    tvUnbilledCashback.setText(currencyFormatter.format(unbilledCashback));
 
                     filterTransactions(etSearchCardTx.getText() != null ? etSearchCardTx.getText().toString() : "");
                 });

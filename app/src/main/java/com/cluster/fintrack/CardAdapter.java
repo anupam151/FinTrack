@@ -1,5 +1,6 @@
 package com.cluster.fintrack;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
@@ -11,7 +12,13 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.text.NumberFormat;
 import java.util.HashMap;
@@ -20,6 +27,7 @@ import java.util.Locale;
 import java.util.Map;
 
 @SuppressWarnings("unused")
+@SuppressLint("SetTextI18n") // Silences string concatenation warnings
 public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder> {
 
     private final Context context;
@@ -53,32 +61,24 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
     public void onBindViewHolder(@NonNull CardViewHolder holder, int position) {
         Card card = cardList.get(position);
 
-        // 1. Set Card Name & Bank Initials
+        // Cancel any lingering listeners on recycled views to prevent memory leaks
+        holder.cancelListener();
+
+        // 1. Set Static Core Identity
         holder.tvCardName.setText(card.getCardName());
         holder.tvCardLogoText.setText(getBankInitials(card.getBankName()));
+        holder.tvBankName.setText(card.getBankName());
+        holder.tvLast4Digits.setText(String.format(Locale.getDefault(), "• %s", card.getLast4Digits()));
+        holder.tvCardType.setText(card.getCardType());
+        holder.tvCardLimit.setText(formatCurrency(card.getTotalLimit()));
 
-        // 2. Calculate Financials (Used is hardcoded to 0 for now)
-        double totalLimit = card.getTotalLimit();
-        double usedLimit = 0.0;
-        double availableLimit = totalLimit - usedLimit;
-
-        // 3. Set Financial Values formatted with automatic commas and 2 decimal places
-        holder.tvCardLimit.setText(formatCurrency(totalLimit));
-        holder.tvCardUsed.setText(formatCurrency(usedLimit));
-        holder.tvCardAvailable.setText(formatCurrency(availableLimit));
-        holder.tvCardDue.setText(formatCurrency(0.0)); // Hardcoded for now
-
-        // 4. Set Due Date with proper ordinal suffix (e.g., 1st, 2nd, 3rd, 21st, etc.)
+        // Set Due Date format
         int billingDay = card.getBillingDay();
         String suffix = getOrdinalSuffix(billingDay);
         String dueText = String.format(Locale.getDefault(), "%d%s of month", billingDay, suffix);
         holder.tvCardDueDate.setText(dueText);
 
-        // 5. Circular Progress Indicator (0% for now)
-        holder.cpiCardProgress.setProgress(0);
-        holder.tvCardProgressPercent.setText("0%\nUsed");
-
-        // 6. Apply custom theme color
+        // Apply custom theme color
         try {
             if (card.getThemeColor() != null && !card.getThemeColor().isEmpty()) {
                 int parsedColor = Color.parseColor(card.getThemeColor());
@@ -88,7 +88,79 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
             holder.cardLogoContainer.setCardBackgroundColor(Color.parseColor("#082561"));
         }
 
-        // 7. Standard Click listener -> Launch Card Ledger
+        // --- THE FIX: FETCH LIVE DATA FOR EACH CARD IN REAL-TIME ---
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            holder.listenerRegistration = FirebaseFirestore.getInstance()
+                    .collection("Users").document(user.getUid())
+                    .collection("Transactions")
+                    .whereEqualTo("cardId", card.getCardId())
+                    .addSnapshotListener((snapshot, error) -> {
+                        if (error != null || snapshot == null) return;
+
+                        double billedSpends = 0.0;
+                        double unbilledSpends = 0.0;
+                        double totalPayments = 0.0;
+                        double unbilledCashback = 0.0;
+
+                        for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                            Transaction tx = doc.toObject(Transaction.class);
+                            if (tx != null) {
+                                if ("CARD_SPEND".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType())) {
+                                    if (tx.isBilled()) {
+                                        billedSpends += tx.getTotalAmount();
+                                    } else {
+                                        unbilledSpends += tx.getTotalAmount();
+                                        unbilledCashback += tx.getCashbackEarned();
+                                    }
+                                } else if ("CARD_PAYMENT".equals(tx.getTransactionType())) {
+                                    totalPayments += tx.getTotalAmount();
+                                }
+                            }
+                        }
+
+                        // Ledger Math
+                        double finalBilledDue = billedSpends - totalPayments;
+                        double finalUnbilledDue = unbilledSpends;
+
+                        if (finalBilledDue < 0) {
+                            finalUnbilledDue += finalBilledDue;
+                            finalBilledDue = 0;
+                        }
+                        if (finalUnbilledDue < 0) {
+                            finalUnbilledDue = 0;
+                        }
+
+                        double totalUsed = finalBilledDue + finalUnbilledDue;
+                        double availableLimit = card.getTotalLimit() - totalUsed;
+                        if (availableLimit < 0) availableLimit = 0;
+
+                        // Inject Live Data to UI
+                        holder.tvCardUsed.setText(formatCurrency(totalUsed));
+                        holder.tvCardAvailable.setText(formatCurrency(availableLimit));
+                        holder.tvCardDue.setText(formatCurrency(finalBilledDue));
+                        holder.tvCardUnbilled.setText(formatCurrency(finalUnbilledDue));
+
+                        // Dynamic Circular Progress
+                        int progress = 0;
+                        if (card.getTotalLimit() > 0) {
+                            progress = (int) ((totalUsed / card.getTotalLimit()) * 100);
+                        }
+                        if (progress > 100) progress = 100;
+                        holder.cpiCardProgress.setProgress(progress);
+                        holder.tvCardProgressPercent.setText(progress + "%\nUsed");
+
+                        // Dynamic Cashback Rendering
+                        if (card.isCashbackCard()) {
+                            holder.cardCashbackBadge.setVisibility(View.VISIBLE);
+                            holder.tvUnbilledCashback.setText("Unbilled CB: " + formatCurrency(unbilledCashback));
+                        } else {
+                            holder.cardCashbackBadge.setVisibility(View.GONE);
+                        }
+                    });
+        }
+
+        // Standard Click listener -> Launch Card Ledger
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(context, CardLedgerActivity.class);
             intent.putExtra("CARD_ID", card.getCardId());
@@ -101,7 +173,7 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
             context.startActivity(intent);
         });
 
-        // 8. Long Click listener
+        // Long Click listener
         holder.itemView.setOnLongClickListener(v -> {
             if (longClickListener != null) {
                 longClickListener.onLongClick(card, v);
@@ -116,7 +188,13 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
         return cardList.size();
     }
 
-    // Helper method to automatically format currency amounts with commas and 2 decimal places
+    // Safely remove active snapshot listeners to prevent app lag when scrolling!
+    @Override
+    public void onViewRecycled(@NonNull CardViewHolder holder) {
+        super.onViewRecycled(holder);
+        holder.cancelListener();
+    }
+
     private String formatCurrency(double amount) {
         Locale indianLocale = new Locale.Builder().setLanguage("en").setRegion("IN").build();
         NumberFormat formatter = NumberFormat.getCurrencyInstance(indianLocale);
@@ -125,7 +203,6 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
         return formatter.format(amount);
     }
 
-    // Helper method to generate correct English ordinal suffixes (st, nd, rd, th)
     private String getOrdinalSuffix(int day) {
         if (day >= 11 && day <= 13) {
             return "th";
@@ -216,26 +293,44 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
 
     public static class CardViewHolder extends RecyclerView.ViewHolder {
         androidx.cardview.widget.CardView cardLogoContainer;
+        MaterialCardView cardCashbackBadge;
+        ListenerRegistration listenerRegistration; // Manages the live connection
 
         TextView tvCardName, tvCardLogoText, tvCardProgressPercent;
-        TextView tvCardLimit, tvCardDue, tvCardUsed, tvCardAvailable, tvCardDueDate;
+        TextView tvBankName, tvLast4Digits, tvCardType, tvUnbilledCashback;
+        TextView tvCardLimit, tvCardDue, tvCardUnbilled, tvCardUsed, tvCardAvailable, tvCardDueDate;
 
         CircularProgressIndicator cpiCardProgress;
 
         public CardViewHolder(@NonNull View itemView) {
             super(itemView);
             cardLogoContainer = itemView.findViewById(R.id.cardLogoContainer);
+            cardCashbackBadge = itemView.findViewById(R.id.cardCashbackBadge);
+
             tvCardName = itemView.findViewById(R.id.tvCardName);
             tvCardLogoText = itemView.findViewById(R.id.tvCardLogoText);
 
+            tvBankName = itemView.findViewById(R.id.tvBankName);
+            tvLast4Digits = itemView.findViewById(R.id.tvLast4Digits);
+            tvCardType = itemView.findViewById(R.id.tvCardType);
+            tvUnbilledCashback = itemView.findViewById(R.id.tvUnbilledCashback);
+
             tvCardLimit = itemView.findViewById(R.id.tvCardLimit);
             tvCardDue = itemView.findViewById(R.id.tvCardDue);
+            tvCardUnbilled = itemView.findViewById(R.id.tvCardUnbilled);
             tvCardUsed = itemView.findViewById(R.id.tvCardUsed);
             tvCardAvailable = itemView.findViewById(R.id.tvCardAvailable);
             tvCardDueDate = itemView.findViewById(R.id.tvCardDueDate);
 
             tvCardProgressPercent = itemView.findViewById(R.id.tvCardProgressPercent);
             cpiCardProgress = itemView.findViewById(R.id.cpiCardProgress);
+        }
+
+        public void cancelListener() {
+            if (listenerRegistration != null) {
+                listenerRegistration.remove();
+                listenerRegistration = null;
+            }
         }
     }
 }

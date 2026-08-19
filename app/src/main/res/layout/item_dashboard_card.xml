@@ -23,54 +23,132 @@
         android:orientation="vertical">
 
         <!-- ===================================================== -->
-        <!-- TOP ROW: CARD NAME (Left) & TOTAL LIMIT (Right) -->
+        <!-- TOP ROW: ALL CARD DETAILS & CASHBACK BADGE -->
         <!-- ===================================================== -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical"
+            android:baselineAligned="false"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
-            android:paddingVertical="8dp">
+            android:paddingTop="12dp"
+            android:paddingBottom="8dp">
 
-            <!-- Card Name -->
-            <TextView
-                android:id="@+id/tvCardName"
+            <!-- Left Side: Bank, Card Name, Last 4, Cashback -->
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginEnd="16dp"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="Card Name"
-                android:textColor="#082561"
-                android:textSize="15sp"
-                android:textStyle="bold" />
+                android:orientation="vertical"
+                android:layout_marginEnd="8dp">
 
-            <!-- Total Limit Block -->
+                <TextView
+                    android:id="@+id/tvBankName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Bank Name"
+                    android:textColor="#667085"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:baselineAligned="false"
+                    android:layout_marginTop="2dp"
+                    android:gravity="bottom">
+
+                    <TextView
+                        android:id="@+id/tvCardName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="Card Name"
+                        android:textColor="#082561"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvLast4Digits"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="• 1234"
+                        android:textColor="#949494"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Dynamic Live Cashback Badge -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardCashbackBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    app:cardBackgroundColor="#E8F5E9"
+                    app:cardCornerRadius="4dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/tvUnbilledCashback"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="2dp"
+                        android:text="Unbilled CB: ₹0"
+                        android:textColor="#2E7D32"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- Right Side: Total Limit & Card Network -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
+                android:orientation="vertical"
                 android:gravity="end">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="10dp"
-                    android:text="Total Limit"
-                    android:textColor="#949494"
-                    android:textSize="12sp" />
+                    android:orientation="horizontal"
+                    android:baselineAligned="false"
+                    android:gravity="bottom">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        android:layout_marginBottom="1dp"
+                        android:text="Total Limit"
+                        android:textColor="#949494"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tvCardLimit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="₹0"
+                        android:textColor="#082561"
+                        android:textSize="15sp"
+                        android:textStyle="bold"/>
+                </LinearLayout>
 
                 <TextView
-                    android:id="@+id/tvCardLimit"
+                    android:id="@+id/tvCardType"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:text="₹0"
-                    android:textColor="#082561"
-                    android:textSize="14sp" />
+                    android:layout_marginTop="4dp"
+                    android:text="Visa"
+                    android:textColor="#1abcab"
+                    android:textSize="12sp"
+                    android:textStyle="bold|italic" />
             </LinearLayout>
         </LinearLayout>
 
@@ -82,7 +160,7 @@
             android:background="#F0F0F0" />
 
         <!-- ===================================================== -->
-        <!-- BOTTOM ROW: LOGO + OTHER DETAILS + PROGRESS -->
+        <!-- BOTTOM ROW: LOGO + LIVE DETAILS + PROGRESS -->
         <!-- ===================================================== -->
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
@@ -120,7 +198,7 @@
             </androidx.cardview.widget.CardView>
 
 
-            <!-- Middle: CARD DETAILS (Used, Available, Due) -->
+            <!-- Middle: LIVE CARD DETAILS (Used, Available, Due, Unbilled) -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -136,11 +214,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
                     android:orientation="horizontal"
                     android:baselineAligned="false">
 
-                    <!-- Used -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -164,7 +240,6 @@
                             android:textSize="13sp"/>
                     </LinearLayout>
 
-                    <!-- Available -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -184,21 +259,20 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="1dp"
                             android:text="₹0"
-                            android:textColor="#082561"
-                            android:textSize="13sp" />
+                            android:textColor="#388E3C"
+                            android:textSize="13sp"
+                            android:textStyle="bold"/>
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Row 2: Current Due & Date -->
+                <!-- Row 2: Current Due & Unbilled -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="6dp"
+                    android:layout_marginTop="6dp"
                     android:orientation="horizontal"
                     android:baselineAligned="false">
 
-                    <!-- Used -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -218,11 +292,11 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="1dp"
                             android:text="₹0"
-                            android:textColor="#082561"
-                            android:textSize="13sp"/>
+                            android:textColor="#D32F2F"
+                            android:textSize="13sp"
+                            android:textStyle="bold"/>
                     </LinearLayout>
 
-                    <!-- Available -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -232,23 +306,46 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Due Date"
+                            android:text="Unbilled"
                             android:textColor="#949494"
                             android:textSize="12sp" />
 
                         <TextView
-                            android:id="@+id/tvCardDueDate"
+                            android:id="@+id/tvCardUnbilled"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="1dp"
-                            android:text="00th Day"
-                            android:textColor="#082561"
+                            android:text="₹0"
+                            android:textColor="#F57C00"
                             android:textSize="13sp"/>
                     </LinearLayout>
                 </LinearLayout>
 
-            </LinearLayout>
+                <!-- THE FIX: Flattened Row 3 (Due Date) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="vertical">
 
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Due Date"
+                        android:textColor="#949494"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/tvCardDueDate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="1dp"
+                        android:text="00th Day"
+                        android:textColor="#082561"
+                        android:textSize="13sp"/>
+                </LinearLayout>
+
+            </LinearLayout>
 
             <!-- Right: CIRCULAR USAGE PROGRESS -->
             <RelativeLayout
@@ -282,7 +379,6 @@
                     android:textSize="11sp" />
 
             </RelativeLayout>
-
         </androidx.constraintlayout.widget.ConstraintLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

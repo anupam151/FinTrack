@@ -189,6 +189,9 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
         public List<Transaction> transactions = new ArrayList<>();
         public double totalBilledAmount = 0.0;
 
+        // NEW: Track cashback for the whole month
+        public double totalCashbackEarned = 0.0;
+
         public long generatedAt = 0;
         public boolean isUndoable = false;
 
@@ -198,6 +201,10 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
 
         public void addTransaction(Transaction tx) {
             transactions.add(tx);
+
+            // Add cashback instantly to the statement total
+            totalCashbackEarned += tx.getCashbackEarned();
+
             if ("CARD_SPEND".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType())) {
                 totalBilledAmount += tx.getTotalAmount();
             }
@@ -250,6 +257,15 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
 
             holder.tvMonthHeader.setText(sm.monthYear);
             holder.tvTotalBillAmount.setText(currencyFormatter.format(sm.totalBilledAmount));
+
+            // THE FIX: Activate the existing TV to display the statement cashback if earned!
+            if (sm.totalCashbackEarned > 0) {
+                holder.tvCashbackAmount.setVisibility(View.VISIBLE);
+                holder.tvCashbackAmount.setText("Cashback: " + currencyFormatter.format(sm.totalCashbackEarned));
+                holder.tvCashbackAmount.setTextColor(Color.parseColor("#388E3C")); // Premium Green
+            } else {
+                holder.tvCashbackAmount.setVisibility(View.GONE);
+            }
 
             if (sm.monthYear.equals("Current Unbilled Cycle")) {
                 holder.tvMonthHeader.setTextColor(Color.parseColor("#F57C00"));
@@ -330,7 +346,6 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
             holder.viewDivider.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
             holder.scrollTransactionsContainer.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
 
-            // THE FIX: Changed getAdapterPosition() to getBindingAdapterPosition()
             holder.layoutHeaderClickable.setOnClickListener(v -> {
                 int currentPosition = holder.getBindingAdapterPosition();
                 if (currentPosition != RecyclerView.NO_POSITION) {
