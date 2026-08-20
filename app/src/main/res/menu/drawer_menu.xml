@@ -12,10 +12,16 @@
             android:id="@+id/nav_drawer_cards"
             android:icon="@drawable/card_nav_bottom"
             android:title="Credit Cards" />
+
         <item
             android:id="@+id/nav_drawer_ledger"
             android:icon="@drawable/finmate"
             android:title="FinMates" />
+
+        <item
+            android:id="@+id/nav_drawer_all_emis"
+            android:icon="@drawable/card_nav_bottom"
+            android:title="All EMIs" />
     </group>
 
     <item android:title="Account">

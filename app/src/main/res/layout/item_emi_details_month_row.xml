@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="horizontal"
+    android:paddingVertical="8dp"
+    android:gravity="center_vertical"
+    android:baselineAligned="false"
+    tools:ignore="HardcodedText, ContentDescription">
+
+    <TextView
+        android:id="@+id/tvMonthNumber"
+        android:layout_width="30dp"
+        android:layout_height="wrap_content"
+        android:text="1"
+        android:textColor="#082561"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:gravity="center"/>
+
+    <TextView
+        android:id="@+id/tvPrincipal"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="₹0"
+        android:textSize="12sp"
+        android:textColor="#101828"
+        android:gravity="center"/>
+
+    <TextView
+        android:id="@+id/tvInterest"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.8"
+        android:text="₹0"
+        android:textSize="12sp"
+        android:textColor="#667085"
+        android:gravity="center"/>
+
+    <TextView
+        android:id="@+id/tvTotalBankDue"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.2"
+        android:text="₹0.00"
+        android:textColor="#082561"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:gravity="center"/>
+
+    <!-- BADGE: Billed / Pending / Cancelled -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/badgeStatus"
+        android:layout_width="65dp"
+        android:layout_height="wrap_content"
+        app:cardBackgroundColor="#E8F5E9"
+        app:cardCornerRadius="4dp"
+        app:cardElevation="0dp">
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Paid"
+            android:textColor="#388E3C"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:paddingVertical="4dp"/>
+    </com.google.android.material.card.MaterialCardView>
+</LinearLayout>

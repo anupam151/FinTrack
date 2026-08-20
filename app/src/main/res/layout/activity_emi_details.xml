@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:background="#F5F7FA"
+    android:id="@+id/mainEmiDetails"
+    tools:ignore="HardcodedText, ContentDescription">
+
+    <!-- TOP APP BAR -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFFFFF"
+        android:elevation="4dp"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/ivBack"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/back" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="Active EMI Details"
+            android:textColor="#082561"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/topBar"
+        app:layout_constraintBottom_toTopOf="@id/bottomActionContainer"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- 1. SUMMARY & LIMIT BLOCK CARD -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="#082561"
+                app:cardCornerRadius="12dp"
+                app:strokeWidth="0dp"
+                app:cardElevation="4dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:id="@+id/tvEmiTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Item Title"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:id="@+id/tvOriginalAmount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Original Total: ₹0"
+                        android:textColor="#B2DFDB"
+                        android:textSize="12sp"
+                        android:layout_marginTop="2dp"/>
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#33FFFFFF" android:layout_marginVertical="12dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Card Limit Still Blocked"
+                        android:textColor="#B2DFDB"
+                        android:textSize="12sp"/>
+
+                    <TextView
+                        android:id="@+id/tvBlockedLimit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="₹0"
+                        android:textColor="#FFCDD2"
+                        android:textSize="24sp"
+                        android:textStyle="bold"/>
+
+                    <com.google.android.material.progressindicator.LinearProgressIndicator
+                        android:id="@+id/progressLimitBlock"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        app:indicatorColor="#1abcab"
+                        app:trackColor="#33FFFFFF"
+                        app:trackThickness="6dp"
+                        app:trackCornerRadius="3dp"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 2. FINMATE BREAKDOWN CARD -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="12dp"
+                app:strokeWidth="0dp"
+                app:cardElevation="2dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Participants &amp; Profit"
+                        android:textColor="#082561"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp"/>
+
+                    <LinearLayout
+                        android:id="@+id/layoutFinMateBreakdown"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 3. AMORTIZATION SCHEDULE CARD -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="12dp"
+                app:strokeWidth="0dp"
+                app:cardElevation="2dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Bank Schedule (Amortization)"
+                        android:textColor="#082561"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="12dp"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingBottom="4dp"
+                        android:baselineAligned="false">
+                        <TextView android:layout_width="30dp" android:layout_height="wrap_content" android:text="#" android:textSize="11sp" android:textStyle="bold" android:gravity="center"/>
+                        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Prin." android:textSize="11sp" android:textStyle="bold" android:gravity="center"/>
+                        <TextView android:layout_width="0dp" android:layout_weight="0.8" android:layout_height="wrap_content" android:text="Int+GST" android:textSize="11sp" android:textStyle="bold" android:gravity="center"/>
+                        <TextView android:layout_width="0dp" android:layout_weight="1.2" android:layout_height="wrap_content" android:text="Total" android:textSize="11sp" android:textStyle="bold" android:gravity="center"/>
+                        <TextView android:layout_width="65dp" android:layout_height="wrap_content" android:text="Status" android:textSize="11sp" android:textStyle="bold" android:gravity="center"/>
+                    </LinearLayout>
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E0E0E0" android:layout_marginBottom="8dp"/>
+
+                    <LinearLayout
+                        android:id="@+id/layoutScheduleGrid"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- BOTTOM FORECLOSURE ACTION -->
+    <FrameLayout
+        android:id="@+id/bottomActionContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFFFFF"
+        android:elevation="12dp"
+        android:padding="16dp"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnForeclose"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Foreclose EMI Early"
+            android:textColor="#D32F2F"
+            app:strokeColor="#D32F2F"
+            app:strokeWidth="1dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:cornerRadius="12dp" />
+    </FrameLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

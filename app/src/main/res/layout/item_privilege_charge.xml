@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingVertical="6dp"
+    android:baselineAligned="false"
+    tools:ignore="HardcodedText, ContentDescription">
+
+    <TextView
+        android:id="@+id/tvFinMateName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="FinMate Name"
+        android:textColor="#082561"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="120dp"
+        android:layout_height="wrap_content"
+        app:prefixText="₹ "
+        app:prefixTextColor="#667085"
+        app:boxCornerRadiusTopStart="8dp"
+        app:boxCornerRadiusTopEnd="8dp"
+        app:boxCornerRadiusBottomStart="8dp"
+        app:boxCornerRadiusBottomEnd="8dp"
+        app:boxStrokeColor="#1abcab">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etPrivilegeCharge"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal"
+            android:text="0"
+            android:textColor="#101828"
+            android:textSize="14sp"
+            android:paddingVertical="10dp"/>
+    </com.google.android.material.textfield.TextInputLayout>
+</LinearLayout>

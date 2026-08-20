@@ -119,6 +119,12 @@ public class MainActivity extends AppCompatActivity {
                     intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
                     startActivity(intent);
                     overridePendingTransition(0, 0);
+                } else if (id == R.id.nav_drawer_all_emis) {
+                    // --- HANDLER FOR ALL EMIS MENU ITEM ---
+                    Intent intent = new Intent(MainActivity.this, CardActiveEmisActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                    startActivity(intent);
+                    overridePendingTransition(0, 0);
                 } else if (id == R.id.nav_drawer_ledger) {
                     Intent intent = new Intent(MainActivity.this, FinMatesActivity.class);
                     intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
@@ -152,7 +158,6 @@ public class MainActivity extends AppCompatActivity {
         btnAddCard.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, CardsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)));
         btnAddPerson.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, FinMatesActivity.class).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)));
 
-        // THE FIX: Launch Intent instead of BottomSheet
         btnAddCardEmpty.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, AddCardActivity.class)));
         btnAddFinMateEmpty.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, AddFinMateActivity.class)));
 

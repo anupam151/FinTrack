@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    app:cardBackgroundColor="#FFFFFF"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp"
+    app:strokeWidth="0dp"
+    tools:ignore="HardcodedText">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Title & Badge -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:baselineAligned="false">
+
+            <TextView
+                android:id="@+id/tvEmiTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="MacBook Pro M3"
+                android:textColor="#082561"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="#F3E5F5"
+                app:cardCornerRadius="6dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+                <TextView
+                    android:id="@+id/tvProgressBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2 / 12 Paid"
+                    android:textColor="#9C27B0"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="4dp"/>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F2F5" android:layout_marginVertical="12dp"/>
+
+        <!-- Financial Metrics Grid -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:baselineAligned="false">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Total Principal"
+                    android:textColor="#667085"
+                    android:textSize="11sp"/>
+                <TextView
+                    android:id="@+id/tvTotalPrincipal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="₹1,20,000"
+                    android:textColor="#101828"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="2dp"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Remaining Principal"
+                    android:textColor="#667085"
+                    android:textSize="11sp"/>
+                <TextView
+                    android:id="@+id/tvRemainingPrincipal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="₹1,00,000"
+                    android:textColor="#D32F2F"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="2dp"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F2F5" android:layout_marginVertical="12dp"/>
+
+        <!-- Dates Footer -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:baselineAligned="false">
+
+            <TextView
+                android:id="@+id/tvStartDate"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Started: 15 Jan 2026"
+                android:textColor="#667085"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tvFinishDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ends: 15 Dec 2026"
+                android:textColor="#388E3C"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>
