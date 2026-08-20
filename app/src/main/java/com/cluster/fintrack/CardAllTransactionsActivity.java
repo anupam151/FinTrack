@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.CountDownTimer;
@@ -447,6 +448,9 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
             ImageView ivCloseSheet = sheetView.findViewById(R.id.ivCloseSheet);
             ImageView ivCopyTxId = sheetView.findViewById(R.id.ivCopyTxId);
 
+            // Link the new EMI conversion button
+            com.google.android.material.button.MaterialButton btnConvertToEmi = sheetView.findViewById(R.id.btnConvertToEmi);
+
             if (ivCloseSheet != null) ivCloseSheet.setOnClickListener(v -> sheetDialog.dismiss());
 
             if (ivCopyTxId != null) {
@@ -475,6 +479,23 @@ public class CardAllTransactionsActivity extends AppCompatActivity {
             }
 
             tvSheetTotalAmount.setText(currencyFormatter.format(tx.getTotalAmount()));
+
+            // --- EMI TRIGGER LOGIC ---
+            if (btnConvertToEmi != null) {
+                // Only show the button if it's a normal CARD_SPEND that isn't already an EMI
+                if ("CARD_SPEND".equals(tx.getTransactionType()) && !tx.isEmi()) {
+                    btnConvertToEmi.setVisibility(View.VISIBLE);
+                    btnConvertToEmi.setOnClickListener(v -> {
+                        sheetDialog.dismiss();
+                        Intent intent = new Intent(context, ConvertEmiActivity.class);
+                        intent.putExtra("TRANSACTION_ID", tx.getTransactionId());
+                        intent.putExtra("CARD_ID", tx.getCardId());
+                        context.startActivity(intent);
+                    });
+                } else {
+                    btnConvertToEmi.setVisibility(View.GONE);
+                }
+            }
 
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
             if (user != null && tx.getSplits() != null) {

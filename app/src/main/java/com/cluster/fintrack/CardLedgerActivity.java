@@ -12,7 +12,6 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
@@ -57,7 +56,6 @@ public class CardLedgerActivity extends AppCompatActivity {
 
     private TextView tvAvailableLimit, tvTotalUsed, tvBilledDue, tvUnbilled;
 
-    // NEW: Cashback Summary UI
     private LinearLayout layoutCashbackSummary;
     private TextView tvLifetimeCashback, tvUnbilledCashback;
 
@@ -87,15 +85,6 @@ public class CardLedgerActivity extends AppCompatActivity {
             return windowInsets;
         });
 
-        // Find and set up the Header Transaction Button
-        ImageButton btnAddTransactionHeader = findViewById(R.id.btnAddTransactionHeader);
-        if (btnAddTransactionHeader != null) {
-            btnAddTransactionHeader.setOnClickListener(v -> {
-                Intent intent = new Intent(CardLedgerActivity.this, AddTransactionActivity.class);
-                startActivity(intent);
-            });
-        }
-
         cardId = getIntent().getStringExtra("CARD_ID");
         String bankName = getIntent().getStringExtra("BANK_NAME");
         String cardName = getIntent().getStringExtra("CARD_NAME");
@@ -112,8 +101,6 @@ public class CardLedgerActivity extends AppCompatActivity {
         initializeViewsAndMockup(bankName, cardName, cardType, last4, themeColor);
         verifyCashbackEligibility();
         fetchCardTransactions();
-
-
     }
 
     private void initializeViewsAndMockup(String bankName, String cardName, String cardType, String last4, String themeColor) {
@@ -134,7 +121,6 @@ public class CardLedgerActivity extends AppCompatActivity {
         tvAvailableLimit = findViewById(R.id.tvAvailableLimit);
         tvTotalUsed = findViewById(R.id.tvTotalUsed);
 
-        // Link the new Cashback Summary views
         layoutCashbackSummary = findViewById(R.id.layoutCashbackSummary);
         tvLifetimeCashback = findViewById(R.id.tvLifetimeCashback);
         tvUnbilledCashback = findViewById(R.id.tvUnbilledCashback);
@@ -165,6 +151,23 @@ public class CardLedgerActivity extends AppCompatActivity {
 
         btnGenerateBill.setOnClickListener(v -> openBillGenerationSheet());
 
+        // SMART FAB: Passes the exact card context to AddTransactionActivity
+        View fabAddTransaction = findViewById(R.id.btnAddTransactionHeader);
+        if (fabAddTransaction != null) {
+            fabAddTransaction.setOnClickListener(v -> {
+                Intent intent = new Intent(this, AddTransactionActivity.class);
+                intent.putExtra("SOURCE", "CARD_LEDGER");
+                intent.putExtra("CARD_ID", cardId);
+
+                // CENTRALIZED UTIL
+                String shortBankName = BankUtils.getBankInitials(bankName);
+                String fullCardDisplayName = cardName + " - " + shortBankName + " (" + (last4 != null ? last4 : "0000") + ")";
+                intent.putExtra("CARD_NAME", fullCardDisplayName);
+
+                startActivity(intent);
+            });
+        }
+
         recyclerViewCardTx.setLayoutManager(new LinearLayoutManager(this));
         adapter = new CardTransactionAdapter(displayList, cardName);
         recyclerViewCardTx.setAdapter(adapter);
@@ -176,7 +179,6 @@ public class CardLedgerActivity extends AppCompatActivity {
         });
     }
 
-    // Checks if the card has the Cashback Tracker toggled on
     private void verifyCashbackEligibility() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
@@ -358,7 +360,6 @@ public class CardLedgerActivity extends AppCompatActivity {
                     double unbilledSpends = 0.0;
                     double totalPayments = 0.0;
 
-                    // CASHBACK TRACKING VARIABLES
                     double lifetimeCashback = 0.0;
                     double unbilledCashback = 0.0;
 
@@ -367,7 +368,6 @@ public class CardLedgerActivity extends AppCompatActivity {
                         if (tx != null) {
                             masterList.add(tx);
 
-                            // Track Grand Total Cashback
                             lifetimeCashback += tx.getCashbackEarned();
 
                             if ("CARD_SPEND".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType())) {
@@ -375,11 +375,14 @@ public class CardLedgerActivity extends AppCompatActivity {
                                     billedSpends += tx.getTotalAmount();
                                 } else {
                                     unbilledSpends += tx.getTotalAmount();
-                                    // Track Unbilled Cashback
                                     unbilledCashback += tx.getCashbackEarned();
                                 }
                             } else if ("CARD_PAYMENT".equals(tx.getTransactionType())) {
                                 totalPayments += tx.getTotalAmount();
+                            }
+                            // --- THE FIX: Include EMI_MASTER in the card usage logic to keep the limit blocked ---
+                            else if ("EMI_MASTER".equals(tx.getTransactionType()) && tx.getEmiData() != null) {
+                                unbilledSpends += tx.getEmiData().getRemainingEmiPrincipal();
                             }
                         }
                     }
@@ -404,7 +407,6 @@ public class CardLedgerActivity extends AppCompatActivity {
                     tvUnbilled.setText(currencyFormatter.format(finalUnbilledDue));
                     tvAvailableLimit.setText(currencyFormatter.format(Math.max(0, totalLimit - finalTotalUsed)));
 
-                    // Set Cashback Text
                     tvLifetimeCashback.setText(currencyFormatter.format(lifetimeCashback));
                     tvUnbilledCashback.setText(currencyFormatter.format(unbilledCashback));
 
@@ -423,8 +425,9 @@ public class CardLedgerActivity extends AppCompatActivity {
 
             boolean isUnbilledSpend = !tx.isBilled() && ("CARD_SPEND".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType()));
             boolean isRecentPayment = "CARD_PAYMENT".equals(tx.getTransactionType()) && (tx.getBilledMonth() == null || tx.getBilledMonth().trim().isEmpty());
+            boolean isEmiMaster = "EMI_MASTER".equals(tx.getTransactionType());
 
-            if (matchesSearch && (isUnbilledSpend || isRecentPayment)) {
+            if (matchesSearch && (isUnbilledSpend || isRecentPayment || isEmiMaster)) {
                 displayList.add(tx);
             }
         }
@@ -473,7 +476,13 @@ public class CardLedgerActivity extends AppCompatActivity {
             holder.tvTxTotalAmount.setVisibility(View.GONE);
             holder.tvTxSource.setVisibility(View.GONE);
 
-            if ("CARD_PAYMENT".equals(tx.getTransactionType())) {
+            if ("EMI_MASTER".equals(tx.getTransactionType())) {
+                holder.tvTxStatus.setText("Active EMI");
+                holder.tvTxStatus.setTextColor(Color.parseColor("#9C27B0")); // Purple
+                holder.badgeStatus.setCardBackgroundColor(Color.parseColor("#F3E5F5"));
+                holder.cardIconContainer.setCardBackgroundColor(Color.parseColor("#F3E5F5"));
+                holder.ivTxIcon.setColorFilter(Color.parseColor("#9C27B0"));
+            } else if ("CARD_PAYMENT".equals(tx.getTransactionType())) {
                 holder.tvTxStatus.setText("Bill Paid");
                 holder.tvTxStatus.setTextColor(Color.parseColor("#388E3C"));
                 holder.badgeStatus.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
@@ -487,7 +496,16 @@ public class CardLedgerActivity extends AppCompatActivity {
                 holder.ivTxIcon.setColorFilter(Color.parseColor("#1565C0"));
             }
 
-            holder.itemView.setOnClickListener(v -> showTransactionDetailsSheet(v.getContext(), tx));
+            // --- THE FIX: SMART ROUTING FOR EMI DETAILS ---
+            holder.itemView.setOnClickListener(v -> {
+                if ("EMI_MASTER".equals(tx.getTransactionType())) {
+                    Intent intent = new Intent(v.getContext(), EmiDetailsActivity.class);
+                    intent.putExtra("TRANSACTION_ID", tx.getTransactionId());
+                    v.getContext().startActivity(intent);
+                } else {
+                    showTransactionDetailsSheet(v.getContext(), tx);
+                }
+            });
         }
 
         @SuppressLint({"SetTextI18n", "InflateParams"})
@@ -504,6 +522,8 @@ public class CardLedgerActivity extends AppCompatActivity {
             LinearLayout layoutSplitsContainer = sheetView.findViewById(R.id.layoutSplitsContainer);
             ImageView ivCloseSheet = sheetView.findViewById(R.id.ivCloseSheet);
             ImageView ivCopyTxId = sheetView.findViewById(R.id.ivCopyTxId);
+
+            com.google.android.material.button.MaterialButton btnConvertToEmi = sheetView.findViewById(R.id.btnConvertToEmi);
 
             if (ivCloseSheet != null) ivCloseSheet.setOnClickListener(v -> sheetDialog.dismiss());
 
@@ -533,6 +553,21 @@ public class CardLedgerActivity extends AppCompatActivity {
             }
 
             tvSheetTotalAmount.setText(currencyFormatter.format(tx.getTotalAmount()));
+
+            if (btnConvertToEmi != null) {
+                if ("CARD_SPEND".equals(tx.getTransactionType()) && !tx.isEmi()) {
+                    btnConvertToEmi.setVisibility(View.VISIBLE);
+                    btnConvertToEmi.setOnClickListener(v -> {
+                        sheetDialog.dismiss();
+                        Intent intent = new Intent(context, ConvertEmiActivity.class);
+                        intent.putExtra("TRANSACTION_ID", tx.getTransactionId());
+                        intent.putExtra("CARD_ID", tx.getCardId());
+                        context.startActivity(intent);
+                    });
+                } else {
+                    btnConvertToEmi.setVisibility(View.GONE);
+                }
+            }
 
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
             if (user != null && tx.getSplits() != null) {

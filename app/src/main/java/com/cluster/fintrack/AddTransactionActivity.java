@@ -117,6 +117,13 @@ public class AddTransactionActivity extends AppCompatActivity {
     private long selectedTransactionTimestamp = 0;
     private float touchDownX, touchDownY;
 
+    // --- CONTEXT AWARE INTENT VARIABLES ---
+    private String sourceContext = null;
+    private String prefilledCardId = null;
+    private String prefilledCardName = null;
+    private String prefilledFinMateId = null;
+    private String prefilledFinMateName = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -132,8 +139,23 @@ public class AddTransactionActivity extends AppCompatActivity {
             return WindowInsetsCompat.CONSUMED;
         });
 
+        // 1. Read the Context Intents
+        if (getIntent() != null) {
+            sourceContext = getIntent().getStringExtra("SOURCE");
+            prefilledCardId = getIntent().getStringExtra("CARD_ID");
+            prefilledCardName = getIntent().getStringExtra("CARD_NAME");
+            prefilledFinMateId = getIntent().getStringExtra("FINMATE_ID");
+            prefilledFinMateName = getIntent().getStringExtra("FINMATE_NAME");
+        }
+
         initializeViews();
         setupListeners();
+
+        // Auto-switch to Receive tab if coming from FinMate general activity
+        if ("FINMATES_ACTIVITY".equals(sourceContext)) {
+            btnTypeReceive.performClick();
+        }
+
         fetchFirestoreData();
     }
 
@@ -394,7 +416,6 @@ public class AddTransactionActivity extends AppCompatActivity {
         creditCheckBoxes.clear();
     }
 
-    // THE FIX: Dynamically creates radio buttons based on the Card's configured percentages!
     private void updateCashbackVisibility() {
         if (isSpendMode && rgSpendOptions.getCheckedRadioButtonId() == R.id.rbNormalSpend) {
             String selectedSource = spinPaymentSource.getText() != null ? spinPaymentSource.getText().toString() : "";
@@ -410,7 +431,6 @@ public class AddTransactionActivity extends AppCompatActivity {
                         Double rate = rates.get(i);
                         RadioButton rb = new RadioButton(this);
 
-                        // ID must be generated so RadioGroup logic works seamlessly
                         rb.setId(View.generateViewId());
 
                         String label = (rate == Math.floor(rate))
@@ -418,7 +438,7 @@ public class AddTransactionActivity extends AppCompatActivity {
                                 : String.format(Locale.getDefault(), "%.1f%%", rate);
 
                         rb.setText(label);
-                        rb.setTag(rate); // Save percentage to the view tag for easy lookup!
+                        rb.setTag(rate);
                         rb.setTextColor(Color.parseColor("#082561"));
                         rb.setButtonTintList(ColorStateList.valueOf(Color.parseColor("#1abcab")));
 
@@ -536,18 +556,17 @@ public class AddTransactionActivity extends AppCompatActivity {
 
                     sourceNames.add("Cash (Personal Liquidity)");
                     sourceNameToIdMap.put("Cash (Personal Liquidity)", "CASH");
-                    cardCashbackMap.put("CASH", false); // Cash doesn't earn cashback
+                    cardCashbackMap.put("CASH", false);
 
                     for (DocumentSnapshot doc : snapshot) {
                         Card card = doc.toObject(Card.class);
                         if (card != null) {
-                            String shortBankName = getBankInitials(card.getBankName());
+                            String shortBankName = BankUtils.getBankInitials(card.getBankName()); // CENTRALIZED UTIL
                             String displayName = card.getCardName() + " - " + shortBankName + " (" + card.getLast4Digits() + ")";
                             sourceNames.add(displayName);
                             strictlyCardsOnly.add(displayName);
                             sourceNameToIdMap.put(displayName, card.getCardId());
 
-                            // Log the dynamic cashback percentages
                             cardCashbackMap.put(card.getCardId(), card.isCashbackCard());
                             cardCashbackRatesMap.put(card.getCardId(), card.getCashbackRates());
                         }
@@ -555,14 +574,27 @@ public class AddTransactionActivity extends AppCompatActivity {
 
                     ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, sourceNames);
                     spinPaymentSource.setAdapter(adapter);
-                    if (!sourceNames.isEmpty()) {
-                        spinPaymentSource.setText(sourceNames.get(0), false);
-                    }
 
                     if (spinTargetCreditCard != null) {
                         ArrayAdapter<String> targetCardAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, strictlyCardsOnly);
                         spinTargetCreditCard.setAdapter(targetCardAdapter);
-                        if (!strictlyCardsOnly.isEmpty()) {
+                    }
+
+                    // --- SMART CONTEXT LOGIC: CARD LEDGER ---
+                    if ("CARD_LEDGER".equals(sourceContext) && prefilledCardName != null) {
+                        spinPaymentSource.setText(prefilledCardName, false);
+                        spinPaymentSource.setEnabled(false); // Lock it down
+
+                        if (spinTargetCreditCard != null) {
+                            spinTargetCreditCard.setText(prefilledCardName, false);
+                            spinTargetCreditCard.setEnabled(false);
+                        }
+                        updateCashbackVisibility();
+                    } else {
+                        if (!sourceNames.isEmpty()) {
+                            spinPaymentSource.setText(sourceNames.get(0), false);
+                        }
+                        if (spinTargetCreditCard != null && !strictlyCardsOnly.isEmpty()) {
                             spinTargetCreditCard.setText(strictlyCardsOnly.get(0), false);
                         }
                     }
@@ -597,7 +629,41 @@ public class AddTransactionActivity extends AppCompatActivity {
                     if (spinSinglePerson != null) {
                         ArrayAdapter<String> singlePersonAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, singlePersonNames);
                         spinSinglePerson.setAdapter(singlePersonAdapter);
-                        if (!singlePersonNames.isEmpty()) {
+                    }
+
+                    // --- SMART CONTEXT LOGIC: FINMATE LEDGER ---
+                    if ("FINMATE_LEDGER".equals(sourceContext) && prefilledFinMateName != null) {
+                        // Pre-fill and lock all FinMate dropdowns
+                        if (spinSinglePerson != null) {
+                            spinSinglePerson.setText(prefilledFinMateName, false);
+                            spinSinglePerson.setEnabled(false);
+                        }
+                        spinReceivePerson.setText(prefilledFinMateName, false);
+                        spinReceivePerson.setEnabled(false);
+                        spinPayBackPerson.setText(prefilledFinMateName, false);
+                        spinPayBackPerson.setEnabled(false);
+
+                        // Force the split decision to "No" and lock the toggle
+                        if (rgSplitDecision != null) {
+                            rgSplitDecision.check(R.id.rbSplitNo);
+                            for (int i = 0; i < rgSplitDecision.getChildCount(); i++) {
+                                rgSplitDecision.getChildAt(i).setEnabled(false);
+                            }
+                        }
+
+                        // Maintain the exact ID mappings for saving
+                        currentSelectedReceiveFinMateId = prefilledFinMateId;
+                        currentSelectedPayBackFinMateId = prefilledFinMateId;
+
+                        // Auto-fetch unpaid data if tab was switched
+                        if (!isSpendMode && rgReceiveOptions.getCheckedRadioButtonId() == R.id.rbSettleDues) {
+                            fetchUnpaidTransactions(prefilledFinMateId, prefilledFinMateName);
+                        } else if (isSpendMode && rgSpendOptions.getCheckedRadioButtonId() == R.id.rbPayBackCredit) {
+                            fetchUnpaidCredits(prefilledFinMateId, prefilledFinMateName);
+                        }
+
+                    } else {
+                        if (spinSinglePerson != null && !singlePersonNames.isEmpty()) {
                             spinSinglePerson.setText(singlePersonNames.get(0), false);
                         }
                     }
@@ -1210,7 +1276,6 @@ public class AddTransactionActivity extends AppCompatActivity {
                 });
     }
 
-    // THE FIX: Extracted dynamically fetching the checked percentage
     private double getSelectedCashbackPercentage() {
         if (rgCashbackPercentage == null) return 0.0;
         int checkedId = rgCashbackPercentage.getCheckedRadioButtonId();
@@ -1717,81 +1782,5 @@ public class AddTransactionActivity extends AppCompatActivity {
                 }
             });
         });
-    }
-
-    private String getBankInitials(String bankName) {
-        if (bankName == null || bankName.trim().isEmpty()) return "BANK";
-
-        Map<String, String> shortNameMap = new HashMap<>();
-        shortNameMap.put("AU Small Finance Bank", "AUSFB");
-        shortNameMap.put("American Express", "AMEX");
-        shortNameMap.put("Axis Bank", "AXIS");
-        shortNameMap.put("Bandhan Bank", "BANDHAN");
-        shortNameMap.put("Bank of Baroda", "BOB");
-        shortNameMap.put("Bank of India", "BOI");
-        shortNameMap.put("Bank of Maharashtra", "BOM");
-        shortNameMap.put("Barclays Bank", "BARB");
-        shortNameMap.put("Baroda Gujarat Gramin Bank", "BGGB");
-        shortNameMap.put("Baroda Rajasthan Kshetriya Gramin Bank", "BRKGB");
-        shortNameMap.put("Baroda U.P. Bank", "BUPB");
-        shortNameMap.put("CSB Bank", "CSB");
-        shortNameMap.put("Canara Bank", "CAN");
-        shortNameMap.put("Capital Small Finance Bank", "CSFB");
-        shortNameMap.put("Central Bank of India", "CBI");
-        shortNameMap.put("City Union Bank", "CUB");
-        shortNameMap.put("Cosmos Co-operative Bank", "CCB");
-        shortNameMap.put("DBS Bank", "DBS");
-        shortNameMap.put("DCB Bank", "DCB");
-        shortNameMap.put("Deutsche Bank", "DB");
-        shortNameMap.put("Dhanlaxmi Bank", "DLB");
-        shortNameMap.put("ESAF Small Finance Bank", "ESFB");
-        shortNameMap.put("Equitas Small Finance Bank", "ESFB");
-        shortNameMap.put("Federal Bank", "FED");
-        shortNameMap.put("First Abu Dhabi Bank", "FAB");
-        shortNameMap.put("HDFC Bank", "HDFC");
-        shortNameMap.put("HSBC Bank", "HSBC");
-        shortNameMap.put("ICICI Bank Limited", "ICICI");
-        shortNameMap.put("IDFC FIRST Bank", "IDFC");
-        shortNameMap.put("Indian Bank", "IB");
-        shortNameMap.put("Indian Overseas Bank", "IOB");
-        shortNameMap.put("IndusInd Bank", "IND");
-        shortNameMap.put("Jammu & Kashmir Bank", "J&K");
-        shortNameMap.put("Jana Small Finance Bank", "JSFB");
-        shortNameMap.put("Karnataka Bank", "KBL");
-        shortNameMap.put("Karur Vysya Bank", "KVB");
-        shortNameMap.put("Kerala Gramin Bank", "KGB");
-        shortNameMap.put("Kotak Mahindra Bank", "KOTAK");
-        shortNameMap.put("Nainital Bank", "NB");
-        shortNameMap.put("Punjab & Sind Bank", "PSB");
-        shortNameMap.put("Punjab National Bank", "PNB");
-        shortNameMap.put("RBL Bank", "RBL");
-        shortNameMap.put("SBM Bank India", "SBM");
-        shortNameMap.put("SVC Co-operative Bank", "SVC");
-        shortNameMap.put("Saraswat Co-operative Bank", "SCB");
-        shortNameMap.put("South Indian Bank", "SIB");
-        shortNameMap.put("Standard Chartered Bank", "SCB");
-        shortNameMap.put("State Bank of India", "SBI");
-        shortNameMap.put("Suryoday Small Finance Bank", "SSFB");
-        shortNameMap.put("Tamilnad Mercantile Bank", "TMB");
-        shortNameMap.put("UCO Bank", "UCO");
-        shortNameMap.put("Ujjivan Small Finance Bank", "USFB");
-        shortNameMap.put("Union Bank of India", "UBI");
-        shortNameMap.put("Utkarsh Small Finance Bank", "USFB");
-        shortNameMap.put("YES Bank", "YES");
-
-        if (shortNameMap.containsKey(bankName)) {
-            return shortNameMap.get(bankName);
-        }
-
-        String[] words = bankName.trim().split("\\s+");
-        if (words.length == 1) {
-            return words[0].length() > 4 ? words[0].substring(0, 4).toUpperCase() : words[0].toUpperCase();
-        } else {
-            StringBuilder initials = new StringBuilder();
-            for (String word : words) {
-                if (!word.isEmpty()) initials.append(word.charAt(0));
-            }
-            return initials.toString().toUpperCase();
-        }
     }
 }

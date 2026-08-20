@@ -8,7 +8,7 @@ import java.util.Map;
 public class Transaction {
 
     // --- ENUMS FOR TRANSACTION TYPES ---
-    // "CARD_SPEND", "CASH_TRANSACTION", "SETTLEMENT", "EMI_CONVERSION", "CARD_PAYMENT"
+    // "CARD_SPEND", "CASH_TRANSACTION", "SETTLEMENT", "CARD_PAYMENT", "EMI_MASTER", "EMI_REVERSAL"
     private String transactionType;
 
     private String transactionId;
@@ -25,14 +25,14 @@ public class Transaction {
     // Tracks the exact millisecond the statement was generated for the 72-hour undo window
     private long statementGeneratedAt = 0;
 
-    // NEW: Tracks the exact cashback earned for this specific transaction
+    // Tracks the exact cashback earned for this specific transaction
     private double cashbackEarned = 0.0;
 
     // --- THE SPLIT ENGINE ---
     // Key: FinMateId (or "self"). Value: The exact absolute amounts.
     private Map<String, TransactionSplit> splits;
 
-    // --- THE EMI ENGINE ---
+    // --- THE ADVANCED EMI ENGINE ---
     private boolean isEmi;
     private EmiData emiData; // Null if not an EMI
 
@@ -40,7 +40,7 @@ public class Transaction {
     public Transaction() {
     }
 
-    // 2. Main Constructor (AddTransactionActivity uses this)
+    // 2. Main Constructor
     public Transaction(String transactionId, String transactionType, String cardId, String title,
                        long timestamp, double totalAmount, boolean isEmi) {
         this.transactionId = transactionId;
@@ -51,9 +51,9 @@ public class Transaction {
         this.totalAmount = totalAmount;
         this.isEmi = isEmi;
         this.billed = false;
-        this.billedMonth = null; // Defaults to null until a bill is formally generated!
+        this.billedMonth = null;
         this.statementGeneratedAt = 0;
-        this.cashbackEarned = 0.0; // Defaults to 0 when first created
+        this.cashbackEarned = 0.0;
         this.splits = new HashMap<>();
     }
 
@@ -91,6 +91,7 @@ public class Transaction {
     public Map<String, TransactionSplit> getSplits() { return splits; }
     public void setSplits(Map<String, TransactionSplit> splits) { this.splits = splits; }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean isEmi() { return isEmi; }
     public void setEmi(boolean emi) { isEmi = emi; }
 
@@ -130,18 +131,33 @@ public class Transaction {
     }
 
     // =========================================================================
-    // NESTED CLASS 2: EMI DATA
+    // NESTED CLASS 2: ADVANCED EMI DATA
     // =========================================================================
     public static class EmiData {
         private double bankProcessingFee;
         private double bankProcessingFeeGst;
+
+        // NEW: Blueprint Phase 5.1 -> To track the blocked limit on the card
+        private double remainingEmiPrincipal;
+
+        // NEW: Blueprint Phase 5.3 -> Stores the initial absolute principal split to calculate ratios
+        private Map<String, Double> originalPrincipalSplits;
+
+        // NEW: Blueprint Phase 5.2 -> Stores the total flat privilege charge applied to each person
+        private Map<String, Double> totalPrivilegeCharges;
+
         private List<EmiMonth> amortizationSchedule;
 
         public EmiData() {}
 
-        public EmiData(double bankProcessingFee, double bankProcessingFeeGst, List<EmiMonth> amortizationSchedule) {
+        public EmiData(double bankProcessingFee, double bankProcessingFeeGst, double remainingEmiPrincipal,
+                       Map<String, Double> originalPrincipalSplits, Map<String, Double> totalPrivilegeCharges,
+                       List<EmiMonth> amortizationSchedule) {
             this.bankProcessingFee = bankProcessingFee;
             this.bankProcessingFeeGst = bankProcessingFeeGst;
+            this.remainingEmiPrincipal = remainingEmiPrincipal;
+            this.originalPrincipalSplits = originalPrincipalSplits != null ? originalPrincipalSplits : new HashMap<>();
+            this.totalPrivilegeCharges = totalPrivilegeCharges != null ? totalPrivilegeCharges : new HashMap<>();
             this.amortizationSchedule = amortizationSchedule;
         }
 
@@ -151,12 +167,21 @@ public class Transaction {
         public double getBankProcessingFeeGst() { return bankProcessingFeeGst; }
         public void setBankProcessingFeeGst(double bankProcessingFeeGst) { this.bankProcessingFeeGst = bankProcessingFeeGst; }
 
+        public double getRemainingEmiPrincipal() { return remainingEmiPrincipal; }
+        public void setRemainingEmiPrincipal(double remainingEmiPrincipal) { this.remainingEmiPrincipal = remainingEmiPrincipal; }
+
+        public Map<String, Double> getOriginalPrincipalSplits() { return originalPrincipalSplits; }
+        public void setOriginalPrincipalSplits(Map<String, Double> originalPrincipalSplits) { this.originalPrincipalSplits = originalPrincipalSplits; }
+
+        public Map<String, Double> getTotalPrivilegeCharges() { return totalPrivilegeCharges; }
+        public void setTotalPrivilegeCharges(Map<String, Double> totalPrivilegeCharges) { this.totalPrivilegeCharges = totalPrivilegeCharges; }
+
         public List<EmiMonth> getAmortizationSchedule() { return amortizationSchedule; }
         public void setAmortizationSchedule(List<EmiMonth> amortizationSchedule) { this.amortizationSchedule = amortizationSchedule; }
     }
 
     // =========================================================================
-    // NESTED CLASS 3: EMI MONTH
+    // NESTED CLASS 3: EMI MONTH (EDITABLE BANK TRUTH)
     // =========================================================================
     public static class EmiMonth {
         private int monthNumber;
@@ -164,6 +189,9 @@ public class Transaction {
         private double bankInterest;
         private double bankGst;
         private boolean isBilled;
+
+        // NEW: Blueprint Phase 7.3 -> Used to mark future months as dead if the user forecloses early
+        private boolean isCancelled;
 
         public EmiMonth() {}
 
@@ -173,6 +201,7 @@ public class Transaction {
             this.bankInterest = bankInterest;
             this.bankGst = bankGst;
             this.isBilled = isBilled;
+            this.isCancelled = false; // Defaults to false
         }
 
         public int getMonthNumber() { return monthNumber; }
@@ -189,6 +218,9 @@ public class Transaction {
 
         public boolean isBilled() { return isBilled; }
         public void setBilled(boolean billed) { this.isBilled = billed; }
+
+        public boolean isCancelled() { return isCancelled; }
+        public void setCancelled(boolean cancelled) { this.isCancelled = cancelled; }
 
         public double getTotalBankDueForMonth() {
             return bankPrincipal + bankInterest + bankGst;

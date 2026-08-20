@@ -181,4 +181,15 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:layout_marginBottom="4dp" />
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnConvertToEmi"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_marginTop="16dp"
+        android:text="Convert to EMI"
+        android:textColor="#1abcab"
+        app:strokeColor="#1abcab"
+        app:cornerRadius="8dp"
+        android:visibility="gone"/>
 </LinearLayout>
