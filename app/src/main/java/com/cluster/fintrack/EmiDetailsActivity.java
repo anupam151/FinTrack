@@ -152,7 +152,6 @@ public class EmiDetailsActivity extends AppCompatActivity {
 
                         double profit = 0.0;
                         if (data.getTotalPrivilegeCharges() != null) {
-                            // Safe unboxing
                             Double profitObj = data.getTotalPrivilegeCharges().get(mateId);
                             if (profitObj != null) profit = profitObj;
                         }
@@ -219,6 +218,19 @@ public class EmiDetailsActivity extends AppCompatActivity {
         }
     }
 
+    private double calculateTotalCardDueForMonth(Transaction.EmiMonth month, Transaction.EmiData emiData) {
+        double principalAmt = month.getBankPrincipal();
+        double interestAmt = month.getBankInterest();
+        double gstAmt = month.getBankGst();
+
+        double bankFeeAmount = 0.0;
+        if (month.getMonthNumber() == 1 && emiData.getBankProcessingFee() > 0) {
+            bankFeeAmount = emiData.getBankProcessingFee() + emiData.getBankProcessingFeeGst();
+        }
+
+        return principalAmt + interestAmt + gstAmt + bankFeeAmount;
+    }
+
     private void transferMonthToUnbilled(int monthIndex) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) return;
@@ -234,7 +246,7 @@ public class EmiDetailsActivity extends AppCompatActivity {
         double pfAmt = (month.getMonthNumber() == 1) ? emiTx.getEmiData().getBankProcessingFee() : 0.0;
         double pfGstAmt = (month.getMonthNumber() == 1) ? emiTx.getEmiData().getBankProcessingFeeGst() : 0.0;
 
-        double totalCardDueForMonth = principalAmt + interestAmt + gstAmt + pfAmt + pfGstAmt;
+        double totalCardDueForMonth = calculateTotalCardDueForMonth(month, emiTx.getEmiData());
         double remainingPrincipal = emiTx.getEmiData().getRemainingEmiPrincipal() - principalAmt;
 
         month.setBilled(true);
@@ -287,17 +299,30 @@ public class EmiDetailsActivity extends AppCompatActivity {
             for (String key : originalSplits.keySet()) {
                 if (!"self".equals(key)) {
                     hasFinMate = true;
-                    break; // FIX 1: Loop correctly terminated early for performance
+                    break;
                 }
             }
 
             if (hasFinMate) {
+                double totalMonths = emiTx.getEmiData().getAmortizationSchedule().size();
+
+                // --- THE FIX: Correctly sum the Transaction's Total Amount to include Cash Profit! ---
+                double totalGhostTxAmount = totalCardDueForMonth;
+                Map<String, Double> privMap = emiTx.getEmiData().getTotalPrivilegeCharges();
+                if (privMap != null) {
+                    for (Map.Entry<String, Double> pEntry : privMap.entrySet()) {
+                        if (!"self".equals(pEntry.getKey()) && pEntry.getValue() != null) {
+                            totalGhostTxAmount += (pEntry.getValue() / totalMonths);
+                        }
+                    }
+                }
+
                 String ghostCardId = emiTx.getCardId() + "_GHOST";
-                Transaction tFinMate = new Transaction(generateRandomId(), "CARD_SPEND", ghostCardId, baseTitle, currentTimestamp, totalCardDueForMonth, false);
+                // Create transaction with the accurate math (Card + Cash limits combined)
+                Transaction tFinMate = new Transaction(generateRandomId(), "CARD_SPEND", ghostCardId, baseTitle, currentTimestamp, totalGhostTxAmount, false);
 
                 Map<String, Transaction.TransactionSplit> consolidatedSplits = new HashMap<>();
                 double totalOriginal = emiTx.getTotalAmount();
-                double totalMonths = emiTx.getEmiData().getAmortizationSchedule().size();
 
                 for (Map.Entry<String, Double> entry : originalSplits.entrySet()) {
                     String mateId = entry.getKey();
@@ -306,9 +331,7 @@ public class EmiDetailsActivity extends AppCompatActivity {
                     double ratio = totalOriginal > 0 ? (entry.getValue() / totalOriginal) : 0;
                     double cardShare = totalCardDueForMonth * ratio;
 
-                    // FIX 2: Safe unboxing of Privilege Charge to prevent NullPointerException
                     double privilegeCharge = 0.0;
-                    Map<String, Double> privMap = emiTx.getEmiData().getTotalPrivilegeCharges();
                     if (privMap != null) {
                         Double pCharge = privMap.get(mateId);
                         if (pCharge != null) {
@@ -316,6 +339,7 @@ public class EmiDetailsActivity extends AppCompatActivity {
                         }
                     }
 
+                    // Assign cardShare as Card Due, privilegeCharge as Cash Due
                     consolidatedSplits.put(mateId, new Transaction.TransactionSplit(cardShare, privilegeCharge, 0.0));
 
                     DocumentReference fmRef = db.collection("Users").document(userId).collection("FinMates").document(mateId);
