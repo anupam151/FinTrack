@@ -206,7 +206,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="2. Privilege Charges (Your Profit)"
+                        android:text="2. Other Charges (if any)"
                         android:textColor="#082561"
                         android:textSize="14sp"
                         android:textStyle="bold"
@@ -223,7 +223,7 @@
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Total Privilege Charge"
+                        android:hint="Total Other Charges"
                         app:prefixText="₹">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etTotalPrivilegeCharge"
