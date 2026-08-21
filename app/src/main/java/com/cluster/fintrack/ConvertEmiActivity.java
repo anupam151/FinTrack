@@ -31,11 +31,11 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.WriteBatch;
 
+import java.security.SecureRandom;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,15 +53,13 @@ public class ConvertEmiActivity extends AppCompatActivity {
 
     private TextView tvOriginalTitle, tvOriginalAmount;
     private MaterialAutoCompleteTextView spinTenure;
-    private TextInputEditText etInterestRate, etProcessingFee, etGstOnPf;
+    private TextInputEditText etInterestRate, etProcessingFee, etGstOnPf, etTotalPrivilegeCharge;
 
     private MaterialCardView cardPrivilegeCharges, cardAmortizationGrid;
-    private LinearLayout layoutPrivilegeContainer, layoutGridContainer;
+    private LinearLayout layoutGridContainer;
     private MaterialButton btnConvertEmi;
 
-    private final Map<String, TextInputEditText> privilegeInputs = new HashMap<>();
     private final List<Transaction.EmiMonth> generatedSchedule = new ArrayList<>();
-
     private final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale.Builder().setLanguage("en").setRegion("IN").build());
 
     @Override
@@ -104,7 +102,7 @@ public class ConvertEmiActivity extends AppCompatActivity {
         etGstOnPf = findViewById(R.id.etGstOnPf);
 
         cardPrivilegeCharges = findViewById(R.id.cardPrivilegeCharges);
-        layoutPrivilegeContainer = findViewById(R.id.layoutPrivilegeContainer);
+        etTotalPrivilegeCharge = findViewById(R.id.etTotalPrivilegeCharge);
 
         cardAmortizationGrid = findViewById(R.id.cardAmortizationGrid);
         layoutGridContainer = findViewById(R.id.layoutGridContainer);
@@ -133,47 +131,18 @@ public class ConvertEmiActivity extends AppCompatActivity {
                     if (originalTx != null) {
                         tvOriginalTitle.setText(originalTx.getTitle());
                         tvOriginalAmount.setText(currencyFormatter.format(originalTx.getTotalAmount()));
-                        buildPrivilegeChargeInputs();
-                    }
-                });
-    }
 
-    private void buildPrivilegeChargeInputs() {
-        if (originalTx.getSplits() == null) return;
-
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) return;
-
-        FirebaseFirestore.getInstance()
-                .collection("Users").document(user.getUid())
-                .collection("FinMates")
-                .get()
-                .addOnSuccessListener(snapshot -> {
-                    Map<String, String> namesMap = new HashMap<>();
-                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
-                        FinMate fm = doc.toObject(FinMate.class);
-                        if (fm != null) namesMap.put(fm.getFinMateId(), fm.getName());
-                    }
-
-                    layoutPrivilegeContainer.removeAllViews();
-                    privilegeInputs.clear();
-                    boolean hasFinMates = false;
-
-                    for (String mateId : originalTx.getSplits().keySet()) {
-                        if (mateId.equals("self")) continue;
-
-                        hasFinMates = true;
-                        View row = LayoutInflater.from(this).inflate(R.layout.item_privilege_charge, layoutPrivilegeContainer, false);
-                        TextView tvName = row.findViewById(R.id.tvFinMateName);
-                        TextInputEditText etCharge = row.findViewById(R.id.etPrivilegeCharge);
-
-                        tvName.setText(namesMap.getOrDefault(mateId, "Unknown"));
-                        privilegeInputs.put(mateId, etCharge);
-                        layoutPrivilegeContainer.addView(row);
-                    }
-
-                    if (hasFinMates) {
-                        cardPrivilegeCharges.setVisibility(View.VISIBLE);
+                        // Show privilege block ONLY if there are FinMates involved
+                        boolean hasFinMates = false;
+                        if (originalTx.getSplits() != null) {
+                            for (String mateId : originalTx.getSplits().keySet()) {
+                                if (!"self".equals(mateId)) {
+                                    hasFinMates = true;
+                                    break;
+                                }
+                            }
+                        }
+                        cardPrivilegeCharges.setVisibility(hasFinMates ? View.VISIBLE : View.GONE);
                     }
                 });
     }
@@ -258,6 +227,27 @@ public class ConvertEmiActivity extends AppCompatActivity {
         }
     }
 
+    // --- NEW EXTRACTED HELPER METHOD ---
+    private Transaction createReversalTransaction(long currentTimestamp) {
+        String reversalTxId = generateRandomId();
+        Transaction reversalTx = new Transaction(
+                reversalTxId,
+                "CARD_PAYMENT",
+                originalTx.getCardId(),
+                "EMI Reversal: " + originalTx.getTitle(),
+                currentTimestamp,
+                originalTx.getTotalAmount(),
+                false
+        );
+
+        // CHECK & DEDUCT CASHBACK: If cashback was given on the original transaction, claw it back!
+        double originalCashback = originalTx.getCashbackEarned();
+        reversalTx.setCashbackEarned(originalCashback > 0.0 ? -originalCashback : 0.0);
+        reversalTx.setSplits(new HashMap<>()); // Keeps ledger perfectly clean
+
+        return reversalTx;
+    }
+
     private void executeReversalAndConvert() {
         if (originalTx == null) return;
 
@@ -271,47 +261,68 @@ public class ConvertEmiActivity extends AppCompatActivity {
             return;
         }
 
-        // 1. Read Bank Processing Fees & GST (Deducted by Bank)
+        // 1. Bank Fees
         String pfStr = etProcessingFee.getText() != null ? etProcessingFee.getText().toString().trim() : "0";
         String gstStr = etGstOnPf.getText() != null ? etGstOnPf.getText().toString().trim() : "0";
         double bankPf = pfStr.isEmpty() ? 0.0 : Double.parseDouble(pfStr);
-        double bankGst = gstStr.isEmpty() ? 0.0 : Double.parseDouble(gstStr);
+        double gstPercentage = gstStr.isEmpty() ? 0.0 : Double.parseDouble(gstStr);
+        double bankGst = bankPf * (gstPercentage / 100.0);
 
-        // 2. Read Privilege Charges (User Cash Profit per FinMate)
-        Map<String, Double> totalPrivilegeCharges = new HashMap<>();
-        for (Map.Entry<String, TextInputEditText> entry : privilegeInputs.entrySet()) {
-            String chargeStr = entry.getValue().getText() != null ? entry.getValue().getText().toString().trim() : "0";
-            double charge = chargeStr.isEmpty() ? 0.0 : Double.parseDouble(chargeStr);
-            if (charge > 0) {
-                totalPrivilegeCharges.put(entry.getKey(), charge);
-            }
-        }
-
-        // 3. Extract Initial Splits
+        // 2. Original Splits Extraction
         Map<String, Double> originalPrincipalSplits = new HashMap<>();
+        double totalFinMateOriginal = 0.0;
         if (originalTx.getSplits() != null) {
             for (Map.Entry<String, Transaction.TransactionSplit> entry : originalTx.getSplits().entrySet()) {
-                originalPrincipalSplits.put(entry.getKey(), entry.getValue().getCombinedStealthAmount());
+                double amount = entry.getValue().getCombinedStealthAmount();
+                originalPrincipalSplits.put(entry.getKey(), amount);
+                if (!"self".equals(entry.getKey())) totalFinMateOriginal += amount;
             }
         }
 
-        // 4. Construct EMI Data
+        // 3. Distribute Privilege Charge proportionally among FinMates
+        String privStr = etTotalPrivilegeCharge.getText() != null ? etTotalPrivilegeCharge.getText().toString().trim() : "0";
+        double totalPrivilege = privStr.isEmpty() ? 0.0 : Double.parseDouble(privStr);
+
+        Map<String, Double> privilegeMap = new HashMap<>();
+        if (totalPrivilege > 0 && totalFinMateOriginal > 0) {
+            for (Map.Entry<String, Double> entry : originalPrincipalSplits.entrySet()) {
+                String mateId = entry.getKey();
+                if (!"self".equals(mateId)) {
+                    double ratio = entry.getValue() / totalFinMateOriginal;
+                    privilegeMap.put(mateId, totalPrivilege * ratio);
+                }
+            }
+        }
+
         Transaction.EmiData emiData = new Transaction.EmiData(
                 bankPf, bankGst, originalTx.getTotalAmount(),
-                originalPrincipalSplits, totalPrivilegeCharges, generatedSchedule
+                originalPrincipalSplits, privilegeMap, generatedSchedule
         );
 
         WriteBatch batch = db.batch();
+        long currentTimestamp = System.currentTimeMillis();
 
-        // 5. Morph Original Transaction into EMI_MASTER
-        DocumentReference txRef = db.collection("Users").document(userId).collection("Transactions").document(transactionId);
-        batch.update(txRef,
-                "transactionType", "EMI_MASTER",
-                "emi", true,
-                "emiData", emiData
+        // --- ACTION 1: Keep Original Transaction, BUT ERASE SPLITS so it hides from FinMate's ledger! ---
+        DocumentReference originalTxRef = db.collection("Users").document(userId).collection("Transactions").document(transactionId);
+        batch.update(originalTxRef, "emi", true, "splits", new HashMap<>());
+
+        // --- ACTION 2: Create Reversal/Refund Transaction with NO SPLITS (and deduct cashback) ---
+        Transaction reversalTx = createReversalTransaction(currentTimestamp);
+        batch.set(db.collection("Users").document(userId).collection("Transactions").document(reversalTx.getTransactionId()), reversalTx);
+
+        // --- ACTION 3: Create the hidden EMI Master Transaction ---
+        String emiMasterTxId = generateRandomId();
+        Transaction emiMasterTx = new Transaction(
+                emiMasterTxId, "EMI_MASTER", originalTx.getCardId(),
+                originalTx.getTitle() + " (EMI)", currentTimestamp,
+                originalTx.getTotalAmount(), true
         );
+        emiMasterTx.setEmiData(emiData);
+        emiMasterTx.setSplits(new HashMap<>());
 
-        // 6. Refund the FinMates' Upfront Debt
+        batch.set(db.collection("Users").document(userId).collection("Transactions").document(emiMasterTxId), emiMasterTx);
+
+        // --- ACTION 4: Refund the FinMates' Upfront Debt (Since we erased the original transaction from their view) ---
         for (Map.Entry<String, Double> entry : originalPrincipalSplits.entrySet()) {
             String mateId = entry.getKey();
             if ("self".equals(mateId)) continue;
@@ -329,13 +340,21 @@ public class ConvertEmiActivity extends AppCompatActivity {
         btnConvertEmi.setText("Converting...");
 
         batch.commit().addOnSuccessListener(aVoid -> {
-            Toast.makeText(this, "Successfully Converted to EMI!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Successfully Converted! FinMate ledger cleaned.", Toast.LENGTH_SHORT).show();
             finish();
         }).addOnFailureListener(e -> {
             Toast.makeText(this, "Failed to convert: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             btnConvertEmi.setEnabled(true);
             btnConvertEmi.setText("Execute Reversal & Convert");
         });
+    }
+
+    private String generateRandomId() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder sb = new StringBuilder(6);
+        SecureRandom rnd = new SecureRandom();
+        for (int i = 0; i < 6; i++) sb.append(chars.charAt(rnd.nextInt(chars.length())));
+        return sb.toString();
     }
 
     @Override

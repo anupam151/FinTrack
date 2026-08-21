@@ -214,15 +214,23 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Add a flat extra fee for FinMates. This is spread across their EMIs."
+                        android:text="Add a flat extra fee. It will automatically be distributed to the FinMate(s) involved in this purchase."
                         android:textColor="#667085"
                         android:textSize="12sp"
                         android:layout_marginBottom="12dp"/>
-                    <LinearLayout
-                        android:id="@+id/layoutPrivilegeContainer"
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"/>
+                        android:hint="Total Privilege Charge"
+                        app:prefixText="₹">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etTotalPrivilegeCharge"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="numberDecimal" />
+                    </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

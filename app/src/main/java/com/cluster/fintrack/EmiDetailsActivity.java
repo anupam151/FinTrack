@@ -152,6 +152,7 @@ public class EmiDetailsActivity extends AppCompatActivity {
 
                         double profit = 0.0;
                         if (data.getTotalPrivilegeCharges() != null) {
+                            // Safe unboxing
                             Double profitObj = data.getTotalPrivilegeCharges().get(mateId);
                             if (profitObj != null) profit = profitObj;
                         }
@@ -227,77 +228,112 @@ public class EmiDetailsActivity extends AppCompatActivity {
         Transaction.EmiMonth month = emiTx.getEmiData().getAmortizationSchedule().get(monthIndex);
         if (month.isBilled()) return;
 
-        double totalMonthDue = month.getTotalBankDueForMonth();
-        double remainingPrincipal = emiTx.getEmiData().getRemainingEmiPrincipal() - month.getBankPrincipal();
+        double principalAmt = month.getBankPrincipal();
+        double interestAmt = month.getBankInterest();
+        double gstAmt = month.getBankGst();
+        double pfAmt = (month.getMonthNumber() == 1) ? emiTx.getEmiData().getBankProcessingFee() : 0.0;
+        double pfGstAmt = (month.getMonthNumber() == 1) ? emiTx.getEmiData().getBankProcessingFeeGst() : 0.0;
+
+        double totalCardDueForMonth = principalAmt + interestAmt + gstAmt + pfAmt + pfGstAmt;
+        double remainingPrincipal = emiTx.getEmiData().getRemainingEmiPrincipal() - principalAmt;
 
         month.setBilled(true);
         emiTx.getEmiData().setRemainingEmiPrincipal(Math.max(0, remainingPrincipal));
 
         WriteBatch batch = db.batch();
+        long currentTimestamp = System.currentTimeMillis();
+        String baseTitle = emiTx.getTitle() + " (Month " + month.getMonthNumber() + ")";
 
-        // 1. Update Master EMI Transaction
         DocumentReference masterRef = db.collection("Users").document(userId).collection("Transactions").document(transactionId);
         batch.set(masterRef, emiTx, SetOptions.merge());
 
-        // 2. Create Unbilled Spend Transaction for this Month's Installment
-        String newTxId = generateRandomId();
-        Map<String, Transaction.TransactionSplit> splits = new HashMap<>();
+        // ======================================================================
+        // 1. CARD TRANSACTIONS (5 separate entries, visible ONLY to Card)
+        // ======================================================================
+
+        Transaction tPrin = new Transaction(generateRandomId(), "CARD_SPEND", emiTx.getCardId(), baseTitle + " - Principal", currentTimestamp, principalAmt, false);
+        tPrin.setSplits(new HashMap<>());
+        batch.set(db.collection("Users").document(userId).collection("Transactions").document(tPrin.getTransactionId()), tPrin);
+
+        Transaction tInt = new Transaction(generateRandomId(), "CARD_SPEND", emiTx.getCardId(), baseTitle + " - Interest", currentTimestamp, interestAmt, false);
+        tInt.setSplits(new HashMap<>());
+        batch.set(db.collection("Users").document(userId).collection("Transactions").document(tInt.getTransactionId()), tInt);
+
+        if (gstAmt > 0) {
+            Transaction tGst = new Transaction(generateRandomId(), "CARD_SPEND", emiTx.getCardId(), baseTitle + " - GST on Interest", currentTimestamp, gstAmt, false);
+            tGst.setSplits(new HashMap<>());
+            batch.set(db.collection("Users").document(userId).collection("Transactions").document(tGst.getTransactionId()), tGst);
+        }
+
+        if (pfAmt > 0) {
+            Transaction tPf = new Transaction(generateRandomId(), "CARD_SPEND", emiTx.getCardId(), baseTitle + " - Processing Fee", currentTimestamp, pfAmt, false);
+            tPf.setSplits(new HashMap<>());
+            batch.set(db.collection("Users").document(userId).collection("Transactions").document(tPf.getTransactionId()), tPf);
+        }
+
+        if (pfGstAmt > 0) {
+            Transaction tPfGst = new Transaction(generateRandomId(), "CARD_SPEND", emiTx.getCardId(), baseTitle + " - GST on PF", currentTimestamp, pfGstAmt, false);
+            tPfGst.setSplits(new HashMap<>());
+            batch.set(db.collection("Users").document(userId).collection("Transactions").document(tPfGst.getTransactionId()), tPfGst);
+        }
+
+        // ======================================================================
+        // 2. FINMATE TRANSACTION (1 consolidated entry, visible ONLY to FinMate)
+        // ======================================================================
 
         Map<String, Double> originalSplits = emiTx.getEmiData().getOriginalPrincipalSplits();
-        double totalOriginal = emiTx.getTotalAmount();
-
-        for (Map.Entry<String, Double> entry : originalSplits.entrySet()) {
-            String mateId = entry.getKey();
-            double ratio = totalOriginal > 0 ? (entry.getValue() / totalOriginal) : 0;
-            double matePrincipalShare = month.getBankPrincipal() * ratio;
-            double mateInterestShare = (month.getBankInterest() + month.getBankGst()) * ratio;
-
-            // Privilege charge applied as cash, principal/interest as card
-            double privilegeCharge = 0.0;
-            if (emiTx.getEmiData().getTotalPrivilegeCharges() != null) {
-                Double pCharge = emiTx.getEmiData().getTotalPrivilegeCharges().get(mateId);
-                if (pCharge != null) {
-                    // Distribute privilege charge evenly across months or attach full
-                    privilegeCharge = pCharge / emiTx.getEmiData().getAmortizationSchedule().size();
+        if (originalSplits != null && !originalSplits.isEmpty()) {
+            boolean hasFinMate = false;
+            for (String key : originalSplits.keySet()) {
+                if (!"self".equals(key)) {
+                    hasFinMate = true;
+                    break; // FIX 1: Loop correctly terminated early for performance
                 }
             }
 
-            splits.put(mateId, new Transaction.TransactionSplit(matePrincipalShare + mateInterestShare, privilegeCharge, 0.0));
-        }
+            if (hasFinMate) {
+                String ghostCardId = emiTx.getCardId() + "_GHOST";
+                Transaction tFinMate = new Transaction(generateRandomId(), "CARD_SPEND", ghostCardId, baseTitle, currentTimestamp, totalCardDueForMonth, false);
 
-        Transaction monthlySpendTx = new Transaction(
-                newTxId,
-                "CARD_SPEND",
-                emiTx.getCardId(),
-                emiTx.getTitle() + " (Month " + month.getMonthNumber() + ")",
-                System.currentTimeMillis(),
-                totalMonthDue,
-                false
-        );
-        monthlySpendTx.setSplits(splits);
+                Map<String, Transaction.TransactionSplit> consolidatedSplits = new HashMap<>();
+                double totalOriginal = emiTx.getTotalAmount();
+                double totalMonths = emiTx.getEmiData().getAmortizationSchedule().size();
 
-        DocumentReference newTxRef = db.collection("Users").document(userId).collection("Transactions").document(newTxId);
-        batch.set(newTxRef, monthlySpendTx);
+                for (Map.Entry<String, Double> entry : originalSplits.entrySet()) {
+                    String mateId = entry.getKey();
+                    if ("self".equals(mateId)) continue;
 
-        // 3. Update FinMate Balances
-        for (Map.Entry<String, Transaction.TransactionSplit> splitEntry : splits.entrySet()) {
-            String mateId = splitEntry.getKey();
-            if ("self".equals(mateId)) continue;
+                    double ratio = totalOriginal > 0 ? (entry.getValue() / totalOriginal) : 0;
+                    double cardShare = totalCardDueForMonth * ratio;
 
-            double cardAmt = splitEntry.getValue().getCardAmount();
-            double cashAmt = splitEntry.getValue().getCashAmount();
+                    // FIX 2: Safe unboxing of Privilege Charge to prevent NullPointerException
+                    double privilegeCharge = 0.0;
+                    Map<String, Double> privMap = emiTx.getEmiData().getTotalPrivilegeCharges();
+                    if (privMap != null) {
+                        Double pCharge = privMap.get(mateId);
+                        if (pCharge != null) {
+                            privilegeCharge = pCharge / totalMonths;
+                        }
+                    }
 
-            DocumentReference fmRef = db.collection("Users").document(userId).collection("FinMates").document(mateId);
-            batch.update(fmRef,
-                    "receivableCardAmount", FieldValue.increment(cardAmt),
-                    "receivableCashAmount", FieldValue.increment(cashAmt),
-                    "totalReceivable", FieldValue.increment(cardAmt + cashAmt)
-            );
+                    consolidatedSplits.put(mateId, new Transaction.TransactionSplit(cardShare, privilegeCharge, 0.0));
+
+                    DocumentReference fmRef = db.collection("Users").document(userId).collection("FinMates").document(mateId);
+                    batch.update(fmRef,
+                            "receivableCardAmount", FieldValue.increment(cardShare),
+                            "receivableCashAmount", FieldValue.increment(privilegeCharge),
+                            "totalReceivable", FieldValue.increment(cardShare + privilegeCharge)
+                    );
+                }
+
+                tFinMate.setSplits(consolidatedSplits);
+                batch.set(db.collection("Users").document(userId).collection("Transactions").document(tFinMate.getTransactionId()), tFinMate);
+            }
         }
 
         batch.commit().addOnSuccessListener(aVoid -> {
-            Toast.makeText(this, "Month " + month.getMonthNumber() + " transferred to unbilled spends!", Toast.LENGTH_SHORT).show();
-            fetchEmiData(); // Refresh UI
+            Toast.makeText(this, "Month " + month.getMonthNumber() + " transferred successfully!", Toast.LENGTH_SHORT).show();
+            fetchEmiData();
         }).addOnFailureListener(e -> Toast.makeText(this, "Failed to transfer: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 

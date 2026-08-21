@@ -115,6 +115,7 @@ public class CardLedgerActivity extends AppCompatActivity {
 
         MaterialButton btnAllTransactions = findViewById(R.id.btnAllTransactions);
         MaterialButton btnGenerateBill = findViewById(R.id.btnGenerateBill);
+        MaterialButton btnActiveEmis = findViewById(R.id.btnActiveEmis);
 
         tvBilledDue = findViewById(R.id.tvBilledDue);
         tvUnbilled = findViewById(R.id.tvUnbilled);
@@ -151,7 +152,15 @@ public class CardLedgerActivity extends AppCompatActivity {
 
         btnGenerateBill.setOnClickListener(v -> openBillGenerationSheet());
 
-        // SMART FAB: Passes the exact card context to AddTransactionActivity
+        if (btnActiveEmis != null) {
+            btnActiveEmis.setOnClickListener(v -> {
+                Intent intent = new Intent(this, CardActiveEmisActivity.class);
+                intent.putExtra("CARD_ID", cardId);
+                intent.putExtra("CARD_NAME", cardName);
+                startActivity(intent);
+            });
+        }
+
         View fabAddTransaction = findViewById(R.id.btnAddTransactionHeader);
         if (fabAddTransaction != null) {
             fabAddTransaction.setOnClickListener(v -> {
@@ -159,7 +168,6 @@ public class CardLedgerActivity extends AppCompatActivity {
                 intent.putExtra("SOURCE", "CARD_LEDGER");
                 intent.putExtra("CARD_ID", cardId);
 
-                // CENTRALIZED UTIL
                 String shortBankName = BankUtils.getBankInitials(bankName);
                 String fullCardDisplayName = cardName + " - " + shortBankName + " (" + (last4 != null ? last4 : "0000") + ")";
                 intent.putExtra("CARD_NAME", fullCardDisplayName);
@@ -368,19 +376,28 @@ public class CardLedgerActivity extends AppCompatActivity {
                         if (tx != null) {
                             masterList.add(tx);
 
-                            lifetimeCashback += tx.getCashbackEarned();
+                            // --- PERFECTED CASHBACK LOGIC ---
+                            // 1. If billed -> goes to Lifetime Cashback
+                            // 2. If unbilled -> goes to Unbilled Cashback
+                            // Because it applies to all transactions regardless of type,
+                            // the EMI Reversal's negative cashback perfectly offsets the original!
+                            if (tx.isBilled()) {
+                                lifetimeCashback += tx.getCashbackEarned();
+                            } else {
+                                unbilledCashback += tx.getCashbackEarned();
+                            }
 
+                            // --- FINANCIAL DEBT CALCULATION ---
                             if ("CARD_SPEND".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType())) {
                                 if (tx.isBilled()) {
                                     billedSpends += tx.getTotalAmount();
                                 } else {
                                     unbilledSpends += tx.getTotalAmount();
-                                    unbilledCashback += tx.getCashbackEarned();
                                 }
                             } else if ("CARD_PAYMENT".equals(tx.getTransactionType())) {
                                 totalPayments += tx.getTotalAmount();
                             }
-                            // --- THE FIX: Include EMI_MASTER in the card usage logic to keep the limit blocked ---
+                            // Keeps the card limit accurately blocked using the hidden Master EMI transaction
                             else if ("EMI_MASTER".equals(tx.getTransactionType()) && tx.getEmiData() != null) {
                                 unbilledSpends += tx.getEmiData().getRemainingEmiPrincipal();
                             }
@@ -425,9 +442,8 @@ public class CardLedgerActivity extends AppCompatActivity {
 
             boolean isUnbilledSpend = !tx.isBilled() && ("CARD_SPEND".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType()));
             boolean isRecentPayment = "CARD_PAYMENT".equals(tx.getTransactionType()) && (tx.getBilledMonth() == null || tx.getBilledMonth().trim().isEmpty());
-            boolean isEmiMaster = "EMI_MASTER".equals(tx.getTransactionType());
 
-            if (matchesSearch && (isUnbilledSpend || isRecentPayment || isEmiMaster)) {
+            if (matchesSearch && (isUnbilledSpend || isRecentPayment)) {
                 displayList.add(tx);
             }
         }
@@ -466,7 +482,6 @@ public class CardLedgerActivity extends AppCompatActivity {
 
             holder.tvTxTitle.setText(tx.getTitle());
             holder.tvTxDate.setText(dateFormat.format(new Date(tx.getTimestamp())));
-            holder.tvTxAmount.setText(currencyFormatter.format(tx.getTotalAmount()));
 
             String shortId = tx.getTransactionId() != null && tx.getTransactionId().length() >= 6
                     ? tx.getTransactionId().substring(0, 6).toUpperCase()
@@ -476,36 +491,43 @@ public class CardLedgerActivity extends AppCompatActivity {
             holder.tvTxTotalAmount.setVisibility(View.GONE);
             holder.tvTxSource.setVisibility(View.GONE);
 
-            if ("EMI_MASTER".equals(tx.getTransactionType())) {
-                holder.tvTxStatus.setText("Active EMI");
+            if ("CARD_PAYMENT".equals(tx.getTransactionType()) || "PAY_CREDIT".equals(tx.getTransactionType())) {
+                holder.tvTxAmount.setText("+" + currencyFormatter.format(tx.getTotalAmount()));
+                holder.tvTxAmount.setTextColor(Color.parseColor("#388E3C")); // Green
+            } else {
+                holder.tvTxAmount.setText(currencyFormatter.format(tx.getTotalAmount()));
+                holder.tvTxAmount.setTextColor(Color.parseColor("#101828")); // Dark
+            }
+
+            if (tx.isEmi() && "CARD_SPEND".equals(tx.getTransactionType())) {
+                holder.tvTxStatus.setText("Converted to EMI");
                 holder.tvTxStatus.setTextColor(Color.parseColor("#9C27B0")); // Purple
                 holder.badgeStatus.setCardBackgroundColor(Color.parseColor("#F3E5F5"));
                 holder.cardIconContainer.setCardBackgroundColor(Color.parseColor("#F3E5F5"));
                 holder.ivTxIcon.setColorFilter(Color.parseColor("#9C27B0"));
             } else if ("CARD_PAYMENT".equals(tx.getTransactionType())) {
-                holder.tvTxStatus.setText("Bill Paid");
-                holder.tvTxStatus.setTextColor(Color.parseColor("#388E3C"));
-                holder.badgeStatus.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
-                holder.cardIconContainer.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
-                holder.ivTxIcon.setColorFilter(Color.parseColor("#388E3C"));
+                if (tx.getTitle() != null && tx.getTitle().contains("EMI Reversal")) {
+                    holder.tvTxStatus.setText("EMI Refund");
+                    holder.tvTxStatus.setTextColor(Color.parseColor("#F57C00")); // Orange warning
+                    holder.badgeStatus.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
+                    holder.cardIconContainer.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
+                    holder.ivTxIcon.setColorFilter(Color.parseColor("#F57C00"));
+                } else {
+                    holder.tvTxStatus.setText("Bill Paid");
+                    holder.tvTxStatus.setTextColor(Color.parseColor("#388E3C")); // Green
+                    holder.badgeStatus.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
+                    holder.cardIconContainer.setCardBackgroundColor(Color.parseColor("#E8F5E9"));
+                    holder.ivTxIcon.setColorFilter(Color.parseColor("#388E3C"));
+                }
             } else {
                 holder.tvTxStatus.setText("Unbilled");
-                holder.tvTxStatus.setTextColor(Color.parseColor("#F57C00"));
+                holder.tvTxStatus.setTextColor(Color.parseColor("#F57C00")); // Orange
                 holder.badgeStatus.setCardBackgroundColor(Color.parseColor("#FFF3E0"));
-                holder.cardIconContainer.setCardBackgroundColor(Color.parseColor("#E3F2FD"));
-                holder.ivTxIcon.setColorFilter(Color.parseColor("#1565C0"));
+                holder.cardIconContainer.setCardBackgroundColor(Color.parseColor("#E3F2FD")); // Blue Icon Background
+                holder.ivTxIcon.setColorFilter(Color.parseColor("#1565C0")); // Blue Icon
             }
 
-            // --- THE FIX: SMART ROUTING FOR EMI DETAILS ---
-            holder.itemView.setOnClickListener(v -> {
-                if ("EMI_MASTER".equals(tx.getTransactionType())) {
-                    Intent intent = new Intent(v.getContext(), EmiDetailsActivity.class);
-                    intent.putExtra("TRANSACTION_ID", tx.getTransactionId());
-                    v.getContext().startActivity(intent);
-                } else {
-                    showTransactionDetailsSheet(v.getContext(), tx);
-                }
-            });
+            holder.itemView.setOnClickListener(v -> showTransactionDetailsSheet(v.getContext(), tx));
         }
 
         @SuppressLint({"SetTextI18n", "InflateParams"})
