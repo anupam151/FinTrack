@@ -53,7 +53,7 @@ public class ConvertEmiActivity extends AppCompatActivity {
 
     private TextView tvOriginalTitle, tvOriginalAmount;
     private MaterialAutoCompleteTextView spinTenure;
-    private TextInputEditText etInterestRate, etProcessingFee, etGstOnPf, etTotalPrivilegeCharge;
+    private TextInputEditText etInterestRate, etProcessingFee, etGstOnPf, etTotalPrivilegeCharge, etConversionAmount;
 
     private MaterialCardView cardPrivilegeCharges, cardAmortizationGrid;
     private LinearLayout layoutGridContainer;
@@ -96,6 +96,9 @@ public class ConvertEmiActivity extends AppCompatActivity {
         tvOriginalTitle = findViewById(R.id.tvOriginalTitle);
         tvOriginalAmount = findViewById(R.id.tvOriginalAmount);
 
+        // Added the new Conversion Amount field binding
+        etConversionAmount = findViewById(R.id.etConversionAmount);
+
         spinTenure = findViewById(R.id.spinTenure);
         etInterestRate = findViewById(R.id.etInterestRate);
         etProcessingFee = findViewById(R.id.etProcessingFee);
@@ -132,6 +135,11 @@ public class ConvertEmiActivity extends AppCompatActivity {
                         tvOriginalTitle.setText(originalTx.getTitle());
                         tvOriginalAmount.setText(currencyFormatter.format(originalTx.getTotalAmount()));
 
+                        // Pre-fill the conversion field with the full amount by default
+                        if (etConversionAmount != null) {
+                            etConversionAmount.setText(String.format(Locale.US, "%.2f", originalTx.getTotalAmount()));
+                        }
+
                         // Show privilege block ONLY if there are FinMates involved
                         boolean hasFinMates = false;
                         if (originalTx.getSplits() != null) {
@@ -148,6 +156,15 @@ public class ConvertEmiActivity extends AppCompatActivity {
     }
 
     private void generateAmortizationGrid() {
+        // Fetch the user-defined amount (fallback to total if empty)
+        String amountStr = etConversionAmount.getText() != null ? etConversionAmount.getText().toString().trim() : "";
+        double conversionAmount = amountStr.isEmpty() ? originalTx.getTotalAmount() : Double.parseDouble(amountStr);
+
+        if (conversionAmount <= 0 || conversionAmount > originalTx.getTotalAmount()) {
+            Toast.makeText(this, "Invalid conversion amount.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         String tenureStr = spinTenure.getText().toString();
         String rateStr = String.valueOf(etInterestRate.getText()).trim();
 
@@ -158,15 +175,15 @@ public class ConvertEmiActivity extends AppCompatActivity {
 
         int months = Integer.parseInt(tenureStr);
         double annualRate = Double.parseDouble(rateStr);
-        double p = originalTx.getTotalAmount();
 
         double r = (annualRate / 12) / 100.0;
-        double emi = (p * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
+        // Use conversionAmount for the calculation instead of the total amount
+        double emi = (conversionAmount * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
 
         generatedSchedule.clear();
         layoutGridContainer.removeAllViews();
 
-        double remainingPrincipal = p;
+        double remainingPrincipal = conversionAmount;
 
         for (int i = 1; i <= months; i++) {
             double interest = remainingPrincipal * r;
@@ -227,8 +244,8 @@ public class ConvertEmiActivity extends AppCompatActivity {
         }
     }
 
-    // --- NEW EXTRACTED HELPER METHOD ---
-    private Transaction createReversalTransaction(long currentTimestamp) {
+    // Pass the calculated variables so Reversal perfectly matches the target
+    private Transaction createReversalTransaction(long currentTimestamp, double conversionAmount, double conversionRatio) {
         String reversalTxId = generateRandomId();
         Transaction reversalTx = new Transaction(
                 reversalTxId,
@@ -236,13 +253,15 @@ public class ConvertEmiActivity extends AppCompatActivity {
                 originalTx.getCardId(),
                 "EMI Reversal: " + originalTx.getTitle(),
                 currentTimestamp,
-                originalTx.getTotalAmount(),
+                conversionAmount, // REVERSE ONLY WHAT IS CONVERTED
                 false
         );
 
-        // CHECK & DEDUCT CASHBACK: If cashback was given on the original transaction, claw it back!
+        // CHECK & DEDUCT CASHBACK PROPORTIONALLY
         double originalCashback = originalTx.getCashbackEarned();
-        reversalTx.setCashbackEarned(originalCashback > 0.0 ? -originalCashback : 0.0);
+        double cashbackToDeduct = originalCashback * conversionRatio;
+        reversalTx.setCashbackEarned(cashbackToDeduct > 0.0 ? -cashbackToDeduct : 0.0);
+
         reversalTx.setSplits(new HashMap<>()); // Keeps ledger perfectly clean
 
         return reversalTx;
@@ -261,6 +280,18 @@ public class ConvertEmiActivity extends AppCompatActivity {
             return;
         }
 
+        // --- PARTIAL CONVERSION MATH ---
+        String amountStr = etConversionAmount.getText() != null ? etConversionAmount.getText().toString().trim() : "";
+        double conversionAmount = amountStr.isEmpty() ? originalTx.getTotalAmount() : Double.parseDouble(amountStr);
+
+        if (conversionAmount <= 0 || conversionAmount > originalTx.getTotalAmount()) {
+            Toast.makeText(this, "Invalid conversion amount.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        double conversionRatio = originalTx.getTotalAmount() > 0 ? (conversionAmount / originalTx.getTotalAmount()) : 1.0;
+        boolean isPartialConversion = conversionAmount < originalTx.getTotalAmount();
+
         // 1. Bank Fees
         String pfStr = etProcessingFee.getText() != null ? etProcessingFee.getText().toString().trim() : "0";
         String gstStr = etGstOnPf.getText() != null ? etGstOnPf.getText().toString().trim() : "0";
@@ -268,46 +299,67 @@ public class ConvertEmiActivity extends AppCompatActivity {
         double gstPercentage = gstStr.isEmpty() ? 0.0 : Double.parseDouble(gstStr);
         double bankGst = bankPf * (gstPercentage / 100.0);
 
-        // 2. Original Splits Extraction
-        Map<String, Double> originalPrincipalSplits = new HashMap<>();
-        double totalFinMateOriginal = 0.0;
+        // 2. Proportionally separate the original splits!
+        Map<String, Double> convertedPrincipalSplits = new HashMap<>();
+        Map<String, Transaction.TransactionSplit> remainingOriginalSplits = new HashMap<>();
+        double totalFinMateConverted = 0.0;
+
         if (originalTx.getSplits() != null) {
             for (Map.Entry<String, Transaction.TransactionSplit> entry : originalTx.getSplits().entrySet()) {
-                double amount = entry.getValue().getCombinedStealthAmount();
-                originalPrincipalSplits.put(entry.getKey(), amount);
-                if (!"self".equals(entry.getKey())) totalFinMateOriginal += amount;
+                String mateId = entry.getKey();
+                Transaction.TransactionSplit originalSplit = entry.getValue();
+
+                double ogAmount = originalSplit.getCombinedStealthAmount();
+                double convertedAmt = ogAmount * conversionRatio;
+                double remainingAmt = ogAmount - convertedAmt; // The leftover unconverted debt
+
+                convertedPrincipalSplits.put(mateId, convertedAmt);
+                if (!"self".equals(mateId)) {
+                    totalFinMateConverted += convertedAmt;
+                }
+
+                // If partially converted, keep the leftover split inside the original transaction!
+                if (remainingAmt > 0.01) {
+                    remainingOriginalSplits.put(mateId, new Transaction.TransactionSplit(remainingAmt, originalSplit.getCashAmount(), originalSplit.getPaidAmount()));
+                }
             }
         }
 
-        // 3. Distribute Privilege Charge proportionally among FinMates
+        // 3. Distribute Privilege Charge proportionally among the CONVERTED FinMate amounts
         String privStr = etTotalPrivilegeCharge.getText() != null ? etTotalPrivilegeCharge.getText().toString().trim() : "0";
         double totalPrivilege = privStr.isEmpty() ? 0.0 : Double.parseDouble(privStr);
 
         Map<String, Double> privilegeMap = new HashMap<>();
-        if (totalPrivilege > 0 && totalFinMateOriginal > 0) {
-            for (Map.Entry<String, Double> entry : originalPrincipalSplits.entrySet()) {
+        if (totalPrivilege > 0 && totalFinMateConverted > 0) {
+            for (Map.Entry<String, Double> entry : convertedPrincipalSplits.entrySet()) {
                 String mateId = entry.getKey();
                 if (!"self".equals(mateId)) {
-                    double ratio = entry.getValue() / totalFinMateOriginal;
+                    double ratio = entry.getValue() / totalFinMateConverted;
                     privilegeMap.put(mateId, totalPrivilege * ratio);
                 }
             }
         }
 
         Transaction.EmiData emiData = new Transaction.EmiData(
-                bankPf, bankGst, originalTx.getTotalAmount(),
-                originalPrincipalSplits, privilegeMap, generatedSchedule
+                bankPf, bankGst, conversionAmount, // Set EMI Master Total to the targeted converted amount
+                convertedPrincipalSplits, privilegeMap, generatedSchedule
         );
 
         WriteBatch batch = db.batch();
         long currentTimestamp = System.currentTimeMillis();
 
-        // --- ACTION 1: Keep Original Transaction, BUT ERASE SPLITS so it hides from FinMate's ledger! ---
+        // --- ACTION 1: Keep Original Transaction & Manage Unconverted Splits ---
         DocumentReference originalTxRef = db.collection("Users").document(userId).collection("Transactions").document(transactionId);
-        batch.update(originalTxRef, "emi", true, "splits", new HashMap<>());
+        if (isPartialConversion) {
+            // Keep the badge but leave the remaining unconverted splits so the FinMate keeps the standard unbilled debt
+            batch.update(originalTxRef, "emi", true, "splits", remainingOriginalSplits);
+        } else {
+            // Fully converted, erase splits completely
+            batch.update(originalTxRef, "emi", true, "splits", new HashMap<>());
+        }
 
-        // --- ACTION 2: Create Reversal/Refund Transaction with NO SPLITS (and deduct cashback) ---
-        Transaction reversalTx = createReversalTransaction(currentTimestamp);
+        // --- ACTION 2: Create Reversal/Refund Transaction ONLY for Converted Amount ---
+        Transaction reversalTx = createReversalTransaction(currentTimestamp, conversionAmount, conversionRatio);
         batch.set(db.collection("Users").document(userId).collection("Transactions").document(reversalTx.getTransactionId()), reversalTx);
 
         // --- ACTION 3: Create the hidden EMI Master Transaction ---
@@ -315,32 +367,33 @@ public class ConvertEmiActivity extends AppCompatActivity {
         Transaction emiMasterTx = new Transaction(
                 emiMasterTxId, "EMI_MASTER", originalTx.getCardId(),
                 originalTx.getTitle() + " (EMI)", currentTimestamp,
-                originalTx.getTotalAmount(), true
+                conversionAmount, true
         );
         emiMasterTx.setEmiData(emiData);
         emiMasterTx.setSplits(new HashMap<>());
 
         batch.set(db.collection("Users").document(userId).collection("Transactions").document(emiMasterTxId), emiMasterTx);
 
-        // --- ACTION 4: Refund the FinMates' Upfront Debt (Since we erased the original transaction from their view) ---
-        for (Map.Entry<String, Double> entry : originalPrincipalSplits.entrySet()) {
+        // --- ACTION 4: Refund the FinMates' CONVERTED Upfront Debt ---
+        for (Map.Entry<String, Double> entry : convertedPrincipalSplits.entrySet()) {
             String mateId = entry.getKey();
             if ("self".equals(mateId)) continue;
 
-            double refundAmount = entry.getValue();
-            DocumentReference fmRef = db.collection("Users").document(userId).collection("FinMates").document(mateId);
-
-            batch.update(fmRef,
-                    "receivableCardAmount", FieldValue.increment(-refundAmount),
-                    "totalReceivable", FieldValue.increment(-refundAmount)
-            );
+            double refundAmount = entry.getValue(); // Only refund the amount that moved to EMI
+            if (refundAmount > 0) {
+                DocumentReference fmRef = db.collection("Users").document(userId).collection("FinMates").document(mateId);
+                batch.update(fmRef,
+                        "receivableCardAmount", FieldValue.increment(-refundAmount),
+                        "totalReceivable", FieldValue.increment(-refundAmount)
+                );
+            }
         }
 
         btnConvertEmi.setEnabled(false);
         btnConvertEmi.setText("Converting...");
 
         batch.commit().addOnSuccessListener(aVoid -> {
-            Toast.makeText(this, "Successfully Converted! FinMate ledger cleaned.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Successfully Converted!", Toast.LENGTH_SHORT).show();
             finish();
         }).addOnFailureListener(e -> {
             Toast.makeText(this, "Failed to convert: " + e.getMessage(), Toast.LENGTH_SHORT).show();

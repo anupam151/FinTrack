@@ -260,7 +260,7 @@ public class EmiDetailsActivity extends AppCompatActivity {
         batch.set(masterRef, emiTx, SetOptions.merge());
 
         // ======================================================================
-        // 1. CARD TRANSACTIONS (5 separate entries, visible ONLY to Card)
+        // 1. CARD TRANSACTIONS (5 separate entries, visible ONLY to Card Ledger)
         // ======================================================================
 
         Transaction tPrin = new Transaction(generateRandomId(), "CARD_SPEND", emiTx.getCardId(), baseTitle + " - Principal", currentTimestamp, principalAmt, false);
@@ -305,8 +305,10 @@ public class EmiDetailsActivity extends AppCompatActivity {
 
             if (hasFinMate) {
                 double totalMonths = emiTx.getEmiData().getAmortizationSchedule().size();
+                String ghostCardId = emiTx.getCardId() + "_GHOST";
 
-                // --- THE FIX: Correctly sum the Transaction's Total Amount to include Cash Profit! ---
+                // MATHEMATICAL FIX: Safely expand the Ghost Transaction's Total Amount to include Cash Profit.
+                // If this does not include the Privilege Charge, FinTrack's internal UI caps the Cash amount to 0!
                 double totalGhostTxAmount = totalCardDueForMonth;
                 Map<String, Double> privMap = emiTx.getEmiData().getTotalPrivilegeCharges();
                 if (privMap != null) {
@@ -317,8 +319,6 @@ public class EmiDetailsActivity extends AppCompatActivity {
                     }
                 }
 
-                String ghostCardId = emiTx.getCardId() + "_GHOST";
-                // Create transaction with the accurate math (Card + Cash limits combined)
                 Transaction tFinMate = new Transaction(generateRandomId(), "CARD_SPEND", ghostCardId, baseTitle, currentTimestamp, totalGhostTxAmount, false);
 
                 Map<String, Transaction.TransactionSplit> consolidatedSplits = new HashMap<>();
@@ -339,7 +339,7 @@ public class EmiDetailsActivity extends AppCompatActivity {
                         }
                     }
 
-                    // Assign cardShare as Card Due, privilegeCharge as Cash Due
+                    // Assign cardShare strictly to the Card parameter, privilegeCharge strictly to the Cash parameter
                     consolidatedSplits.put(mateId, new Transaction.TransactionSplit(cardShare, privilegeCharge, 0.0));
 
                     DocumentReference fmRef = db.collection("Users").document(userId).collection("FinMates").document(mateId);

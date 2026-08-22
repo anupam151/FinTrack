@@ -52,11 +52,11 @@
       </SelectionState>
       <SelectionState runConfigName="main">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-08-18T13:47:09.378312700Z">
+        <DropdownSelection timestamp="2026-08-22T08:19:42.538591400Z">
           <Target type="DEFAULT_BOOT">
-            <handle>
-              <DeviceId pluginId="Wireless" identifier="serviceName=adb-RZCT106PWYY-Rbw6Ts" />
-            </handle>
+            <template>
+              <DeviceId pluginId="FirebaseDirectAccess" type="TEMPLATE" identifier="model_id=r8q/33" />
+            </template>
           </Target>
         </DropdownSelection>
         <DialogSelection>
