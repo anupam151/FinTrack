@@ -133,7 +133,7 @@ public class CardLedgerActivity extends AppCompatActivity {
         tvBankName.setText(bankName != null ? bankName : "Bank");
         tvCardName.setText(cardName != null ? cardName : "Credit Card");
         tvCardType.setText(cardType != null ? cardType : "Visa");
-        tvCardNumber.setText("****  ****  ****  " + (last4 != null ? last4 : "0000"));
+        tvCardNumber.setText(" " + (last4 != null ? last4 : "0000"));
 
         if (themeColor != null && !themeColor.isEmpty()) {
             try {
