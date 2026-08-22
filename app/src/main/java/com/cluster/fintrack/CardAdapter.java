@@ -12,7 +12,6 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -21,6 +20,8 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
@@ -70,10 +71,26 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
         holder.tvCardType.setText(card.getCardType());
         holder.tvCardLimit.setText(formatCurrency(card.getTotalLimit()));
 
-        // Set Due Date format
+        // --- DYNAMIC BILLING DATE CALCULATION ---
         int billingDay = card.getBillingDay();
-        String suffix = getOrdinalSuffix(billingDay);
-        String dueText = String.format(Locale.getDefault(), "%d%s of month", billingDay, suffix);
+        Calendar calendar = Calendar.getInstance();
+        int currentDay = calendar.get(Calendar.DAY_OF_MONTH);
+
+        // If today is past or on the billing day, the next bill generates next month
+        if (currentDay >= billingDay) {
+            calendar.add(Calendar.MONTH, 1);
+        }
+
+        // Safeguard: If billing day is 31, but month is Feb (28 days), cap it safely
+        int maxDaysInTargetMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH);
+        int targetDay = Math.min(billingDay, maxDaysInTargetMonth);
+
+        calendar.set(Calendar.DAY_OF_MONTH, targetDay);
+
+        String suffix = getOrdinalSuffix(targetDay);
+        SimpleDateFormat monthYearFormat = new SimpleDateFormat("MMM yyyy", Locale.getDefault());
+        String dueText = String.format(Locale.getDefault(), "%d%s %s", targetDay, suffix, monthYearFormat.format(calendar.getTime()));
+
         holder.tvCardDueDate.setText(dueText);
 
         // Apply custom theme color
@@ -99,7 +116,6 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
                         double billedSpends = 0.0;
                         double unbilledSpends = 0.0;
                         double totalPayments = 0.0;
-                        double unbilledCashback = 0.0;
 
                         for (DocumentSnapshot doc : snapshot.getDocuments()) {
                             Transaction tx = doc.toObject(Transaction.class);
@@ -109,12 +125,11 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
                                         billedSpends += tx.getTotalAmount();
                                     } else {
                                         unbilledSpends += tx.getTotalAmount();
-                                        unbilledCashback += tx.getCashbackEarned();
                                     }
                                 } else if ("CARD_PAYMENT".equals(tx.getTransactionType())) {
                                     totalPayments += tx.getTotalAmount();
                                 }
-                                // THE FIX: Include EMI_MASTER to block the credit card limit globally
+                                // Include EMI_MASTER to block the credit card limit globally
                                 else if ("EMI_MASTER".equals(tx.getTransactionType()) && tx.getEmiData() != null) {
                                     unbilledSpends += tx.getEmiData().getRemainingEmiPrincipal();
                                 }
@@ -152,13 +167,6 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
                         holder.cpiCardProgress.setProgress(progress);
                         holder.tvCardProgressPercent.setText(progress + "%\nUsed");
 
-                        // Dynamic Cashback Rendering
-                        if (card.isCashbackCard()) {
-                            holder.cardCashbackBadge.setVisibility(View.VISIBLE);
-                            holder.tvUnbilledCashback.setText("Unbilled CB: " + formatCurrency(unbilledCashback));
-                        } else {
-                            holder.cardCashbackBadge.setVisibility(View.GONE);
-                        }
                     });
         }
 
@@ -219,11 +227,10 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
 
     public static class CardViewHolder extends RecyclerView.ViewHolder {
         androidx.cardview.widget.CardView cardLogoContainer;
-        MaterialCardView cardCashbackBadge;
         ListenerRegistration listenerRegistration; // Manages the live connection
 
         TextView tvCardName, tvCardLogoText, tvCardProgressPercent;
-        TextView tvBankName, tvLast4Digits, tvCardType, tvUnbilledCashback;
+        TextView tvBankName, tvLast4Digits, tvCardType;
         TextView tvCardLimit, tvCardDue, tvCardUnbilled, tvCardUsed, tvCardAvailable, tvCardDueDate;
 
         CircularProgressIndicator cpiCardProgress;
@@ -231,7 +238,6 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
         public CardViewHolder(@NonNull View itemView) {
             super(itemView);
             cardLogoContainer = itemView.findViewById(R.id.cardLogoContainer);
-            cardCashbackBadge = itemView.findViewById(R.id.cardCashbackBadge);
 
             tvCardName = itemView.findViewById(R.id.tvCardName);
             tvCardLogoText = itemView.findViewById(R.id.tvCardLogoText);
@@ -239,7 +245,6 @@ public class CardAdapter extends RecyclerView.Adapter<CardAdapter.CardViewHolder
             tvBankName = itemView.findViewById(R.id.tvBankName);
             tvLast4Digits = itemView.findViewById(R.id.tvLast4Digits);
             tvCardType = itemView.findViewById(R.id.tvCardType);
-            tvUnbilledCashback = itemView.findViewById(R.id.tvUnbilledCashback);
 
             tvCardLimit = itemView.findViewById(R.id.tvCardLimit);
             tvCardDue = itemView.findViewById(R.id.tvCardDue);
